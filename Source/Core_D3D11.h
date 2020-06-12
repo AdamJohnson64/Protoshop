@@ -1,10 +1,14 @@
 #pragma once
 
 #include <d3d11.h>
-#include <dxgi1_6.h>
+#include <memory>
 
-void InitializeDirect3D11(HWND hWindow);
+class Direct3D11Device
+{
+public:
+    virtual ~Direct3D11Device() = default;
+    virtual ID3D11Device* GetID3D11Device() = 0;
+    virtual ID3D11DeviceContext* GetID3D11DeviceContext() = 0;
+};
 
-IDXGISwapChain1*        GetIDXGISwapChain();
-ID3D11Device*           GetID3D11Device();
-ID3D11DeviceContext*    GetID3D11DeviceContext();
+std::shared_ptr<Direct3D11Device> CreateDirect3D11Device();

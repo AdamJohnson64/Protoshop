@@ -10,11 +10,13 @@
     <ClInclude Include="Source\Core_D3D.h" />
     <ClInclude Include="Source\Core_D3D11.h" />
     <ClInclude Include="Source\Core_D3DCompiler.h" />
+    <ClInclude Include="Source\Core_DXGI.h" />
     <ClInclude Include="Source\Framework_Sample.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core_D3D11.cpp" />
     <ClCompile Include="Source\Core_D3DCompiler.cpp" />
+    <ClCompile Include="Source\Core_DXGI.cpp" />
     <ClCompile Include="Source\Core_Window.cpp" />
     <ClCompile Include="Source\Sample_ComputeCanvas.cpp" />
     <ClCompile Include="Source\Sample_DrawingContext.cpp" />

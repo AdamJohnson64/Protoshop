@@ -44,9 +44,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     ////////////////////////////////////////////////////////////////////////////////
     // Initialize our graphics API.
-    InitializeDirect3D11(hWindow);
-    //std::unique_ptr<Sample> sample(CreateSample_ComputeCanvas());
-    std::unique_ptr<Sample> sample(CreateSample_DrawingContext());
+    std::shared_ptr<Direct3D11Device> pDevice = CreateDirect3D11Device();
+    std::shared_ptr<DXGISwapChain> pSwapChain = CreateDXGISwapChain(pDevice, hWindow);
+    std::unique_ptr<Sample> sample(CreateSample_ComputeCanvas(pSwapChain, pDevice));
+    //std::unique_ptr<Sample> sample(CreateSample_DrawingContext(pSwapChain, pDevice));
 
     ////////////////////////////////////////////////////////////////////////////////
     // Define the window paint function to use in WNDPROC.

@@ -4,6 +4,7 @@
 #include "Framework_Sample.h"
 #include <atlbase.h>
 #include <cstdint>
+#include <memory>
 
 #define IMAGE_WIDTH 256
 #define IMAGE_HEIGHT 256
@@ -25,7 +26,9 @@ private:
     CComPtr<ID3D11Buffer> pD3D11BufferImage;
     CComPtr<ID3D11UnorderedAccessView> pD3D11UnorderedAccessViewImage;
 public:
-    Sample_ComputeCanvas()
+    Sample_ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
+        m_pSwapChain(pSwapChain),
+        m_pDevice(pDevice)
     {
         // Create a compute shader.
         CComPtr<ID3DBlob> pD3DBlobCodeCS = CompileShader("cs_5_0", R"SHADER(
@@ -102,7 +105,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             descBuffer.ByteWidth = 1024;
             descBuffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
             descBuffer.StructureByteStride = sizeof(Constants);
-            TRYD3D(GetID3D11Device()->CreateBuffer(&descBuffer, nullptr, &pD3D11BufferConstants));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, nullptr, &pD3D11BufferConstants));
         }
         {
             D3D11_BUFFER_DESC descBuffer = {};
@@ -117,16 +120,16 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             data[16 + 16 * IMAGE_WIDTH] = 0xFFFF0000;
             D3D11_SUBRESOURCE_DATA descData = {};
             descData.pSysMem = data;
-            TRYD3D(GetID3D11Device()->CreateBuffer(&descBuffer, &descData, &pD3D11BufferImage));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, &descData, &pD3D11BufferImage));
         }
         {
             D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV = {};
             descUAV.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
             descUAV.Format = DXGI_FORMAT_R32_UINT;
             descUAV.Buffer.NumElements = IMAGE_WIDTH * IMAGE_HEIGHT;
-            TRYD3D(GetID3D11Device()->CreateUnorderedAccessView(pD3D11BufferImage, &descUAV, &pD3D11UnorderedAccessViewImage));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateUnorderedAccessView(pD3D11BufferImage, &descUAV, &pD3D11UnorderedAccessViewImage));
         }
-        TRYD3D(GetID3D11Device()->CreateComputeShader(pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(), nullptr, &pD3D11ComputeShader));
+        TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(), nullptr, &pD3D11ComputeShader));
     }
     void Render()
     {
@@ -134,11 +137,11 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         CComPtr<ID3D11UnorderedAccessView> pD3D11UnorderedAccessViewRenderTarget;
         {
             CComPtr<ID3D11Texture2D> pD3D11Texture2D;
-            TRYD3D(GetIDXGISwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&pD3D11Texture2D));
+            TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&pD3D11Texture2D));
             D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
             uavDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-            TRYD3D(GetID3D11Device()->CreateUnorderedAccessView(pD3D11Texture2D, &uavDesc, &pD3D11UnorderedAccessViewRenderTarget));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateUnorderedAccessView(pD3D11Texture2D, &uavDesc, &pD3D11UnorderedAccessViewRenderTarget));
         }
         // Upload the constant buffer.
         static float a = 0;
@@ -153,30 +156,32 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         a += 0.001f;
         //t += 1;
         if (t > 100) t -= 100;
-        GetID3D11DeviceContext()->UpdateSubresource(pD3D11BufferConstants, 0, nullptr, &data, 0, 0);
+        m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(pD3D11BufferConstants, 0, nullptr, &data, 0, 0);
         // Beginning of rendering.
-        GetID3D11DeviceContext()->CSSetShader(pD3D11ComputeShader, nullptr, 0);
-        GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1, &pD3D11BufferConstants.p);
-        GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &pD3D11UnorderedAccessViewRenderTarget.p, nullptr);
-        GetID3D11DeviceContext()->CSSetUnorderedAccessViews(1, 1, &pD3D11UnorderedAccessViewImage.p, nullptr);
-        GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, 1);
+        m_pDevice->GetID3D11DeviceContext()->CSSetShader(pD3D11ComputeShader, nullptr, 0);
+        m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1, &pD3D11BufferConstants.p);
+        m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &pD3D11UnorderedAccessViewRenderTarget.p, nullptr);
+        m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(1, 1, &pD3D11UnorderedAccessViewImage.p, nullptr);
+        m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, 1);
         ID3D11UnorderedAccessView* makeNullptr = nullptr;
-        GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &makeNullptr, nullptr);
+        m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &makeNullptr, nullptr);
         {
             D3D11_VIEWPORT viewportdesc = {};
             viewportdesc.Width = RENDERTARGET_WIDTH;
             viewportdesc.Height = RENDERTARGET_HEIGHT;
             viewportdesc.MaxDepth = 1.0f;
-            GetID3D11DeviceContext()->RSSetViewports(1, &viewportdesc);
+            m_pDevice->GetID3D11DeviceContext()->RSSetViewports(1, &viewportdesc);
         }
-        GetID3D11DeviceContext()->Flush();
+        m_pDevice->GetID3D11DeviceContext()->Flush();
         
         // End of rendering; send to display.
-        GetIDXGISwapChain()->Present(0, 0);
+        m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
     }
+    std::shared_ptr<DXGISwapChain> m_pSwapChain;
+    std::shared_ptr<Direct3D11Device> m_pDevice;
 };
 
-Sample* CreateSample_ComputeCanvas()
+Sample* CreateSample_ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
 {
-    return new Sample_ComputeCanvas();
+    return new Sample_ComputeCanvas(pSwapChain, pDevice);
 }
