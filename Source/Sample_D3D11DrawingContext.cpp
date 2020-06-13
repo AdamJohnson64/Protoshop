@@ -17,16 +17,16 @@ float Length(const float2& lhs) { return sqrtf(Dot(lhs, lhs)); }
 float2 Normalize(const float2& lhs) { return lhs * (1 / Length(lhs)); }
 float2 Perpendicular(const float2& lhs) { return { -lhs.y, lhs.x }; }
 
-class Sample_DrawingContext : public Sample
+class Sample_D3D11DrawingContext : public Sample
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     std::shared_ptr<Direct3D11Device> m_pDevice;
-    CComPtr<ID3D11VertexShader> pD3D11VertexShader;
-    CComPtr<ID3D11PixelShader> pD3D11PixelShader;
-    CComPtr<ID3D11InputLayout> pD3D11InputLayout;
+    CComPtr<ID3D11VertexShader> m_pD3D11VertexShader;
+    CComPtr<ID3D11PixelShader> m_pD3D11PixelShader;
+    CComPtr<ID3D11InputLayout> m_pD3D11InputLayout;
 public:
-    Sample_DrawingContext(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
+    Sample_D3D11DrawingContext(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
     {
@@ -37,7 +37,7 @@ float4 main(float4 pos : SV_Position) : SV_Position
 {
         return float4(-1 + pos.x * 2 / 320, 1 - pos.y * 2 / 240, 0, 1);
 })SHADER");
-        TRYD3D(m_pDevice->GetID3D11Device()->CreateVertexShader(pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(), nullptr, &pD3D11VertexShader));
+        TRYD3D(m_pDevice->GetID3D11Device()->CreateVertexShader(pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(), nullptr, &m_pD3D11VertexShader));
 
         ////////////////////////////////////////////////////////////////////////////////
         // Create a pixel shader.
@@ -46,7 +46,7 @@ float4 main() : SV_Target
 {
         return float4(1, 1, 1, 1);
 })SHADER");
-        TRYD3D(m_pDevice->GetID3D11Device()->CreatePixelShader(pD3DBlobCodePS->GetBufferPointer(), pD3DBlobCodePS->GetBufferSize(), nullptr, &pD3D11PixelShader));
+        TRYD3D(m_pDevice->GetID3D11Device()->CreatePixelShader(pD3DBlobCodePS->GetBufferPointer(), pD3DBlobCodePS->GetBufferSize(), nullptr, &m_pD3D11PixelShader));
 
         ////////////////////////////////////////////////////////////////////////////////
         // Create an input layout.
@@ -55,7 +55,7 @@ float4 main() : SV_Target
             inputdesc.SemanticName = "SV_Position";
             inputdesc.Format = DXGI_FORMAT_R32G32_FLOAT;
             inputdesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(&inputdesc, 1, pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(), &pD3D11InputLayout));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(&inputdesc, 1, pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(), &m_pD3D11InputLayout));
         }
     }
     void Render()
@@ -115,10 +115,10 @@ float4 main() : SV_Target
             m_pDevice->GetID3D11DeviceContext()->RSSetViewports(1, &viewportdesc);
         }
         m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(1, &pD3D11RenderTargetView.p, nullptr);
-        m_pDevice->GetID3D11DeviceContext()->VSSetShader(pD3D11VertexShader, nullptr, 0);
-        m_pDevice->GetID3D11DeviceContext()->PSSetShader(pD3D11PixelShader, nullptr, 0);
+        m_pDevice->GetID3D11DeviceContext()->VSSetShader(m_pD3D11VertexShader, nullptr, 0);
+        m_pDevice->GetID3D11DeviceContext()->PSSetShader(m_pD3D11PixelShader, nullptr, 0);
         m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(pD3D11InputLayout);
+        m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(m_pD3D11InputLayout);
         static float angle = 0;
         for (int i = 0; i < 10; ++i)
         {
@@ -133,7 +133,7 @@ float4 main() : SV_Target
     }
 };
 
-std::shared_ptr<Sample> CreateSample_DrawingContext(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Sample> CreateSample_D3D11DrawingContext(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
 {
-    return std::shared_ptr<Sample>(new Sample_DrawingContext(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_D3D11DrawingContext(pSwapChain, pDevice));
 }

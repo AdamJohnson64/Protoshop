@@ -1,0 +1,19 @@
+Code presented here within this repository is 100% written by myself
+(Adam Johnson) in my free time, and I claim full copyright in this software.
+
+Code referenced via submodules should be referred to as 3rd Party Software
+and all rights and licensing terms remain the property of their respective
+owners.
+
+This repository does NOT confer any sublicense to 3rd Party components. If you
+wish to use submodules of this code you shall adhere to the independent license
+terms of those submodule components.
+
+You may download, compile, modify and use the software for personal education
+or curiosity.
+
+You MAY NOT release compiled versions of this software, nor may you release
+modified versions of this code, neither in part nor whole.
+
+You MAY NOT use any of this code (neither text nor binary) for any commercial
+purposes or interests, nor any commercial product, neither in part nor whole.

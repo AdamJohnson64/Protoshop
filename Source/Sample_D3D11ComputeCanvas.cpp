@@ -9,9 +9,15 @@
 #define IMAGE_WIDTH 256
 #define IMAGE_HEIGHT 256
 
-class Sample_ComputeCanvas : public Sample
+class Sample_D3D11ComputeCanvas : public Sample
 {
 private:
+    std::shared_ptr<DXGISwapChain> m_pSwapChain;
+    std::shared_ptr<Direct3D11Device> m_pDevice;
+    CComPtr<ID3D11ComputeShader> m_pD3D11ComputeShader;
+    CComPtr<ID3D11Buffer> m_pD3D11BufferConstants;
+    CComPtr<ID3D11Buffer> m_pD3D11BufferImage;
+    CComPtr<ID3D11UnorderedAccessView> m_pD3D11UnorderedAccessViewImage;
     struct Constants
     {
         float
@@ -21,12 +27,8 @@ private:
             m30, m31, m32, m33;
         int width, height;
     };
-    CComPtr<ID3D11ComputeShader> pD3D11ComputeShader;
-    CComPtr<ID3D11Buffer> pD3D11BufferConstants;
-    CComPtr<ID3D11Buffer> pD3D11BufferImage;
-    CComPtr<ID3D11UnorderedAccessView> pD3D11UnorderedAccessViewImage;
 public:
-    Sample_ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
+    Sample_D3D11ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
     {
@@ -87,8 +89,8 @@ float4 Sample(float2 pixel)
 [numthreads(1, 1, 1)]
 void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
-    //renderTarget[dispatchThreadId.xy] = Sample((float2)dispatchThreadId);
-    //return;
+    renderTarget[dispatchThreadId.xy] = Sample((float2)dispatchThreadId);
+    return;
     float4 accumulateSamples;
     for (int superSampleY = 0; superSampleY < 4; ++superSampleY)
     {
@@ -105,7 +107,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             descBuffer.ByteWidth = 1024;
             descBuffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
             descBuffer.StructureByteStride = sizeof(Constants);
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, nullptr, &pD3D11BufferConstants));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, nullptr, &m_pD3D11BufferConstants));
         }
         {
             D3D11_BUFFER_DESC descBuffer = {};
@@ -120,16 +122,16 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             data[16 + 16 * IMAGE_WIDTH] = 0xFFFF0000;
             D3D11_SUBRESOURCE_DATA descData = {};
             descData.pSysMem = data;
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, &descData, &pD3D11BufferImage));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, &descData, &m_pD3D11BufferImage));
         }
         {
             D3D11_UNORDERED_ACCESS_VIEW_DESC descUAV = {};
             descUAV.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
             descUAV.Format = DXGI_FORMAT_R32_UINT;
             descUAV.Buffer.NumElements = IMAGE_WIDTH * IMAGE_HEIGHT;
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateUnorderedAccessView(pD3D11BufferImage, &descUAV, &pD3D11UnorderedAccessViewImage));
+            TRYD3D(m_pDevice->GetID3D11Device()->CreateUnorderedAccessView(m_pD3D11BufferImage, &descUAV, &m_pD3D11UnorderedAccessViewImage));
         }
-        TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(), nullptr, &pD3D11ComputeShader));
+        TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(), nullptr, &m_pD3D11ComputeShader));
     }
     void Render()
     {
@@ -156,12 +158,12 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         a += 0.001f;
         //t += 1;
         if (t > 100) t -= 100;
-        m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(pD3D11BufferConstants, 0, nullptr, &data, 0, 0);
+        m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(m_pD3D11BufferConstants, 0, nullptr, &data, 0, 0);
         // Beginning of rendering.
-        m_pDevice->GetID3D11DeviceContext()->CSSetShader(pD3D11ComputeShader, nullptr, 0);
-        m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1, &pD3D11BufferConstants.p);
+        m_pDevice->GetID3D11DeviceContext()->CSSetShader(m_pD3D11ComputeShader, nullptr, 0);
+        m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1, &m_pD3D11BufferConstants.p);
         m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &pD3D11UnorderedAccessViewRenderTarget.p, nullptr);
-        m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(1, 1, &pD3D11UnorderedAccessViewImage.p, nullptr);
+        m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(1, 1, &m_pD3D11UnorderedAccessViewImage.p, nullptr);
         m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, 1);
         ID3D11UnorderedAccessView* makeNullptr = nullptr;
         m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &makeNullptr, nullptr);
@@ -177,11 +179,9 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         // End of rendering; send to display.
         m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
     }
-    std::shared_ptr<DXGISwapChain> m_pSwapChain;
-    std::shared_ptr<Direct3D11Device> m_pDevice;
 };
 
-std::shared_ptr<Sample> CreateSample_ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Sample> CreateSample_D3D11ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
 {
-    return std::shared_ptr<Sample>(new Sample_ComputeCanvas(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_D3D11ComputeCanvas(pSwapChain, pDevice));
 }
