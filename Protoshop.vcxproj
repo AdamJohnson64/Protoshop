@@ -11,7 +11,7 @@
     <ClInclude Include="Source\Core_D3D11.h" />
     <ClInclude Include="Source\Core_D3DCompiler.h" />
     <ClInclude Include="Source\Core_DXGI.h" />
-    <ClInclude Include="Source\Framework_Sample.h" />
+    <ClInclude Include="Source\Sample.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core_D3D11.cpp" />

@@ -1,7 +1,7 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"
-#include "Framework_Sample.h"
+#include "Sample.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <memory>
@@ -181,7 +181,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     std::shared_ptr<Direct3D11Device> m_pDevice;
 };
 
-Sample* CreateSample_ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Sample> CreateSample_ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
 {
-    return new Sample_ComputeCanvas(pSwapChain, pDevice);
+    return std::shared_ptr<Sample>(new Sample_ComputeCanvas(pSwapChain, pDevice));
 }

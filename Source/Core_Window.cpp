@@ -1,72 +1,89 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
-#include "Framework_Sample.h"
+#include "Sample.h"
 #include <Windows.h>
 #include <functional>
 #include <memory>
 
-std::function<void()> fnWindowProcPaint = nullptr;
-
-LRESULT WINAPI WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+class WindowImpl
 {
-    if (uMsg == WM_CLOSE)
+public:
+    WindowImpl()
     {
-        PostQuitMessage(0);
-        return 0;
+        static bool windowClassInitialized = false;
+        if (!windowClassInitialized)
+        {
+            WNDCLASS wndclass = {};
+            wndclass.lpfnWndProc = WindowProc;
+            wndclass.cbWndExtra = sizeof(WindowImpl*);
+            wndclass.lpszClassName = L"Protoshop";
+            if (0 == RegisterClass(&wndclass)) throw FALSE;
+            windowClassInitialized = true;
+        }
+        m_hWindow = CreateWindow(L"Protoshop", L"Protoshop", WS_OVERLAPPEDWINDOW, 16, 16, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, nullptr, nullptr, nullptr, this);
+        ShowWindow(m_hWindow, SW_SHOW);
     }
-    if (uMsg == WM_PAINT)
+    virtual void OnPaint()
     {
-        fnWindowProcPaint();
-        ValidateRect(hWnd, nullptr);
-        return 0;
+        if (m_pSample != nullptr)
+        {
+            m_pSample->Render();
+        }
     }
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
-}
+    void SetSample(std::shared_ptr<Sample> pSample)
+    {
+        m_pSample = pSample;
+    }
+    HWND m_hWindow;
+private:
+    static LRESULT WINAPI WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    {
+        WindowImpl* window = reinterpret_cast<WindowImpl*>(GetWindowLongPtr(hWnd, 0));
+        if (uMsg == WM_CREATE)
+        {
+            const CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
+            SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
+            return 0;
+        }
+        if (uMsg == WM_CLOSE)
+        {
+            PostQuitMessage(0);
+            return 0;
+        }
+        if (uMsg == WM_PAINT)
+        {
+            window->OnPaint();
+            ValidateRect(hWnd, nullptr);
+            return 0;
+        }
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
+    std::shared_ptr<Sample> m_pSample;
+};
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
     try
     {
+        std::shared_ptr<Direct3D11Device> pDevice = CreateDirect3D11Device();
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // Create a window class.
-    {
-        WNDCLASS wndclass = {};
-        wndclass.lpszClassName = L"HelloD3D11";
-        wndclass.lpfnWndProc = WindowProc;
-        if (0 == RegisterClass(&wndclass)) throw FALSE;
-    }
+        std::shared_ptr<WindowImpl> pWindow1(new WindowImpl());
+        std::shared_ptr<DXGISwapChain> pSwapChain1 = CreateDXGISwapChain(pDevice, pWindow1->m_hWindow);
+        pWindow1->SetSample(CreateSample_ComputeCanvas(pSwapChain1, pDevice));
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // Create a window for display.
-    HWND hWindow = CreateWindow(L"HelloD3D11", L"HelloD3D11", WS_OVERLAPPEDWINDOW, 16, 16, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, nullptr, nullptr, nullptr, nullptr);
-    ShowWindow(hWindow, nShowCmd);
+        std::shared_ptr<WindowImpl> pWindow2(new WindowImpl());
+        std::shared_ptr<DXGISwapChain> pSwapChain2 = CreateDXGISwapChain(pDevice, pWindow2->m_hWindow);
+        pWindow2->SetSample(CreateSample_DrawingContext(pSwapChain2, pDevice));
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // Initialize our graphics API.
-    std::shared_ptr<Direct3D11Device> pDevice = CreateDirect3D11Device();
-    std::shared_ptr<DXGISwapChain> pSwapChain = CreateDXGISwapChain(pDevice, hWindow);
-    std::unique_ptr<Sample> sample(CreateSample_ComputeCanvas(pSwapChain, pDevice));
-    //std::unique_ptr<Sample> sample(CreateSample_DrawingContext(pSwapChain, pDevice));
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // Define the window paint function to use in WNDPROC.
-    fnWindowProcPaint = [&]() {
-        sample->Render();
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // Run the window message loop.
-    {
-        MSG Msg = {};
-        while (GetMessage(&Msg, nullptr, 0, 0))
         {
-            TranslateMessage(&Msg);
-            DispatchMessage(&Msg);
+            MSG Msg = {};
+            while (GetMessage(&Msg, nullptr, 0, 0))
+            {
+                TranslateMessage(&Msg);
+                DispatchMessage(&Msg);
+            }
         }
-    }
-    return 0;
-
+        return 0;
     }
     catch (const std::exception& ex)
     {

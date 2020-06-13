@@ -1,7 +1,7 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"
-#include "Framework_Sample.h"
+#include "Sample.h"
 #include <atlbase.h>
 #include <functional>
 #include <vector>
@@ -133,7 +133,7 @@ float4 main() : SV_Target
     }
 };
 
-Sample* CreateSample_DrawingContext(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Sample> CreateSample_DrawingContext(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
 {
-    return new Sample_DrawingContext(pSwapChain, pDevice);
+    return std::shared_ptr<Sample>(new Sample_DrawingContext(pSwapChain, pDevice));
 }
