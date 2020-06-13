@@ -1,21 +1,11 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"
+#include "Core_Math.h"
 #include "Sample.h"
 #include <atlbase.h>
 #include <functional>
 #include <vector>
-
-struct float2 { float x, y; };
-
-float2 operator*(const float& lhs, const float2& rhs) { return { lhs * rhs.x, lhs * rhs.y }; }
-float2 operator*(const float2& lhs, const float& rhs) { return { lhs.x * rhs, lhs.y * rhs }; }
-float2 operator+(const float2& lhs, const float2& rhs) { return { lhs.x + rhs.x, lhs.y + rhs.y }; }
-float2 operator-(const float2& lhs, const float2& rhs) { return { lhs.x - rhs.x, lhs.y - rhs.y }; }
-float Dot(const float2& lhs, const float2& rhs) { return lhs.x * rhs.x + lhs.y * rhs.y; }
-float Length(const float2& lhs) { return sqrtf(Dot(lhs, lhs)); }
-float2 Normalize(const float2& lhs) { return lhs * (1 / Length(lhs)); }
-float2 Perpendicular(const float2& lhs) { return { -lhs.y, lhs.x }; }
 
 class Sample_D3D11DrawingContext : public Sample
 {

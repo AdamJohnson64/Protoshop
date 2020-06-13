@@ -12,6 +12,7 @@
     <ClInclude Include="Source\Core_D3D12.h" />
     <ClInclude Include="Source\Core_D3DCompiler.h" />
     <ClInclude Include="Source\Core_DXGI.h" />
+    <ClInclude Include="Source\Core_Math.h" />
     <ClInclude Include="Source\Core_Object.h" />
     <ClInclude Include="Source\Core_Window.h" />
     <ClInclude Include="Source\Sample.h" />
@@ -21,12 +22,16 @@
     <ClCompile Include="Source\Core_D3D12.cpp" />
     <ClCompile Include="Source\Core_D3DCompiler.cpp" />
     <ClCompile Include="Source\Core_DXGI.cpp" />
+    <ClCompile Include="Source\Core_Math.cpp" />
     <ClCompile Include="Source\Core_Window.cpp" />
     <ClCompile Include="Source\Protoshop.cpp" />
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
     <ClCompile Include="Source\Sample_D3D12Basic.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="LICENSE.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

@@ -1,13 +1,14 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"
+#include "Core_Math.h"
 #include "Sample.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <memory>
 
-#define IMAGE_WIDTH 256
-#define IMAGE_HEIGHT 256
+#define IMAGE_WIDTH 320
+#define IMAGE_HEIGHT 240
 
 class Sample_D3D11ComputeCanvas : public Sample
 {
@@ -20,12 +21,8 @@ private:
     CComPtr<ID3D11UnorderedAccessView> m_pD3D11UnorderedAccessViewImage;
     struct Constants
     {
-        float
-            m00, m01, m02, m03,
-            m10, m11, m12, m13,
-            m20, m21, m22, m23,
-            m30, m31, m32, m33;
-        int width, height;
+        matrix44 Transform;
+        int Width, Height;
     };
 public:
     Sample_D3D11ComputeCanvas(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
@@ -115,11 +112,31 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             descBuffer.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
             descBuffer.StructureByteStride = sizeof(uint32_t);
             uint32_t data[IMAGE_WIDTH * IMAGE_HEIGHT];
+            char stamp[] =
+            {
+                0, 0, 0, 1, 1, 0, 0, 0,
+                0, 0, 1, 0, 0, 1, 0, 0,
+                0, 1, 0, 0, 0, 0, 1, 0,
+                0, 1, 0, 0, 0, 0, 1, 0,
+                0, 1, 1, 1, 1, 1, 1, 0,
+                0, 1, 0, 0, 0, 0, 1, 0,
+                0, 1, 0, 0, 0, 0, 1, 0,
+                0, 1, 0, 0, 0, 0, 1, 0,
+            };
             for (int a = 0; a < IMAGE_WIDTH * IMAGE_HEIGHT; ++a)
             {
                 data[a] = 0xFF0080FF + a;
             }
-            data[16 + 16 * IMAGE_WIDTH] = 0xFFFF0000;
+            for (int y = 0; y < 8; ++y)
+            {
+                for (int x = 0; x < 8; ++x)
+                {
+                    if (stamp[x + y * 8])
+                    {
+                        data[(16 + x) + (16 + y) * IMAGE_WIDTH] = 0xFFFF0000;
+                    }
+                }
+            }
             D3D11_SUBRESOURCE_DATA descData = {};
             descData.pSysMem = data;
             TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, &descData, &m_pD3D11BufferImage));
@@ -147,17 +164,16 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         }
         // Upload the constant buffer.
         static float a = 0;
-        static float t = 0;
         Constants data = {};
-        data.m00 = data.m11 = data.m22 = data.m33 = 1;
-        data.m00 = cosf(a); data.m10 = sinf(a);
-        data.m01 = -sinf(a); data.m11 = cosf(a);
-        data.m03 = -t;
-        data.width = IMAGE_WIDTH;
-        data.height = IMAGE_HEIGHT;
-        a += 0.001f;
-        //t += 1;
-        if (t > 100) t -= 100;
+        data.Transform.M11 = data.Transform.M22 = data.Transform.M33 = data.Transform.M44 = 1;
+        data.Transform.M11 = cosf(a); data.Transform.M21 = sinf(a);
+        data.Transform.M12 = -sinf(a); data.Transform.M22 = cosf(a);
+        data.Transform.M14 = (RENDERTARGET_WIDTH - IMAGE_WIDTH * cosf(a) + IMAGE_HEIGHT * sinf(a)) / 2.0f;
+        data.Transform.M24 = (RENDERTARGET_HEIGHT - IMAGE_WIDTH * sinf(a) - IMAGE_HEIGHT * cosf(a)) / 2.0f;
+        data.Transform = Invert(data.Transform);
+        data.Width = IMAGE_WIDTH;
+        data.Height = IMAGE_HEIGHT;
+        a += 0.01f;
         m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(m_pD3D11BufferConstants, 0, nullptr, &data, 0, 0);
         // Beginning of rendering.
         m_pDevice->GetID3D11DeviceContext()->CSSetShader(m_pD3D11ComputeShader, nullptr, 0);
