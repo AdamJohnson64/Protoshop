@@ -1,6 +1,7 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"
+#include "Core_DXGI.h"
 #include "Sample.h"
 #include <atlbase.h>
 #include <memory>
