@@ -31,8 +31,13 @@
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
+    <ClCompile Include="Source\Sample_D3D11Imgui.cpp" />
     <ClCompile Include="Source\Sample_D3D12Basic.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
+    <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx11.cpp" />
+    <ClCompile Include="Submodules\imgui\imgui.cpp" />
+    <ClCompile Include="Submodules\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Submodules\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />
@@ -67,6 +72,9 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)Submodules\imgui</AdditionalIncludeDirectories>
+    </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
