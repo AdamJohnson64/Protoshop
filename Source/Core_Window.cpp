@@ -38,6 +38,11 @@ public:
                 InvalidateRect(hWnd, nullptr, FALSE);
             });
     }
+    ~WindowImpl()
+    {
+        KillTimer(m_hWindow, 0);
+        DestroyWindow(m_hWindow);
+    }
     HWND GetWindowHandle() override
     {
         return m_hWindow;
