@@ -29,7 +29,11 @@ public:
         }
         ////////////////////////////////////////////////////////////////////////////////
         // Create a window of this class.
-        m_hWindow = CreateWindow(L"Protoshop", L"Protoshop", WS_OVERLAPPEDWINDOW, 16, 16, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, nullptr, nullptr, nullptr, this);
+        {
+            RECT rect = { 64, 64, 64 + RENDERTARGET_WIDTH, 64 + RENDERTARGET_HEIGHT };
+            AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+            m_hWindow = CreateWindow(L"Protoshop", L"Protoshop", WS_OVERLAPPEDWINDOW, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, nullptr, this);
+        }
         ShowWindow(m_hWindow, SW_SHOW);
         ////////////////////////////////////////////////////////////////////////////////
         // Start a timer to drive frames.
