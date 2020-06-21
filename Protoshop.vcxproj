@@ -33,8 +33,10 @@
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
     <ClCompile Include="Source\Sample_D3D11Imgui.cpp" />
     <ClCompile Include="Source\Sample_D3D12Basic.cpp" />
+    <ClCompile Include="Source\Sample_D3D12Imgui.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx11.cpp" />
+    <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx12.cpp" />
     <ClCompile Include="Submodules\imgui\imgui.cpp" />
     <ClCompile Include="Submodules\imgui\imgui_draw.cpp" />
     <ClCompile Include="Submodules\imgui\imgui_widgets.cpp" />

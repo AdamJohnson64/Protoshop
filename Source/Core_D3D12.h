@@ -11,6 +11,8 @@ public:
     virtual ID3D12CommandQueue* GetID3D12CommandQueue() = 0;
     virtual ID3D12RootSignature* GetID3D12RootSignature() = 0;
     virtual ID3D12DescriptorHeap* GetID3D12DescriptorHeapRTV() = 0;
+    virtual ID3D12DescriptorHeap* GetID3D12DescriptorHeapCBVSRVUAV() = 0;
+    virtual ID3D12DescriptorHeap* GetID3D12DescriptorHeapSMP() = 0;
 };
 
 std::shared_ptr<Direct3D12Device> CreateDirect3D12Device();

@@ -32,9 +32,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         std::shared_ptr<Window> pWindow5(CreateNewWindow());
         pWindow5->SetSample(CreateSample_D3D12Basic(CreateDXGISwapChain(pDevice12, pWindow5->GetWindowHandle()), pDevice12));
-        
+
         std::shared_ptr<Window> pWindow6(CreateNewWindow());
-        pWindow6->SetSample(CreateSample_OpenGLBasic(pDeviceGL, pWindow6));
+        pWindow6->SetSample(CreateSample_D3D12Imgui(CreateDXGISwapChain(pDevice12, pWindow6->GetWindowHandle()), pDevice12));
+
+        std::shared_ptr<Window> pWindow7(CreateNewWindow());
+        pWindow7->SetSample(CreateSample_OpenGLBasic(pDeviceGL, pWindow7));
 
         {
             MSG Msg = {};

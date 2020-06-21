@@ -85,8 +85,8 @@ public:
             descDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
             descDescriptorHeap.NumDescriptors = 1;
             descDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-            TRYD3D(pD3D12Device->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pD3D12DescriptorHeapSRV));
-            pD3D12DescriptorHeapSRV->SetName(L"D3D12DescriptorHeap (SRV)");
+            TRYD3D(pD3D12Device->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pD3D12DescriptorHeapCBVSRVUAV));
+            pD3D12DescriptorHeapCBVSRVUAV->SetName(L"D3D12DescriptorHeap (CBV/SRV/UAV)");
         }
         ////////////////////////////////////////////////////////////////////////////////
         // Create a descriptor heap for samplers.
@@ -122,11 +122,19 @@ public:
     {
         return pD3D12DescriptorHeapRTV.p;
     }
+    ID3D12DescriptorHeap* GetID3D12DescriptorHeapCBVSRVUAV() override
+    {
+        return pD3D12DescriptorHeapCBVSRVUAV.p;
+    }
+    ID3D12DescriptorHeap* GetID3D12DescriptorHeapSMP() override
+    {
+        return pD3D12DescriptorHeapSMP.p;
+    }
 private:
     CComPtr<ID3D12Device> pD3D12Device;
     CComPtr<ID3D12CommandQueue> pD3D12CommandQueue;
     CComPtr<ID3D12DescriptorHeap> pD3D12DescriptorHeapRTV;
-    CComPtr<ID3D12DescriptorHeap> pD3D12DescriptorHeapSRV;
+    CComPtr<ID3D12DescriptorHeap> pD3D12DescriptorHeapCBVSRVUAV;
     CComPtr<ID3D12DescriptorHeap> pD3D12DescriptorHeapSMP;
     CComPtr<ID3D12RootSignature> pD3D12RootSignature;
 };
