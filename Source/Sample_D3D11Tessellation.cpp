@@ -9,6 +9,7 @@
 class Sample_D3D11Tessellation : public Sample_D3D11Base
 {
 private:
+    CComPtr<ID3D11RasterizerState> m_pD3D11RasterizerState;
     CComPtr<ID3D11VertexShader> m_pD3D11VertexShader;
     CComPtr<ID3D11HullShader> m_pD3D11HullShader;
     CComPtr<ID3D11DomainShader> m_pD3D11DomainShader;
@@ -17,6 +18,12 @@ private:
 public:
     Sample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) : Sample_D3D11Base(pSwapChain, pDevice)
     {
+        {
+            D3D11_RASTERIZER_DESC rasterizerdesc = {};
+            rasterizerdesc.CullMode = D3D11_CULL_NONE;
+            rasterizerdesc.FillMode = D3D11_FILL_WIREFRAME;
+            m_pDevice->GetID3D11Device()->CreateRasterizerState(&rasterizerdesc, &m_pD3D11RasterizerState);
+        }
         const char* szShaderCode = R"SHADER(
 struct ControlPoint
 {
@@ -112,6 +119,7 @@ float4 mainPS() : SV_Target
         m_pDevice->GetID3D11DeviceContext()->VSSetShader(m_pD3D11VertexShader, nullptr, 0);
         m_pDevice->GetID3D11DeviceContext()->HSSetShader(m_pD3D11HullShader, nullptr, 0);
         m_pDevice->GetID3D11DeviceContext()->DSSetShader(m_pD3D11DomainShader, nullptr, 0);
+        m_pDevice->GetID3D11DeviceContext()->RSSetState(m_pD3D11RasterizerState);
         m_pDevice->GetID3D11DeviceContext()->PSSetShader(m_pD3D11PixelShader, nullptr, 0);
         m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
         m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(m_pD3D11InputLayout);
