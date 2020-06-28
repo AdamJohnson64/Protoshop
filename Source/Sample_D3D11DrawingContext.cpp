@@ -23,7 +23,7 @@ public:
     {
         ////////////////////////////////////////////////////////////////////////////////
         // Create a vertex shader.
-        CComPtr<ID3DBlob> pD3DBlobCodeVS = CompileShader("vs_5_0", R"SHADER(
+        CComPtr<ID3DBlob> pD3DBlobCodeVS = CompileShader("vs_5_0", "main", R"SHADER(
 float4 main(float4 pos : SV_Position) : SV_Position
 {
         return float4(-1 + pos.x * 2 / 320, 1 - pos.y * 2 / 240, 0, 1);
@@ -32,7 +32,7 @@ float4 main(float4 pos : SV_Position) : SV_Position
 
         ////////////////////////////////////////////////////////////////////////////////
         // Create a pixel shader.
-        ID3DBlob* pD3DBlobCodePS = CompileShader("ps_5_0", R"SHADER(
+        ID3DBlob* pD3DBlobCodePS = CompileShader("ps_5_0", "main", R"SHADER(
 float4 main() : SV_Target
 {
         return float4(1, 1, 1, 1);

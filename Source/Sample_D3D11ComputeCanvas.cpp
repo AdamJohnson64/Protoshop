@@ -31,7 +31,7 @@ public:
         m_pDevice(pDevice)
     {
         // Create a compute shader.
-        CComPtr<ID3DBlob> pD3DBlobCodeCS = CompileShader("cs_5_0", R"SHADER(
+        CComPtr<ID3DBlob> pD3DBlobCodeCS = CompileShader("cs_5_0", "main", R"SHADER(
 cbuffer Constants
 {
     float4x4 transform;
