@@ -18,26 +18,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Direct3D12Device> pDevice12 = CreateDirect3D12Device();
         std::shared_ptr<OpenGLDevice> pDeviceGL = CreateOpenGLDevice();
 
-        std::shared_ptr<Window> pWindow1(CreateNewWindow());
-        pWindow1->SetSample(CreateSample_D3D11Basic(CreateDXGISwapChain(pDevice11, pWindow1->GetWindowHandle()), pDevice11));
+        std::shared_ptr<Window> pWindowD3D11Basic(CreateNewWindow());
+        pWindowD3D11Basic->SetSample(CreateSample_D3D11Basic(CreateDXGISwapChain(pDevice11, pWindowD3D11Basic->GetWindowHandle()), pDevice11));
 
-        std::shared_ptr<Window> pWindow2(CreateNewWindow());
-        pWindow2->SetSample(CreateSample_D3D11ComputeCanvas(CreateDXGISwapChain(pDevice11, pWindow2->GetWindowHandle()), pDevice11));
+        std::shared_ptr<Window> pWindowD3D11ComputeCanvas(CreateNewWindow());
+        pWindowD3D11ComputeCanvas->SetSample(CreateSample_D3D11ComputeCanvas(CreateDXGISwapChain(pDevice11, pWindowD3D11ComputeCanvas->GetWindowHandle()), pDevice11));
 
-        std::shared_ptr<Window> pWindow3(CreateNewWindow());
-        pWindow3->SetSample(CreateSample_D3D11DrawingContext(CreateDXGISwapChain(pDevice11, pWindow3->GetWindowHandle()), pDevice11));
+        std::shared_ptr<Window> pWindowD3D11DrawingContext(CreateNewWindow());
+        pWindowD3D11DrawingContext->SetSample(CreateSample_D3D11DrawingContext(CreateDXGISwapChain(pDevice11, pWindowD3D11DrawingContext->GetWindowHandle()), pDevice11));
 
-        std::shared_ptr<Window> pWindow4(CreateNewWindow());
-        pWindow4->SetSample(CreateSample_D3D11Imgui(CreateDXGISwapChain(pDevice11, pWindow4->GetWindowHandle()), pDevice11));
+        std::shared_ptr<Window> pWindowD3D11Imgui(CreateNewWindow());
+        pWindowD3D11Imgui->SetSample(CreateSample_D3D11Imgui(CreateDXGISwapChain(pDevice11, pWindowD3D11Imgui->GetWindowHandle()), pDevice11));
 
-        std::shared_ptr<Window> pWindow5(CreateNewWindow());
-        pWindow5->SetSample(CreateSample_D3D12Basic(CreateDXGISwapChain(pDevice12, pWindow5->GetWindowHandle()), pDevice12));
+        std::shared_ptr<Window> pWindowD3D11Tessellation(CreateNewWindow());
+        pWindowD3D11Tessellation->SetSample(CreateSample_D3D11Tessellation(CreateDXGISwapChain(pDevice11, pWindowD3D11Tessellation->GetWindowHandle()), pDevice11));
 
-        std::shared_ptr<Window> pWindow6(CreateNewWindow());
-        pWindow6->SetSample(CreateSample_D3D12Imgui(CreateDXGISwapChain(pDevice12, pWindow6->GetWindowHandle()), pDevice12));
+        std::shared_ptr<Window> pWindowD3D12Basic(CreateNewWindow());
+        pWindowD3D12Basic->SetSample(CreateSample_D3D12Basic(CreateDXGISwapChain(pDevice12, pWindowD3D12Basic->GetWindowHandle()), pDevice12));
 
-        std::shared_ptr<Window> pWindow7(CreateNewWindow());
-        pWindow7->SetSample(CreateSample_OpenGLBasic(pDeviceGL, pWindow7));
+        std::shared_ptr<Window> pWindowD3D12Imgui(CreateNewWindow());
+        pWindowD3D12Imgui->SetSample(CreateSample_D3D12Imgui(CreateDXGISwapChain(pDevice12, pWindowD3D12Imgui->GetWindowHandle()), pDevice12));
+
+        std::shared_ptr<Window> pWindowGLBasic(CreateNewWindow());
+        pWindowGLBasic->SetSample(CreateSample_OpenGLBasic(pDeviceGL, pWindowGLBasic));
 
         {
             MSG Msg = {};
