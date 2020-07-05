@@ -15,8 +15,8 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         // Enable D3D12 Debugging (note: DXGI may fail when tearing down the swapchain).
         {
-            CComPtr<ID3D12Debug> pD3D12Debug;
-            TRYD3D(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&pD3D12Debug));
+            CComPtr<ID3D12Debug3> pD3D12Debug;
+            TRYD3D(D3D12GetDebugInterface(__uuidof(ID3D12Debug3), (void**)&pD3D12Debug));
             // By all means turn this on when you're debugging, but this will crash on exit due to the swap chain.
             pD3D12Debug->EnableDebugLayer();
         }
@@ -29,7 +29,7 @@ public:
         TRYD3D(pDXGIFactory7->EnumWarpAdapter(__uuidof(IDXGIAdapter4), (void**)&pDXGIAdapter4Warp));
         ////////////////////////////////////////////////////////////////////////////////
         // Create the Direct3D 12 device.
-        TRYD3D(D3D12CreateDevice(pDXGIAdapter4Warp, D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), (void**)&pD3D12Device));
+        TRYD3D(D3D12CreateDevice(pDXGIAdapter4Warp, D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device6), (void**)&pD3D12Device));
         pD3D12Device->SetName(L"D3D12Device");
         ////////////////////////////////////////////////////////////////////////////////
         // Create our primary command queue.
@@ -106,7 +106,7 @@ public:
             pD3D12Device->CreateSampler(&descSampler, pD3D12DescriptorHeapSMP->GetCPUDescriptorHandleForHeapStart());
         }
     }
-    ID3D12Device* GetID3D12Device() override
+    ID3D12Device6* GetID3D12Device() override
     {
         return pD3D12Device.p;
     }
@@ -131,7 +131,7 @@ public:
         return pD3D12DescriptorHeapSMP.p;
     }
 private:
-    CComPtr<ID3D12Device> pD3D12Device;
+    CComPtr<ID3D12Device6> pD3D12Device;
     CComPtr<ID3D12CommandQueue> pD3D12CommandQueue;
     CComPtr<ID3D12DescriptorHeap> pD3D12DescriptorHeapRTV;
     CComPtr<ID3D12DescriptorHeap> pD3D12DescriptorHeapCBVSRVUAV;
