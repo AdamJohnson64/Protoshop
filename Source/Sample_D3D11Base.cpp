@@ -21,6 +21,7 @@ void Sample_D3D11Base::Render()
         TRYD3D(m_pDevice->GetID3D11Device()->CreateRenderTargetView(pD3D11Texture2D, &rtvDesc, &pD3D11RenderTargetView));
     }
     // Beginning of rendering.
+    m_pDevice->GetID3D11DeviceContext()->ClearState();
     {
         float color[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
         m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(pD3D11RenderTargetView, color);
@@ -34,6 +35,7 @@ void Sample_D3D11Base::Render()
     }
     m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(1, &pD3D11RenderTargetView.p, nullptr);
     RenderSample();
+    m_pDevice->GetID3D11DeviceContext()->ClearState();
     m_pDevice->GetID3D11DeviceContext()->Flush();
     // End of rendering; send to display.
     m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
