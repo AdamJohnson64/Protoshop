@@ -26,7 +26,7 @@ public:
         TRYD3D(CreateDXGIFactory(__uuidof(IDXGIFactory7), (void**)&pDXGIFactory7));
         CComPtr<IDXGIAdapter4> pDXGIAdapter4Warp;
         // Comment out this line to use a real hardware GPU (and not the WARP adapter).
-        TRYD3D(pDXGIFactory7->EnumWarpAdapter(__uuidof(IDXGIAdapter4), (void**)&pDXGIAdapter4Warp));
+        //TRYD3D(pDXGIFactory7->EnumWarpAdapter(__uuidof(IDXGIAdapter4), (void**)&pDXGIAdapter4Warp));
         ////////////////////////////////////////////////////////////////////////////////
         // Create the Direct3D 12 device.
         TRYD3D(D3D12CreateDevice(pDXGIAdapter4Warp, D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device6), (void**)&pD3D12Device));
