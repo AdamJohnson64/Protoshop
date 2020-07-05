@@ -10,6 +10,7 @@
     <ClInclude Include="Source\Core_D3D.h" />
     <ClInclude Include="Source\Core_D3D11.h" />
     <ClInclude Include="Source\Core_D3D12.h" />
+    <ClInclude Include="Source\Core_D3D12Util.h" />
     <ClInclude Include="Source\Core_D3DCompiler.h" />
     <ClInclude Include="Source\Core_DXGI.h" />
     <ClInclude Include="Source\Core_Math.h" />
@@ -23,6 +24,7 @@
   <ItemGroup>
     <ClCompile Include="Source\Core_D3D11.cpp" />
     <ClCompile Include="Source\Core_D3D12.cpp" />
+    <ClCompile Include="Source\Core_D3D12Util.cpp" />
     <ClCompile Include="Source\Core_D3DCompiler.cpp" />
     <ClCompile Include="Source\Core_DXGI.cpp" />
     <ClCompile Include="Source\Core_Math.cpp" />
