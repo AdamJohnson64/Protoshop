@@ -21,7 +21,7 @@ void raygeneration()
     uint2 LaunchIndex = DispatchRaysIndex().xy;
     uint2 LaunchDimensions = DispatchRaysDimensions().xy;
     RayDesc ray;
-    ray.Origin = float3(LaunchIndex.x, LaunchIndex.y, -1);
+    ray.Origin = float3(LaunchIndex.x + 0.5f, LaunchIndex.y + 0.5f, -1); // +0.5f for center-pixel sampling.
     ray.Direction = float3(0, 0, 1);
     ray.TMin = 0.001f;
     ray.TMax = 1000;
