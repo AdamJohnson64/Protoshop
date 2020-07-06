@@ -28,7 +28,6 @@ public:
         // Create a LOCAL root signature.
         {
             uint32_t setupRange = 0;
-            uint32_t setupOffset = 0;
 
             std::array<D3D12_DESCRIPTOR_RANGE, 8> descDescriptorRange;
 
@@ -36,16 +35,14 @@ public:
             descDescriptorRange[setupRange].NumDescriptors = 1;
             descDescriptorRange[setupRange].RegisterSpace = 0;
             descDescriptorRange[setupRange].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-            descDescriptorRange[setupRange].OffsetInDescriptorsFromTableStart = setupOffset;
-            setupOffset += descDescriptorRange[setupRange].NumDescriptors;
+            descDescriptorRange[setupRange].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
             ++setupRange;
 
             descDescriptorRange[setupRange].BaseShaderRegister = 0;
             descDescriptorRange[setupRange].NumDescriptors = 1;
             descDescriptorRange[setupRange].RegisterSpace = 0;
             descDescriptorRange[setupRange].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-            descDescriptorRange[setupRange].OffsetInDescriptorsFromTableStart = setupOffset;
-            setupOffset += descDescriptorRange[setupRange].NumDescriptors;
+            descDescriptorRange[setupRange].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
             ++setupRange;
 
             D3D12_ROOT_PARAMETER descRootParameter = {};
