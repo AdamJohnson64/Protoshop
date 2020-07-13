@@ -5,7 +5,7 @@
 #include "Core_DXGI.h"
 #include "Core_Math.h"
 #include "Sample_DXRBase.h"
-#include "generated.Sample_DXR3D.dxr.h"
+#include "generated.Sample_DXRMesh.dxr.h"
 #include <atlbase.h>
 #include <array>
 #include <memory>
@@ -85,12 +85,12 @@ void ParametricUVToMesh::copyIndices(uint32_t* to)
     }
 }
 
-class Sample_DXR3D : public Sample_DXRBase
+class Sample_DXRMesh : public Sample_DXRBase
 {
 private:
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
 public:
-    Sample_DXR3D(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
+    Sample_DXRMesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
         Sample_DXRBase(pSwapChain, pDevice)
     {
         ////////////////////////////////////////////////////////////////////////////////
@@ -390,7 +390,7 @@ public:
     }
 };
 
-std::shared_ptr<Sample> CreateSample_DXR3D(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
+std::shared_ptr<Sample> CreateSample_DXRMesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
 {
-    return std::shared_ptr<Sample>(new Sample_DXR3D(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_DXRMesh(pSwapChain, pDevice));
 }
