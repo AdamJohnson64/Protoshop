@@ -88,7 +88,6 @@ public:
                 ImGui::Text("Dear ImGui running on Direct3D 12.");
                 ImGui::Render();
                 ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pD3D12GraphicsCommandList);
-                ImGui_ImplDX12_NewFrame();
             }
             // Transition the render target into presentation state for display.
             {
