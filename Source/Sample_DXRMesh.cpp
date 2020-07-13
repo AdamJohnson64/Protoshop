@@ -4,6 +4,7 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
+#include "Core_Object.h"
 #include "Sample_DXRBase.h"
 #include "generated.Sample_DXRMesh.dxr.h"
 #include <atlbase.h>
@@ -27,14 +28,23 @@ float3 Plane::getVertexPosition(float2 uv)
     return { -1 + uv.X * 2, sinf(uv.X * 20.0f) * 0.25f, -1 + uv.Y * 2 };
 }
 
-class ParametricUVToMesh
+class Mesh
+{
+public:
+    virtual uint32_t getVertexCount() = 0;
+    virtual uint32_t getIndexCount() = 0;
+    virtual void copyVertices(float3* to, uint32_t stride) = 0;
+    virtual void copyIndices(uint32_t* to, uint32_t stride) = 0;
+};
+
+class ParametricUVToMesh : public Object, public Mesh
 {
 public:
     ParametricUVToMesh(std::shared_ptr<ParametricUV> shape, uint32_t stepsInU, uint32_t stepsInV);
-    uint32_t getVertexCount();
-    uint32_t getIndexCount();
-    void copyVertices(float3* to);
-    void copyIndices(uint32_t* to);
+    uint32_t getVertexCount() override;
+    uint32_t getIndexCount() override;
+    void copyVertices(float3* to, uint32_t stride) override;
+    void copyIndices(uint32_t* to, uint32_t stride) override;
 private:
     std::shared_ptr<ParametricUV> m_shape;
     uint32_t m_stepsInU;
@@ -58,29 +68,36 @@ uint32_t ParametricUVToMesh::getIndexCount()
     return 3 * 2 * m_stepsInU * m_stepsInV;
 }
 
-void ParametricUVToMesh::copyVertices(float3* to)
+void ParametricUVToMesh::copyVertices(float3* to, uint32_t stride)
 {
     for (int32_t v = 0; v <= m_stepsInV; ++v)
     {
         for (int32_t u = 0; u <= m_stepsInU; ++u)
         {
-            *(to++) = m_shape->getVertexPosition({(float)u / m_stepsInU, (float)v / m_stepsInV });
+            *to = m_shape->getVertexPosition({(float)u / m_stepsInU, (float)v / m_stepsInV });
+            to = reinterpret_cast<float3*>(reinterpret_cast<uint8_t*>(to) + stride);
         }
     }
 }
 
-void ParametricUVToMesh::copyIndices(uint32_t* to)
+void ParametricUVToMesh::copyIndices(uint32_t* to, uint32_t stride)
 {
     for (int32_t v = 0; v < m_stepsInV; ++v)
     {
         for (int32_t u = 0; u < m_stepsInU; ++u)
         {
-            *(to++) = (u + 0) + (v + 0) * (m_stepsInU + 1);
-            *(to++) = (u + 0) + (v + 1) * (m_stepsInU + 1);
-            *(to++) = (u + 1) + (v + 1) * (m_stepsInU + 1);
-            *(to++) = (u + 0) + (v + 0) * (m_stepsInU + 1);
-            *(to++) = (u + 1) + (v + 1) * (m_stepsInU + 1);
-            *(to++) = (u + 1) + (v + 0) * (m_stepsInU + 1);
+            *to = (u + 0) + (v + 0) * (m_stepsInU + 1);
+            to = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(to) + stride);
+            *to = (u + 0) + (v + 1) * (m_stepsInU + 1);
+            to = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(to) + stride);
+            *to = (u + 1) + (v + 1) * (m_stepsInU + 1);
+            to = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(to) + stride);
+            *to = (u + 0) + (v + 0) * (m_stepsInU + 1);
+            to = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(to) + stride);
+            *to = (u + 1) + (v + 1) * (m_stepsInU + 1);
+            to = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(to) + stride);
+            *to = (u + 1) + (v + 0) * (m_stepsInU + 1);
+            to = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(to) + stride);
         }
     }
 }
@@ -174,20 +191,20 @@ public:
         // Create some simple geometry.
         ////////////////////////////////////////////////////////////////////////////////
         std::shared_ptr<ParametricUV> shape(new Plane());
-        std::shared_ptr<ParametricUVToMesh> mesh(new ParametricUVToMesh(shape, 100, 100));
+        std::shared_ptr<Mesh> mesh(new ParametricUVToMesh(shape, 100, 100));
         CComPtr<ID3D12Resource> Vertices;
         CComPtr<ID3D12Resource> Indices;
         {
             {
                 int sizeVertex = sizeof(float[3]) * mesh->getVertexCount();
                 std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-                mesh->copyVertices(reinterpret_cast<float3*>(vertices.get()));
+                mesh->copyVertices(reinterpret_cast<float3*>(vertices.get()), sizeof(float3));
                 Vertices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
             }
             {
                 int sizeIndices = sizeof(int32_t) * mesh->getIndexCount();
                 std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-                mesh->copyIndices(reinterpret_cast<uint32_t*>(indices.get()));
+                mesh->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
                 Indices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
             }
         }
