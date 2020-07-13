@@ -53,22 +53,3 @@ void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
 {
     payload.ColorAndLambda = float4(1, 0, 0, 1);
 }
-
-[shader("intersection")]
-void IntersectSphere()
-{
-    Attributes attributes;
-    float3 origin = ObjectRayOrigin();
-    float3 direction = ObjectRayDirection();
-    float a = dot(direction, direction);
-    float b = 2 * dot(origin, direction);
-    float c = dot(origin, origin) - 1;
-    float root = b * b - 4 * a * c;
-    if (root < 0) return;
-    float solution = sqrt(root) / (2 * a);
-    float hitFront = -b - solution;
-    float rayLambdaStart = RayTCurrent();
-    if (hitFront <= rayLambdaStart) ReportHit(hitFront, 0, attributes);
-    float hitBack = -b + solution;
-    if (hitBack <= rayLambdaStart) ReportHit(hitBack, 0, attributes);
-}

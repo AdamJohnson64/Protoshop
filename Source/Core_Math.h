@@ -14,6 +14,11 @@ float Length(const float2& lhs);
 float2 Normalize(const float2& lhs);
 float2 Perpendicular(const float2& lhs);
 
+struct float3
+{
+    float X, Y, Z;
+};
+
 struct matrix44
 {
     float

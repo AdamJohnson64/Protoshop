@@ -1,19 +1,89 @@
-////////////////////////////////////////////////////////////////////////////////
-// EXPERIMENTS STILL GOING ON UNDERNEATH HERE...
-////////////////////////////////////////////////////////////////////////////////
-
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_Math.h"
 #include "Sample_DXRBase.h"
 #include "generated.Sample_DXR3D.dxr.h"
 #include <atlbase.h>
-#include <d3dcompiler.h>
 #include <array>
-#include <functional>
 #include <memory>
+
+class ParametricUV
+{
+public:
+    virtual float3 getVertexPosition(float2 uv) = 0;
+};
+
+class Plane : public Object, public ParametricUV
+{
+public:
+    float3 getVertexPosition(float2 uv);
+};
+
+float3 Plane::getVertexPosition(float2 uv)
+{
+    return { -1 + uv.X * 2, sinf(uv.X * 20.0f) * 0.25f, -1 + uv.Y * 2 };
+}
+
+class ParametricUVToMesh
+{
+public:
+    ParametricUVToMesh(std::shared_ptr<ParametricUV> shape, uint32_t stepsInU, uint32_t stepsInV);
+    uint32_t getVertexCount();
+    uint32_t getIndexCount();
+    void copyVertices(float3* to);
+    void copyIndices(uint32_t* to);
+private:
+    std::shared_ptr<ParametricUV> m_shape;
+    uint32_t m_stepsInU;
+    uint32_t m_stepsInV;
+};
+
+ParametricUVToMesh::ParametricUVToMesh(std::shared_ptr<ParametricUV> shape, uint32_t stepsInU, uint32_t stepsInV) :
+    m_shape(shape),
+    m_stepsInU(stepsInU),
+    m_stepsInV(stepsInV)
+{
+}
+
+uint32_t ParametricUVToMesh::getVertexCount()
+{
+    return (m_stepsInU + 1) * (m_stepsInV + 1);
+}
+
+uint32_t ParametricUVToMesh::getIndexCount()
+{
+    return 3 * 2 * m_stepsInU * m_stepsInV;
+}
+
+void ParametricUVToMesh::copyVertices(float3* to)
+{
+    for (int32_t v = 0; v <= m_stepsInV; ++v)
+    {
+        for (int32_t u = 0; u <= m_stepsInU; ++u)
+        {
+            *(to++) = m_shape->getVertexPosition({(float)u / m_stepsInU, (float)v / m_stepsInV });
+        }
+    }
+}
+
+void ParametricUVToMesh::copyIndices(uint32_t* to)
+{
+    for (int32_t v = 0; v < m_stepsInV; ++v)
+    {
+        for (int32_t u = 0; u < m_stepsInU; ++u)
+        {
+            *(to++) = (u + 0) + (v + 0) * (m_stepsInU + 1);
+            *(to++) = (u + 0) + (v + 1) * (m_stepsInU + 1);
+            *(to++) = (u + 1) + (v + 1) * (m_stepsInU + 1);
+            *(to++) = (u + 0) + (v + 0) * (m_stepsInU + 1);
+            *(to++) = (u + 1) + (v + 1) * (m_stepsInU + 1);
+            *(to++) = (u + 1) + (v + 0) * (m_stepsInU + 1);
+        }
+    }
+}
 
 class Sample_DXR3D : public Sample_DXRBase
 {
@@ -44,7 +114,7 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup", L"HitGroup2", L"IntersectSphere" };
+            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup", L"HitGroup2" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
             descSubobjectExports.NumExports = _countof(shaderExports);
             descSubobjectExports.pExports = shaderExports;
@@ -84,9 +154,8 @@ public:
 
             D3D12_HIT_GROUP_DESC descHitGroup2 = {};
             descHitGroup2.HitGroupExport = L"HitGroup2";
-            descHitGroup2.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+            descHitGroup2.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
             descHitGroup2.ClosestHitShaderImport = L"MaterialRedPlastic";
-            descHitGroup2.IntersectionShaderImport = L"IntersectSphere";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
             descSubobject[setupSubobject].pDesc = &descHitGroup2;
             ++setupSubobject;
@@ -106,36 +175,23 @@ public:
             ////////////////////////////////////////////////////////////////////////////////
             // Create some simple geometry.
             ////////////////////////////////////////////////////////////////////////////////
+            std::shared_ptr<ParametricUV> shape(new Plane());
+            std::shared_ptr<ParametricUVToMesh> mesh(new ParametricUVToMesh(shape, 100, 100));
             CComPtr<ID3D12Resource> Vertices;
             CComPtr<ID3D12Resource> Indices;
             {
-                float vertices[] =
                 {
-                    -10, 0, -10,
-                    10, 0, -10,
-                    -10, 0, 10,
-                    10, 0, 10,
-                };
-                Vertices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(vertices), sizeof(vertices), vertices);
-                uint32_t indices[] =
+                    int sizeVertex = sizeof(float[3]) * mesh->getVertexCount();
+                    std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
+                    mesh->copyVertices(reinterpret_cast<float3*>(vertices.get()));
+                    Vertices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
+                }
                 {
-                    0, 1, 3, 0, 3, 2
-                };
-                Indices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(indices), sizeof(indices), indices);
-            }
-            ////////////////////////////////////////////////////////////////////////////////
-            // Create AABBs.
-            ////////////////////////////////////////////////////////////////////////////////
-            CComPtr<ID3D12Resource> AABBs;
-            {
-                D3D12_RAYTRACING_AABB aabb = {};
-                aabb.MinX = -1;
-                aabb.MinY = -1;
-                aabb.MinZ = -1;
-                aabb.MaxX = 1;
-                aabb.MaxY = 1;
-                aabb.MaxZ = 1;
-                AABBs.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(aabb), sizeof(aabb), &aabb);
+                    int sizeIndices = sizeof(int32_t) * mesh->getIndexCount();
+                    std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
+                    mesh->copyIndices(reinterpret_cast<uint32_t*>(indices.get()));
+                    Indices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
+                }
             }
             ////////////////////////////////////////////////////////////////////////////////
             // BLAS - Build the bottom level acceleration structure.
@@ -148,21 +204,16 @@ public:
                 descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
                 descRaytracingInputs.NumDescs = 1;
                 descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-                D3D12_RAYTRACING_GEOMETRY_DESC descGeometry[2] = {};
-                descGeometry[1].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-                descGeometry[1].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-                descGeometry[1].Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-                descGeometry[1].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-                descGeometry[1].Triangles.IndexCount = 6;
-                descGeometry[1].Triangles.VertexCount = 4;
-                descGeometry[1].Triangles.IndexBuffer = Indices->GetGPUVirtualAddress();
-                descGeometry[1].Triangles.VertexBuffer.StartAddress = Vertices->GetGPUVirtualAddress();
-                descGeometry[1].Triangles.VertexBuffer.StrideInBytes = sizeof(float[3]);
-                descGeometry[0].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+                D3D12_RAYTRACING_GEOMETRY_DESC descGeometry[1] = {};
+                descGeometry[0].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
                 descGeometry[0].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-                descGeometry[0].AABBs.AABBCount = 1;
-                descGeometry[0].AABBs.AABBs.StartAddress = AABBs->GetGPUVirtualAddress();
-                descGeometry[0].AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB);
+                descGeometry[0].Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+                descGeometry[0].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+                descGeometry[0].Triangles.IndexCount = mesh->getIndexCount();
+                descGeometry[0].Triangles.VertexCount = mesh->getVertexCount();
+                descGeometry[0].Triangles.IndexBuffer = Indices->GetGPUVirtualAddress();
+                descGeometry[0].Triangles.VertexBuffer.StartAddress = Vertices->GetGPUVirtualAddress();
+                descGeometry[0].Triangles.VertexBuffer.StrideInBytes = sizeof(float[3]);
                 descRaytracingInputs.pGeometryDescs = &descGeometry[0];
                 m_pDevice->GetID3D12Device()->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
                 // Create the output and scratch buffers.
@@ -183,19 +234,12 @@ public:
             ////////////////////////////////////////////////////////////////////////////////
             CComPtr<ID3D12Resource1> ResourceInstance;
             {
-                D3D12_RAYTRACING_INSTANCE_DESC DxrInstance[2] = {};
+                D3D12_RAYTRACING_INSTANCE_DESC DxrInstance[1] = {};
                 DxrInstance[0].Transform[0][0] = 1;
                 DxrInstance[0].Transform[1][1] = 1;
                 DxrInstance[0].Transform[2][2] = 1;
                 DxrInstance[0].InstanceMask = 0xFF;
-                DxrInstance[0].InstanceContributionToHitGroupIndex = 0;
                 DxrInstance[0].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
-                DxrInstance[1].Transform[0][0] = 1;
-                DxrInstance[1].Transform[1][1] = 1;
-                DxrInstance[1].Transform[2][2] = 1;
-                DxrInstance[1].InstanceMask = 0xFF;
-                DxrInstance[1].InstanceContributionToHitGroupIndex = 1;
-                DxrInstance[1].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
                 ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(DxrInstance), sizeof(DxrInstance), &DxrInstance);
             }
             ////////////////////////////////////////////////////////////////////////////////
@@ -206,7 +250,7 @@ public:
                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
                 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs = {};
                 descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-                descRaytracingInputs.NumDescs = 2;
+                descRaytracingInputs.NumDescs = 1;
                 descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
                 descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
                 m_pDevice->GetID3D12Device()->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
