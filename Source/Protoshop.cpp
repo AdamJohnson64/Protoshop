@@ -42,6 +42,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> pWindowD3D12DXRBasic(CreateNewWindow());
         pWindowD3D12DXRBasic->SetSample(CreateSample_DXRBasic(CreateDXGISwapChain(pDevice12, pWindowD3D12DXRBasic->GetWindowHandle()), pDevice12));
 
+        std::shared_ptr<Window> pWindowDXRImplicit(CreateNewWindow());
+        pWindowDXRImplicit->SetSample(CreateSample_DXRImplicit(CreateDXGISwapChain(pDevice12, pWindowDXRImplicit->GetWindowHandle()), pDevice12));
+
         std::shared_ptr<Window> pWindowD3D12Imgui(CreateNewWindow());
         pWindowD3D12Imgui->SetSample(CreateSample_D3D12Imgui(CreateDXGISwapChain(pDevice12, pWindowD3D12Imgui->GetWindowHandle()), pDevice12));
 

@@ -43,6 +43,7 @@
     <ClCompile Include="Source\Sample_DXRBase.cpp" />
     <ClCompile Include="Source\Sample_DXRBasic.cpp" />
     <ClCompile Include="Source\Sample_D3D12Imgui.cpp" />
+    <ClCompile Include="Source\Sample_DXRImplicit.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx11.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx12.cpp" />
@@ -66,6 +67,14 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
+    </FxCompile>
+    <FxCompile Include="Source\Sample_DXRImplicit.hlsl">
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
       <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
       <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
