@@ -21,6 +21,10 @@
     <ClInclude Include="Source\Sample_D3D11Base.h" />
     <ClInclude Include="Source\Sample_DXRBase.h" />
     <ClInclude Include="Source\Sample_Manifest.h" />
+    <ClInclude Include="Source\Scene_Mesh.h" />
+    <ClInclude Include="Source\Scene_ParametricUV.h" />
+    <ClInclude Include="Source\Scene_ParametricUVToMesh.h" />
+    <ClInclude Include="Source\Scene_Plane.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core_D3D11.cpp" />
@@ -45,6 +49,8 @@
     <ClCompile Include="Source\Sample_D3D12Imgui.cpp" />
     <ClCompile Include="Source\Sample_DXRImplicit.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
+    <ClCompile Include="Source\Scene_ParametricUVToMesh.cpp" />
+    <ClCompile Include="Source\Scene_Plane.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx11.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx12.cpp" />
     <ClCompile Include="Submodules\imgui\imgui.cpp" />
