@@ -8,14 +8,14 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Sample.h"
-#include "generated.Sample_D3D12DXR3D.dxr.h"
+#include "generated.Sample_DXR3D.dxr.h"
 #include <atlbase.h>
 #include <d3dcompiler.h>
 #include <array>
 #include <functional>
 #include <memory>
 
-class Sample_D3D12DXR3D : public Sample
+class Sample_DXR3D : public Sample
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
@@ -24,7 +24,7 @@ private:
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
     CComPtr<ID3D12Resource1> m_pResourceTargetUAV;
 public:
-    Sample_D3D12DXR3D(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
+    Sample_DXR3D(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
     {
@@ -412,7 +412,7 @@ public:
     }
 };
 
-std::shared_ptr<Sample> CreateSample_D3D12DXR3D(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
+std::shared_ptr<Sample> CreateSample_DXR3D(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
 {
-    return std::shared_ptr<Sample>(new Sample_D3D12DXR3D(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_DXR3D(pSwapChain, pDevice));
 }

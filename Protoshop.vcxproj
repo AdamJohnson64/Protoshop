@@ -38,8 +38,8 @@
     <ClCompile Include="Source\Sample_D3D11Imgui.cpp" />
     <ClCompile Include="Source\Sample_D3D11Tessellation.cpp" />
     <ClCompile Include="Source\Sample_D3D12Basic.cpp" />
-    <ClCompile Include="Source\Sample_D3D12DXR3D.cpp" />
-    <ClCompile Include="Source\Sample_D3D12DXRBasic.cpp" />
+    <ClCompile Include="Source\Sample_DXR3D.cpp" />
+    <ClCompile Include="Source\Sample_DXRBasic.cpp" />
     <ClCompile Include="Source\Sample_D3D12Imgui.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx11.cpp" />
@@ -52,7 +52,7 @@
     <Text Include="LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Source\Sample_D3D12DXR3D.hlsl">
+    <FxCompile Include="Source\Sample_DXR3D.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -60,7 +60,7 @@
       <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
       <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
     </FxCompile>
-    <FxCompile Include="Source\Sample_D3D12DXRBasic.hlsl">
+    <FxCompile Include="Source\Sample_DXRBasic.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </EntryPointName>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
