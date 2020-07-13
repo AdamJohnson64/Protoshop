@@ -1,5 +1,6 @@
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
+#include "Core_D3D12Util.h"
 #include "Sample_DXRBase.h"
 #include <array>
 #include <atlbase.h>
@@ -64,4 +65,59 @@ Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::s
         TRYD3D(m_pDevice->GetID3D12Device()->CreateCommittedResource(&descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource1), (void**)&m_pResourceTargetUAV));
         m_pResourceTargetUAV->SetName(L"DXR Output Texture2D UAV");
     }
+}
+
+void Sample_DXRBase::Render()
+{
+    RenderSample();
+    ////////////////////////////////////////////////////////////////////////////////
+    // Get the next available backbuffer.
+    ////////////////////////////////////////////////////////////////////////////////
+    CComPtr<ID3D12Resource> pD3D12Resource;
+    TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(m_pSwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(), __uuidof(ID3D12Resource), (void**)&pD3D12Resource));
+    pD3D12Resource->SetName(L"D3D12Resource (Backbuffer)");
+    ////////////////////////////////////////////////////////////////////////////////
+    // Copy the raytracer output from UAV to the back-buffer.
+    ////////////////////////////////////////////////////////////////////////////////
+    RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
+        {
+            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
+            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            descResourceBarrier.Transition.pResource = m_pResourceTargetUAV;
+            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
+        }
+        {
+            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
+            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            descResourceBarrier.Transition.pResource = pD3D12Resource;
+            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
+        }
+        RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);
+        {
+            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
+            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            descResourceBarrier.Transition.pResource = m_pResourceTargetUAV;
+            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
+        }
+        {
+            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
+            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            descResourceBarrier.Transition.pResource = pD3D12Resource;
+            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
+        }
+    });
+    // Swap the backbuffer and send this to the desktop composer for display.
+    TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
 }

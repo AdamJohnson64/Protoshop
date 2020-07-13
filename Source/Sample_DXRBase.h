@@ -10,6 +10,8 @@ class Sample_DXRBase : public Sample
 {
 public:
     Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
+    void Render() override;
+    virtual void RenderSample() = 0;
 protected:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     std::shared_ptr<Direct3D12Device> m_pDevice;
