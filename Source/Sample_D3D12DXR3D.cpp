@@ -1,3 +1,7 @@
+////////////////////////////////////////////////////////////////////////////////
+// EXPERIMENTS STILL GOING ON UNDERNEATH HERE...
+////////////////////////////////////////////////////////////////////////////////
+
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
@@ -83,7 +87,7 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup", L"HitGroup2" };
+            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup", L"HitGroup2", L"IntersectSphere" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
             descSubobjectExports.NumExports = _countof(shaderExports);
             descSubobjectExports.pExports = shaderExports;
@@ -115,6 +119,7 @@ public:
 
             D3D12_HIT_GROUP_DESC descHitGroup = {};
             descHitGroup.HitGroupExport = L"HitGroup";
+            descHitGroup.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
             descHitGroup.ClosestHitShaderImport = L"MaterialCheckerboard";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
             descSubobject[setupSubobject].pDesc = &descHitGroup;
@@ -122,7 +127,9 @@ public:
 
             D3D12_HIT_GROUP_DESC descHitGroup2 = {};
             descHitGroup2.HitGroupExport = L"HitGroup2";
+            descHitGroup2.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
             descHitGroup2.ClosestHitShaderImport = L"MaterialRedPlastic";
+            descHitGroup2.IntersectionShaderImport = L"IntersectSphere";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
             descSubobject[setupSubobject].pDesc = &descHitGroup2;
             ++setupSubobject;
@@ -183,6 +190,20 @@ public:
                 Indices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(indices), sizeof(indices), indices);
             }
             ////////////////////////////////////////////////////////////////////////////////
+            // Create AABBs.
+            ////////////////////////////////////////////////////////////////////////////////
+            CComPtr<ID3D12Resource> AABBs;
+            {
+                D3D12_RAYTRACING_AABB aabb = {};
+                aabb.MinX = -1;
+                aabb.MinY = -1;
+                aabb.MinZ = -1;
+                aabb.MaxX = 1;
+                aabb.MaxY = 1;
+                aabb.MaxZ = 1;
+                AABBs.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(aabb), sizeof(aabb), &aabb);
+            }
+            ////////////////////////////////////////////////////////////////////////////////
             // BLAS - Build the bottom level acceleration structure.
             ////////////////////////////////////////////////////////////////////////////////
             // Create and initialize the BLAS.
@@ -193,17 +214,22 @@ public:
                 descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
                 descRaytracingInputs.NumDescs = 1;
                 descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-                D3D12_RAYTRACING_GEOMETRY_DESC descGeometry = {};
-                descGeometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-                descGeometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-                descGeometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-                descGeometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-                descGeometry.Triangles.IndexCount = 6;
-                descGeometry.Triangles.VertexCount = 4;
-                descGeometry.Triangles.IndexBuffer = Indices->GetGPUVirtualAddress();
-                descGeometry.Triangles.VertexBuffer.StartAddress = Vertices->GetGPUVirtualAddress();
-                descGeometry.Triangles.VertexBuffer.StrideInBytes = sizeof(float[3]);
-                descRaytracingInputs.pGeometryDescs = &descGeometry;
+                D3D12_RAYTRACING_GEOMETRY_DESC descGeometry[2] = {};
+                descGeometry[1].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+                descGeometry[1].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+                descGeometry[1].Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+                descGeometry[1].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+                descGeometry[1].Triangles.IndexCount = 6;
+                descGeometry[1].Triangles.VertexCount = 4;
+                descGeometry[1].Triangles.IndexBuffer = Indices->GetGPUVirtualAddress();
+                descGeometry[1].Triangles.VertexBuffer.StartAddress = Vertices->GetGPUVirtualAddress();
+                descGeometry[1].Triangles.VertexBuffer.StrideInBytes = sizeof(float[3]);
+                descGeometry[0].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+                descGeometry[0].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+                descGeometry[0].AABBs.AABBCount = 1;
+                descGeometry[0].AABBs.AABBs.StartAddress = AABBs->GetGPUVirtualAddress();
+                descGeometry[0].AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB);
+                descRaytracingInputs.pGeometryDescs = &descGeometry[0];
                 m_pDevice->GetID3D12Device()->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
                 // Create the output and scratch buffers.
                 ResourceBLAS.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
@@ -231,7 +257,6 @@ public:
                 DxrInstance[0].InstanceContributionToHitGroupIndex = 0;
                 DxrInstance[0].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
                 DxrInstance[1].Transform[0][0] = 1;
-                DxrInstance[1].Transform[0][3] = 16;
                 DxrInstance[1].Transform[1][1] = 1;
                 DxrInstance[1].Transform[2][2] = 1;
                 DxrInstance[1].InstanceMask = 0xFF;
@@ -247,7 +272,7 @@ public:
                 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
                 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs = {};
                 descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-                descRaytracingInputs.NumDescs = 1;
+                descRaytracingInputs.NumDescs = 2;
                 descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
                 descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
                 m_pDevice->GetID3D12Device()->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
@@ -331,7 +356,7 @@ public:
                     descDispatchRays.RayGenerationShaderRecord.SizeInBytes = 64;
                     descDispatchRays.MissShaderTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 1;
                     descDispatchRays.MissShaderTable.SizeInBytes = 64;
-                    descDispatchRays.MissShaderTable.StrideInBytes = 64;
+                    descDispatchRays.MissShaderTable.StrideInBytes = 0;
                     descDispatchRays.HitGroupTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 2;
                     descDispatchRays.HitGroupTable.SizeInBytes = 64;
                     descDispatchRays.HitGroupTable.StrideInBytes = 64;

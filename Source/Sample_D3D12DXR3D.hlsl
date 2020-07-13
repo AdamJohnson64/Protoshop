@@ -10,18 +10,13 @@ struct Attributes
 RWTexture2D<float4> RTOutput             : register(u0);
 RaytracingAccelerationStructure SceneBVH : register(t0);
 
-struct VertexAttributes
-{
-    float3 position;
-};
-
 [shader("raygeneration")]
 void RayGeneration()
 {
     uint2 LaunchIndex = DispatchRaysIndex().xy;
     uint2 LaunchDimensions = DispatchRaysDimensions().xy;
     RayDesc ray;
-    ray.Origin = float3(0, 1, -1);
+    ray.Origin = float3(0, 1, -3);
     float normx = (float)LaunchIndex.x / (float)LaunchDimensions.x;
     float normy = (float)LaunchIndex.y / (float)LaunchDimensions.y;
     ray.Direction = normalize(float3(-1 + normx * 2, 1 - normy * 2, 1));
@@ -57,4 +52,23 @@ void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
 void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
 {
     payload.ColorAndLambda = float4(1, 0, 0, 1);
+}
+
+[shader("intersection")]
+void IntersectSphere()
+{
+    Attributes attributes;
+    float3 origin = ObjectRayOrigin();
+    float3 direction = ObjectRayDirection();
+    float a = dot(direction, direction);
+    float b = 2 * dot(origin, direction);
+    float c = dot(origin, origin) - 1;
+    float root = b * b - 4 * a * c;
+    if (root < 0) return;
+    float solution = sqrt(root) / (2 * a);
+    float hitFront = -b - solution;
+    float rayLambdaStart = RayTCurrent();
+    if (hitFront <= rayLambdaStart) ReportHit(hitFront, 0, attributes);
+    float hitBack = -b + solution;
+    if (hitBack <= rayLambdaStart) ReportHit(hitBack, 0, attributes);
 }
