@@ -5,6 +5,7 @@ struct HitInfo
 
 struct Attributes
 {
+    float4 Normal;
 };
 
 RWTexture2D<float4> RTOutput             : register(u0);
@@ -37,7 +38,10 @@ void Miss(inout HitInfo payload)
 [shader("closesthit")]
 void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
 {
-    payload.ColorAndLambda = float4(1, 0, 0, 1);
+    float light = max(0, dot(attrib.Normal.xyz, normalize(float3(1, 1, 1))));
+    payload.ColorAndLambda = float4(float3(1, 0, 0) * light, 1);
+    // Have a look at the normals...
+    // payload.ColorAndLambda = float4((attrib.Normal.xyz + 1) / 2, 1);
 }
 
 [shader("intersection")]
@@ -53,8 +57,17 @@ void IntersectSphere()
     if (root < 0) return;
     float solution = sqrt(root) / (2 * a);
     float hitFront = -b - solution;
-    float rayLambdaStart = RayTCurrent();
-    if (hitFront <= rayLambdaStart) ReportHit(hitFront, 0, attributes);
+    if (hitFront >= 0)
+    {
+        // Yes yes, I know, these are wrong.
+        attributes.Normal = float4(mul(normalize(origin + direction * hitFront), (float3x3)ObjectToWorld3x4()), hitFront);
+        ReportHit(hitFront, 0, attributes);
+    }
     float hitBack = -b + solution;
-    if (hitBack <= rayLambdaStart) ReportHit(hitBack, 0, attributes);
+    if (hitBack >= 0)
+    {
+        // Yes yes, I know, these are wrong.
+        attributes.Normal = float4(mul(normalize(origin + direction * hitBack), (float3x3)ObjectToWorld3x4()), hitBack);
+        ReportHit(hitBack, 0, attributes);
+    }
 }
