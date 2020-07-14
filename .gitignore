@@ -3,4 +3,5 @@
 !/LICENSE.txt
 !/*.vcxproj
 !/Source
+!/Submodules
 generated.*
