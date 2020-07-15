@@ -25,6 +25,7 @@
     <ClInclude Include="Source\Scene_ParametricUV.h" />
     <ClInclude Include="Source\Scene_ParametricUVToMesh.h" />
     <ClInclude Include="Source\Scene_Plane.h" />
+    <ClInclude Include="Source\Scene_Sphere.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core_D3D11.cpp" />
@@ -51,6 +52,7 @@
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
     <ClCompile Include="Source\Scene_ParametricUVToMesh.cpp" />
     <ClCompile Include="Source\Scene_Plane.cpp" />
+    <ClCompile Include="Source\Scene_Sphere.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx11.cpp" />
     <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx12.cpp" />
     <ClCompile Include="Submodules\imgui\imgui.cpp" />
