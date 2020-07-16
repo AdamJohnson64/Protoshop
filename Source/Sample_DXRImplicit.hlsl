@@ -35,6 +35,35 @@ void Miss(inout HitInfo payload)
     payload.ColorAndLambda = float4(0.25f, 0.25f, 0.25f, 1);
 }
 
+float3 reflect(float3 i, float3 n)
+{
+     return i - 2 * n * dot(i, n);
+}
+
+[shader("closesthit")]
+void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
+{
+    float3 worldRayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+    float x = worldRayOrigin.x * 4;
+    float z = worldRayOrigin.z * 4;
+    x -= floor(x);
+    z -= floor(z);
+    x *= 2;
+    z *= 2;
+    float3 vectorLight = normalize(float3(1, 1, -1));
+    float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
+    float light = max(0, dot(attrib.Normal.xyz, vectorLight));
+    float blackOrWhite = ((int)x + (int)z) % 2;
+    float lit = light * blackOrWhite;
+    float3 colorAlbedo = float3(lit, lit, lit);
+    RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
+    HitInfo payloadReflect;
+    payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
+    TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
+    float3 colorReflect = payloadReflect.ColorAndLambda.xyz;
+    payload.ColorAndLambda = float4(lerp(colorAlbedo, colorReflect, 0.5), 1);
+}
+
 [shader("closesthit")]
 void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
 {
@@ -42,6 +71,22 @@ void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
     payload.ColorAndLambda = float4(float3(1, 0, 0) * light, 1);
     // Have a look at the normals...
     // payload.ColorAndLambda = float4((attrib.Normal.xyz + 1) / 2, 1);
+}
+
+[shader("intersection")]
+void IntersectPlane()
+{
+    Attributes attributes;
+    float3 origin = ObjectRayOrigin();
+    float3 direction = ObjectRayDirection();
+    float4 plane = float4(0,1,0, 0);
+    float divisor = dot(plane.xyz, direction);
+    float lambda = (plane.w - dot(origin, plane.xyz)) / divisor;
+    if (lambda < 0) return;
+    float3 intersection = origin + direction * lambda;
+    if (intersection.x < -1 || intersection.x > 1 || intersection.z < -1 || intersection.z > 1) return;
+    attributes.Normal = float4(plane.xyz, 0);
+    ReportHit(lambda, 0, attributes);
 }
 
 [shader("intersection")]

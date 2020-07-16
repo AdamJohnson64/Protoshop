@@ -36,7 +36,7 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup", L"IntersectSphere" };
+            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup1", L"HitGroup2", L"IntersectPlane", L"IntersectSphere" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
             descSubobjectExports.NumExports = _countof(shaderExports);
             descSubobjectExports.pExports = shaderExports;
@@ -61,18 +61,27 @@ public:
             ++setupSubobject;
 
             D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
-            descPipelineConfig.MaxTraceRecursionDepth = 1;
+            descPipelineConfig.MaxTraceRecursionDepth = 2;
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
             descSubobject[setupSubobject].pDesc = &descPipelineConfig;
             ++setupSubobject;
 
-            D3D12_HIT_GROUP_DESC descHitGroup = {};
-            descHitGroup.HitGroupExport = L"HitGroup";
-            descHitGroup.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-            descHitGroup.ClosestHitShaderImport = L"MaterialRedPlastic";
-            descHitGroup.IntersectionShaderImport = L"IntersectSphere";
+            D3D12_HIT_GROUP_DESC descHitGroup1 = {};
+            descHitGroup1.HitGroupExport = L"HitGroup1";
+            descHitGroup1.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+            descHitGroup1.ClosestHitShaderImport = L"MaterialCheckerboard";
+            descHitGroup1.IntersectionShaderImport = L"IntersectPlane";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-            descSubobject[setupSubobject].pDesc = &descHitGroup;
+            descSubobject[setupSubobject].pDesc = &descHitGroup1;
+            ++setupSubobject;
+
+            D3D12_HIT_GROUP_DESC descHitGroup2 = {};
+            descHitGroup2.HitGroupExport = L"HitGroup2";
+            descHitGroup2.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+            descHitGroup2.ClosestHitShaderImport = L"MaterialRedPlastic";
+            descHitGroup2.IntersectionShaderImport = L"IntersectSphere";
+            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+            descSubobject[setupSubobject].pDesc = &descHitGroup2;
             ++setupSubobject;
 
             D3D12_STATE_OBJECT_DESC descStateObject = {};
@@ -136,12 +145,36 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         CComPtr<ID3D12Resource1> ResourceInstance;
         {
-            D3D12_RAYTRACING_INSTANCE_DESC DxrInstance[1] = {};
-            DxrInstance[0].Transform[0][0] = 1;
+            D3D12_RAYTRACING_INSTANCE_DESC DxrInstance[4] = {};
+            DxrInstance[0].Transform[0][0] = 10;
             DxrInstance[0].Transform[1][1] = 1;
-            DxrInstance[0].Transform[2][2] = 1;
+            DxrInstance[0].Transform[2][2] = 10;
             DxrInstance[0].InstanceMask = 0xFF;
+            DxrInstance[0].InstanceContributionToHitGroupIndex = 0;
             DxrInstance[0].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
+            DxrInstance[1].Transform[0][0] = 1;
+            DxrInstance[1].Transform[1][1] = 1;
+            DxrInstance[1].Transform[2][2] = 1;
+            DxrInstance[1].Transform[0][3] = -2;
+            DxrInstance[1].Transform[1][3] = 1;
+            DxrInstance[1].InstanceMask = 0xFF;
+            DxrInstance[1].InstanceContributionToHitGroupIndex = 1;
+            DxrInstance[1].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
+            DxrInstance[2].Transform[0][0] = 1;
+            DxrInstance[2].Transform[1][1] = 1;
+            DxrInstance[2].Transform[2][2] = 1;
+            DxrInstance[2].Transform[1][3] = 1;
+            DxrInstance[2].InstanceMask = 0xFF;
+            DxrInstance[2].InstanceContributionToHitGroupIndex = 1;
+            DxrInstance[2].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
+            DxrInstance[3].Transform[0][0] = 1;
+            DxrInstance[3].Transform[1][1] = 1;
+            DxrInstance[3].Transform[2][2] = 1;
+            DxrInstance[3].Transform[0][3] = 2;
+            DxrInstance[3].Transform[1][3] = 1;
+            DxrInstance[3].InstanceMask = 0xFF;
+            DxrInstance[3].InstanceContributionToHitGroupIndex = 1;
+            DxrInstance[3].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
             ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(DxrInstance), sizeof(DxrInstance), &DxrInstance);
         }
         ////////////////////////////////////////////////////////////////////////////////
@@ -152,7 +185,7 @@ public:
             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs = {};
             descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-            descRaytracingInputs.NumDescs = 1;
+            descRaytracingInputs.NumDescs = 4;
             descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
             descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
             m_pDevice->GetID3D12Device()->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
@@ -199,7 +232,7 @@ public:
             CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
             TRYD3D(m_pPipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(&stateObjectProperties));
             uint32_t shaderEntrySize = 64;
-            uint32_t shaderTableSize = shaderEntrySize * 3;
+            uint32_t shaderTableSize = shaderEntrySize * 4;
             std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
             memset(&shaderTableCPU[0], 0, shaderTableSize);
             // Shader Index 0 - Ray Generation Shader
@@ -209,8 +242,11 @@ public:
             memcpy(&shaderTableCPU[shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 1] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 2 - Hit Shader 1
-            memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroup1"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 2] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
+            // Shader Index 3 - Hit Shader 1
+            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroup2"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 3] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             ResourceShaderTable.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
