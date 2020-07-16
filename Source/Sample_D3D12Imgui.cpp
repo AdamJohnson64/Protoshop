@@ -2,32 +2,23 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "Mixin_ImguiD3D12.h"
 #include "Sample.h"
-#include "examples/imgui_impl_dx12.h"
 #include <atlbase.h>
 #include <functional>
 #include <memory>
 
-class Sample_D3D12Imgui : public Sample
+class Sample_D3D12Imgui : public Sample, public Mixin_ImguiD3D12
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     std::shared_ptr<Direct3D12Device> m_pDevice;
-    ImGuiContext* m_pImgui;
 public:
     Sample_D3D12Imgui(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
+        Mixin_ImguiD3D12(pDevice),
         m_pSwapChain(pSwapChain),
-        m_pDevice(pDevice),
-        m_pImgui(ImGui::CreateContext())
+        m_pDevice(pDevice)
     {
-        ID3D12DescriptorHeap* pHeap = pDevice->GetID3D12DescriptorHeapCBVSRVUAV();
-        ImGui_ImplDX12_Init(pDevice->GetID3D12Device(), 1, DXGI_FORMAT_B8G8R8A8_UNORM, pHeap, pHeap->GetCPUDescriptorHandleForHeapStart(), pHeap->GetGPUDescriptorHandleForHeapStart());
-    }
-    ~Sample_D3D12Imgui()
-    {
-        ImGui::SetCurrentContext(m_pImgui);
-        ImGui_ImplDX12_Shutdown();
-        ImGui::DestroyContext(m_pImgui);
     }
     void Render() override
     {
@@ -40,7 +31,7 @@ public:
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
             m_pDevice->GetID3D12Device()->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
         }
-        RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList* pD3D12GraphicsCommandList)
+        RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDevice->GetID3D12RootSignature());
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV(), m_pDevice->GetID3D12DescriptorHeapSMP() };
@@ -78,17 +69,7 @@ public:
             }
             // Set up the Output Merger (OM) to define the target to render into.
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
-            {
-                ImGui::SetCurrentContext(m_pImgui);
-                ImGuiIO& io = ImGui::GetIO();
-                io.DisplaySize.x = RENDERTARGET_WIDTH;
-                io.DisplaySize.y = RENDERTARGET_HEIGHT;
-                ImGui_ImplDX12_NewFrame();
-                ImGui::NewFrame();
-                ImGui::Text("Dear ImGui running on Direct3D 12.");
-                ImGui::Render();
-                ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pD3D12GraphicsCommandList);
-            }
+            RenderImgui(pD3D12GraphicsCommandList);
             // Transition the render target into presentation state for display.
             {
                 D3D12_RESOURCE_BARRIER descBarrier = {};
@@ -100,6 +81,10 @@ public:
         });
         // Swap the backbuffer and send this to the desktop composer for display.
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
+    }
+    void BuildImguiUI() override
+    {
+        ImGui::Text("Dear ImGui running on Direct3D 12.");
     }
 };
 

@@ -9,8 +9,9 @@ public:
     Mixin_ImguiBase();
     ~Mixin_ImguiBase();
 protected:
-    ImGuiContext* pImgui;
+    virtual void BuildImguiUI() = 0;
     void MouseMove(int32_t x, int32_t y);
     void MouseDown(int32_t x, int32_t y);
     void MouseUp(int32_t x, int32_t y);
+    ImGuiContext* pImgui;
 };

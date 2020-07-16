@@ -11,5 +11,4 @@ public:
     ~Mixin_ImguiD3D11();
 protected:
     void RenderImgui();
-    virtual void BuildImguiUI() = 0;
 };
