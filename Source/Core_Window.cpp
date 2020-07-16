@@ -72,15 +72,33 @@ private:
             SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
             return 0;
         }
+        if (uMsg == WM_PAINT)
+        {
+            window->OnPaint();
+            ValidateRect(hWnd, nullptr);
+            return 0;
+        }
         if (uMsg == WM_CLOSE)
         {
             PostQuitMessage(0);
             return 0;
         }
-        if (uMsg == WM_PAINT)
+        if (uMsg == WM_MOUSEMOVE)
         {
-            window->OnPaint();
-            ValidateRect(hWnd, nullptr);
+            MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
+            if (mouse != nullptr) mouse->MouseMove(LOWORD(lParam), HIWORD(lParam));
+            return 0;
+        }
+        if (uMsg == WM_LBUTTONDOWN)
+        {
+            MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
+            if (mouse != nullptr) mouse->MouseDown(LOWORD(lParam), HIWORD(lParam));
+            return 0;
+        }
+        if (uMsg == WM_LBUTTONUP)
+        {
+            MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
+            if (mouse != nullptr) mouse->MouseUp(LOWORD(lParam), HIWORD(lParam));
             return 0;
         }
         return DefWindowProc(hWnd, uMsg, wParam, lParam);
