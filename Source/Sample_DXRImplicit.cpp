@@ -2,18 +2,20 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "Mixin_ImguiD3D12.h"
 #include "Sample_DXRBase.h"
 #include "generated.Sample_DXRImplicit.dxr.h"
 #include <array>
 #include <atlbase.h>
 
-class Sample_DXRImplicit : public Sample_DXRBase
+class Sample_DXRImplicit : public Sample_DXRBase, public Mixin_ImguiD3D12
 {
 private:
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
 public:
     Sample_DXRImplicit(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-        Sample_DXRBase(pSwapChain, pDevice)
+        Sample_DXRBase(pSwapChain, pDevice),
+        Mixin_ImguiD3D12(pDevice)
     {
         ////////////////////////////////////////////////////////////////////////////////
         // PIPELINE - Build the pipeline with all ray shaders.
@@ -273,6 +275,14 @@ public:
                 RaytraceCommandList->DispatchRays(&descDispatchRays);
             }
         });
+    }
+    void RenderPost(ID3D12GraphicsCommandList5* pCommandList)
+    {
+        RenderImgui(pCommandList);
+    }
+    void BuildImguiUI() override
+    {
+        ImGui::Text("Dear ImGui running on Direct3D DXR.");
     }
 };
 
