@@ -12,7 +12,7 @@ RWTexture2D<float4> RTOutput             : register(u0);
 RaytracingAccelerationStructure SceneBVH : register(t0);
 
 [shader("raygeneration")]
-void RayGeneration()
+void RayGenerationDebug()
 {
     uint2 LaunchIndex = DispatchRaysIndex().xy;
     uint2 LaunchDimensions = DispatchRaysDimensions().xy;
@@ -21,6 +21,34 @@ void RayGeneration()
     float normx = (float)LaunchIndex.x / (float)LaunchDimensions.x;
     float normy = (float)LaunchIndex.y / (float)LaunchDimensions.y;
     ray.Direction = normalize(float3(-1 + normx * 2, 1 - normy * 2, 1));
+    ray.TMin = 0.001f;
+    ray.TMax = 1000;
+    HitInfo payload;
+    payload.ColorAndLambda = float4(0, 0, 0, 1);
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
+    RTOutput[LaunchIndex.xy] = float4(payload.ColorAndLambda.rgb, 1.f);
+}
+
+[shader("raygeneration")]
+void RayGenerationRasterMatch()
+{
+    // This is Invert(CreateProjection(0.01f, 1.0f, 45deg, 45deg);
+    float4x4 imvp = {
+        2.12747860, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 2.12747860, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 1.00010002, 1.00000000,
+        0.000000000, 0.000000000, -0.0100010000, 0.000000000 };
+    uint2 LaunchIndex = DispatchRaysIndex().xy;
+    uint2 LaunchDimensions = DispatchRaysDimensions().xy;
+    float normx = (float)LaunchIndex.x / (float)LaunchDimensions.x;
+    float normy = (float)LaunchIndex.y / (float)LaunchDimensions.y;
+    RayDesc ray;
+    float4 front = float4(-1 + 2 * normx, -1 + 2 * normy, 0, 1);
+    front /= front.w;
+    float4 back = float4(-1 + 2 * normx, -1 + 2 * normy, 1, 1);
+    back /= back.w;
+    ray.Origin = front.xyz;
+    ray.Direction = normalize(back.xyz - front.xyz);
     ray.TMin = 0.001f;
     ray.TMax = 1000;
     HitInfo payload;

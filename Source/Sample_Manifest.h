@@ -14,6 +14,7 @@ std::shared_ptr<Sample> CreateSample_D3D11Tessellation(std::shared_ptr<DXGISwapC
 
 std::shared_ptr<Sample> CreateSample_D3D12Basic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 std::shared_ptr<Sample> CreateSample_D3D12Imgui(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
+std::shared_ptr<Sample> CreateSample_D3D12Mesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 
 std::shared_ptr<Sample> CreateSample_DXRBasic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 std::shared_ptr<Sample> CreateSample_DXRImplicit(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
