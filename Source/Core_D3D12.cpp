@@ -45,8 +45,8 @@ public:
             CComPtr<ID3DBlob> pD3D12BlobSignature;
             CComPtr<ID3DBlob> pD3D12BlobError;
             D3D12_ROOT_SIGNATURE_DESC descSignature = {};
-            D3D12_ROOT_PARAMETER parameters[2] = {};
-            D3D12_DESCRIPTOR_RANGE range[2] = {};
+            D3D12_ROOT_PARAMETER parameters[3] = {};
+            D3D12_DESCRIPTOR_RANGE range[3] = {};
             range[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
             range[0].NumDescriptors = 1;
             parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -59,8 +59,14 @@ public:
             parameters[1].DescriptorTable.pDescriptorRanges = &range[1];
             parameters[1].DescriptorTable.NumDescriptorRanges = 1;
             parameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+            range[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+            range[2].NumDescriptors = 1;
+            parameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            parameters[2].DescriptorTable.pDescriptorRanges = &range[2];
+            parameters[2].DescriptorTable.NumDescriptorRanges = 1;
+            parameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
             descSignature.pParameters = parameters;
-            descSignature.NumParameters = 2;
+            descSignature.NumParameters = 3;
             descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
             D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1, &pD3D12BlobSignature, &pD3D12BlobError);
             if (nullptr != pD3D12BlobError)

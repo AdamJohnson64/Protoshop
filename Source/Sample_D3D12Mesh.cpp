@@ -26,24 +26,14 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         // Create a vertex shader.
         CComPtr<ID3DBlob> pD3DBlobCodeVS = CompileShader("vs_5_0", "main", R"SHADER(
+cbuffer Constants
+{
+    float4x4 transform;
+};
+
 float4 main(float4 pos : SV_Position) : SV_Position
 {
-/*
-        float4x4 mvp = {
-            2.12747860, 0.000000000, 0.000000000, 0.000000000,
-            0.000000000, 2.12747860, 0.000000000, 0.000000000,
-            0.000000000, 0.000000000, 1.00010002, 1.00000000,
-            0.000000000, 0.000000000, -0.0100010000, 0.000000000
-        };
-        return mul(pos, mvp);
-*/
-        float4x4 mvp = {
-            1.000000000, 0.000000000, 0.000000000, 0.000000000,
-            0.000000000, 1.000000000, 0.000000000, 0.000000000,
-            0.000000000, 0.000000000, 1.000000000, 0.00000000,
-            0.000000000, 0.000000000, 1.000000000, 1.000000000
-        };
-        return mul(pos, mvp);
+        return mul(pos, transpose(transform));
 })SHADER");
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -91,11 +81,32 @@ float4 main() : SV_Target
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
             m_pDevice->GetID3D12Device()->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
         }
+        CComPtr<ID3D12Resource> constantBuffer;
+        {
+            Matrix44 translate = {
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 5, 1
+            };
+            Matrix44 project = CreateProjection(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
+            Matrix44 transform = translate * project;
+            constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &transform);
+        }
+        {
+            D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
+            descConstantBuffer.BufferLocation = constantBuffer->GetGPUVirtualAddress();
+            descConstantBuffer.SizeInBytes = 256;
+            m_pDevice->GetID3D12Device()->CreateConstantBufferView(&descConstantBuffer, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetCPUDescriptorHandleForHeapStart());
+        }
         std::vector<CComPtr<ID3D12Resource>> vertexBuffers;
         std::vector<CComPtr<ID3D12Resource>> indexBuffers;
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDevice->GetID3D12RootSignature());
+            ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV() };
+            pD3D12GraphicsCommandList->SetDescriptorHeaps(1, descriptorHeaps);
+            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(2, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
             // Put the RTV into render target state and clear it before use.
             {
                 D3D12_RESOURCE_BARRIER descBarrier = {};
