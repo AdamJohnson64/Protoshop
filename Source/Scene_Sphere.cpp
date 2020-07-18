@@ -2,7 +2,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-float3 Sphere::getVertexPosition(float2 uv)
+Vector3 Sphere::getVertexPosition(Vector2 uv)
 {
     float angleU = uv.X * (2 * M_PI);
     float angleV = uv.Y * (1 * M_PI);

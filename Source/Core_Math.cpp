@@ -2,70 +2,70 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-float2 operator*(const float& lhs, const float2& rhs) { return { lhs * rhs.X, lhs * rhs.Y }; }
-float2 operator*(const float2& lhs, const float& rhs) { return { lhs.X * rhs, lhs.Y * rhs }; }
-float2 operator+(const float2& lhs, const float2& rhs) { return { lhs.X + rhs.X, lhs.Y + rhs.Y }; }
-float2 operator-(const float2& lhs, const float2& rhs) { return { lhs.X - rhs.X, lhs.Y - rhs.Y }; }
-float Dot(const float2& lhs, const float2& rhs) { return lhs.X * rhs.X + lhs.Y * rhs.Y; }
-float Length(const float2& lhs) { return sqrtf(Dot(lhs, lhs)); }
-float2 Normalize(const float2& lhs) { return lhs * (1 / Length(lhs)); }
-float2 Perpendicular(const float2& lhs) { return { -lhs.Y, lhs.X }; }
+Vector2 operator*(const float& lhs, const Vector2& rhs) { return { lhs * rhs.X, lhs * rhs.Y }; }
+Vector2 operator*(const Vector2& lhs, const float& rhs) { return { lhs.X * rhs, lhs.Y * rhs }; }
+Vector2 operator+(const Vector2& lhs, const Vector2& rhs) { return { lhs.X + rhs.X, lhs.Y + rhs.Y }; }
+Vector2 operator-(const Vector2& lhs, const Vector2& rhs) { return { lhs.X - rhs.X, lhs.Y - rhs.Y }; }
+float Dot(const Vector2& lhs, const Vector2& rhs) { return lhs.X * rhs.X + lhs.Y * rhs.Y; }
+float Length(const Vector2& lhs) { return sqrtf(Dot(lhs, lhs)); }
+Vector2 Normalize(const Vector2& lhs) { return lhs * (1 / Length(lhs)); }
+Vector2 Perpendicular(const Vector2& lhs) { return { -lhs.Y, lhs.X }; }
 
-float3 operator*(const float3& lhs, const float& rhs) { return { lhs.X * rhs, lhs.Y * rhs, lhs.Z * rhs }; }
-float Dot(const float3& lhs, const float3& rhs) { return lhs.X * rhs.X + lhs.Y * rhs.Y + lhs.Z * rhs.Z; }
-float Length(const float3& lhs) { return sqrtf(Dot(lhs, lhs)); }
-float3 Normalize(const float3& lhs) { return lhs * (1 / Length(lhs)); }
+Vector3 operator*(const Vector3& lhs, const float& rhs) { return { lhs.X * rhs, lhs.Y * rhs, lhs.Z * rhs }; }
+float Dot(const Vector3& lhs, const Vector3& rhs) { return lhs.X * rhs.X + lhs.Y * rhs.Y + lhs.Z * rhs.Z; }
+float Length(const Vector3& lhs) { return sqrtf(Dot(lhs, lhs)); }
+Vector3 Normalize(const Vector3& lhs) { return lhs * (1 / Length(lhs)); }
 
-float Determinant(const matrix44& val)
+float Determinant(const Matrix44& lhs)
 {
-    return (-val.M14 * (+val.M23 * (val.M31 * val.M42 - val.M32 * val.M41) - val.M33 * (val.M21 * val.M42 - val.M22 * val.M41) + val.M43 * (val.M21 * val.M32 - val.M22 * val.M31)) + val.M24 * (+val.M13 * (val.M31 * val.M42 - val.M32 * val.M41) - val.M33 * (val.M11 * val.M42 - val.M12 * val.M41) + val.M43 * (val.M11 * val.M32 - val.M12 * val.M31)) - val.M34 * (+val.M13 * (val.M21 * val.M42 - val.M22 * val.M41) - val.M23 * (val.M11 * val.M42 - val.M12 * val.M41) + val.M43 * (val.M11 * val.M22 - val.M12 * val.M21)) + val.M44 * (+val.M13 * (val.M21 * val.M32 - val.M22 * val.M31) - val.M23 * (val.M11 * val.M32 - val.M12 * val.M31) + val.M33 * (val.M11 * val.M22 - val.M12 * val.M21)));
+    return (-lhs.M14 * (+lhs.M23 * (lhs.M31 * lhs.M42 - lhs.M32 * lhs.M41) - lhs.M33 * (lhs.M21 * lhs.M42 - lhs.M22 * lhs.M41) + lhs.M43 * (lhs.M21 * lhs.M32 - lhs.M22 * lhs.M31)) + lhs.M24 * (+lhs.M13 * (lhs.M31 * lhs.M42 - lhs.M32 * lhs.M41) - lhs.M33 * (lhs.M11 * lhs.M42 - lhs.M12 * lhs.M41) + lhs.M43 * (lhs.M11 * lhs.M32 - lhs.M12 * lhs.M31)) - lhs.M34 * (+lhs.M13 * (lhs.M21 * lhs.M42 - lhs.M22 * lhs.M41) - lhs.M23 * (lhs.M11 * lhs.M42 - lhs.M12 * lhs.M41) + lhs.M43 * (lhs.M11 * lhs.M22 - lhs.M12 * lhs.M21)) + lhs.M44 * (+lhs.M13 * (lhs.M21 * lhs.M32 - lhs.M22 * lhs.M31) - lhs.M23 * (lhs.M11 * lhs.M32 - lhs.M12 * lhs.M31) + lhs.M33 * (lhs.M11 * lhs.M22 - lhs.M12 * lhs.M21)));
 }
 
-matrix44 Invert(const matrix44& val)
+Matrix44 Invert(const Matrix44& lhs)
 {
-    float invdet = 1 / Determinant(val);
-    return matrix44 {
-        invdet * (+(+val.M42 * (val.M23 * val.M34 - val.M33 * val.M24) - val.M43 * (val.M22 * val.M34 - val.M32 * val.M24) + val.M44 * (val.M22 * val.M33 - val.M32 * val.M23))),
-        invdet * (-(+val.M42 * (val.M13 * val.M34 - val.M33 * val.M14) - val.M43 * (val.M12 * val.M34 - val.M32 * val.M14) + val.M44 * (val.M12 * val.M33 - val.M32 * val.M13))),
-        invdet * (+(+val.M42 * (val.M13 * val.M24 - val.M23 * val.M14) - val.M43 * (val.M12 * val.M24 - val.M22 * val.M14) + val.M44 * (val.M12 * val.M23 - val.M22 * val.M13))),
-        invdet * (-(+val.M32 * (val.M13 * val.M24 - val.M23 * val.M14) - val.M33 * (val.M12 * val.M24 - val.M22 * val.M14) + val.M34 * (val.M12 * val.M23 - val.M22 * val.M13))),
-        invdet * (-(+val.M41 * (val.M23 * val.M34 - val.M33 * val.M24) - val.M43 * (val.M21 * val.M34 - val.M31 * val.M24) + val.M44 * (val.M21 * val.M33 - val.M31 * val.M23))),
-        invdet * (+(+val.M41 * (val.M13 * val.M34 - val.M33 * val.M14) - val.M43 * (val.M11 * val.M34 - val.M31 * val.M14) + val.M44 * (val.M11 * val.M33 - val.M31 * val.M13))),
-        invdet * (-(+val.M41 * (val.M13 * val.M24 - val.M23 * val.M14) - val.M43 * (val.M11 * val.M24 - val.M21 * val.M14) + val.M44 * (val.M11 * val.M23 - val.M21 * val.M13))),
-        invdet * (+(+val.M31 * (val.M13 * val.M24 - val.M23 * val.M14) - val.M33 * (val.M11 * val.M24 - val.M21 * val.M14) + val.M34 * (val.M11 * val.M23 - val.M21 * val.M13))),
-        invdet * (+(+val.M41 * (val.M22 * val.M34 - val.M32 * val.M24) - val.M42 * (val.M21 * val.M34 - val.M31 * val.M24) + val.M44 * (val.M21 * val.M32 - val.M31 * val.M22))),
-        invdet * (-(+val.M41 * (val.M12 * val.M34 - val.M32 * val.M14) - val.M42 * (val.M11 * val.M34 - val.M31 * val.M14) + val.M44 * (val.M11 * val.M32 - val.M31 * val.M12))),
-        invdet * (+(+val.M41 * (val.M12 * val.M24 - val.M22 * val.M14) - val.M42 * (val.M11 * val.M24 - val.M21 * val.M14) + val.M44 * (val.M11 * val.M22 - val.M21 * val.M12))),
-        invdet * (-(+val.M31 * (val.M12 * val.M24 - val.M22 * val.M14) - val.M32 * (val.M11 * val.M24 - val.M21 * val.M14) + val.M34 * (val.M11 * val.M22 - val.M21 * val.M12))),
-        invdet * (-(+val.M41 * (val.M22 * val.M33 - val.M32 * val.M23) - val.M42 * (val.M21 * val.M33 - val.M31 * val.M23) + val.M43 * (val.M21 * val.M32 - val.M31 * val.M22))),
-        invdet * (+(+val.M41 * (val.M12 * val.M33 - val.M32 * val.M13) - val.M42 * (val.M11 * val.M33 - val.M31 * val.M13) + val.M43 * (val.M11 * val.M32 - val.M31 * val.M12))),
-        invdet * (-(+val.M41 * (val.M12 * val.M23 - val.M22 * val.M13) - val.M42 * (val.M11 * val.M23 - val.M21 * val.M13) + val.M43 * (val.M11 * val.M22 - val.M21 * val.M12))),
-        invdet * (+(+val.M31 * (val.M12 * val.M23 - val.M22 * val.M13) - val.M32 * (val.M11 * val.M23 - val.M21 * val.M13) + val.M33 * (val.M11 * val.M22 - val.M21 * val.M12)))
+    float invdet = 1 / Determinant(lhs);
+    return Matrix44 {
+        invdet * (+(+lhs.M42 * (lhs.M23 * lhs.M34 - lhs.M33 * lhs.M24) - lhs.M43 * (lhs.M22 * lhs.M34 - lhs.M32 * lhs.M24) + lhs.M44 * (lhs.M22 * lhs.M33 - lhs.M32 * lhs.M23))),
+        invdet * (-(+lhs.M42 * (lhs.M13 * lhs.M34 - lhs.M33 * lhs.M14) - lhs.M43 * (lhs.M12 * lhs.M34 - lhs.M32 * lhs.M14) + lhs.M44 * (lhs.M12 * lhs.M33 - lhs.M32 * lhs.M13))),
+        invdet * (+(+lhs.M42 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M43 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) + lhs.M44 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13))),
+        invdet * (-(+lhs.M32 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M33 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) + lhs.M34 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13))),
+        invdet * (-(+lhs.M41 * (lhs.M23 * lhs.M34 - lhs.M33 * lhs.M24) - lhs.M43 * (lhs.M21 * lhs.M34 - lhs.M31 * lhs.M24) + lhs.M44 * (lhs.M21 * lhs.M33 - lhs.M31 * lhs.M23))),
+        invdet * (+(+lhs.M41 * (lhs.M13 * lhs.M34 - lhs.M33 * lhs.M14) - lhs.M43 * (lhs.M11 * lhs.M34 - lhs.M31 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M33 - lhs.M31 * lhs.M13))),
+        invdet * (-(+lhs.M41 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M43 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13))),
+        invdet * (+(+lhs.M31 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M33 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M34 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13))),
+        invdet * (+(+lhs.M41 * (lhs.M22 * lhs.M34 - lhs.M32 * lhs.M24) - lhs.M42 * (lhs.M21 * lhs.M34 - lhs.M31 * lhs.M24) + lhs.M44 * (lhs.M21 * lhs.M32 - lhs.M31 * lhs.M22))),
+        invdet * (-(+lhs.M41 * (lhs.M12 * lhs.M34 - lhs.M32 * lhs.M14) - lhs.M42 * (lhs.M11 * lhs.M34 - lhs.M31 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M32 - lhs.M31 * lhs.M12))),
+        invdet * (+(+lhs.M41 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) - lhs.M42 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
+        invdet * (-(+lhs.M31 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) - lhs.M32 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M34 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
+        invdet * (-(+lhs.M41 * (lhs.M22 * lhs.M33 - lhs.M32 * lhs.M23) - lhs.M42 * (lhs.M21 * lhs.M33 - lhs.M31 * lhs.M23) + lhs.M43 * (lhs.M21 * lhs.M32 - lhs.M31 * lhs.M22))),
+        invdet * (+(+lhs.M41 * (lhs.M12 * lhs.M33 - lhs.M32 * lhs.M13) - lhs.M42 * (lhs.M11 * lhs.M33 - lhs.M31 * lhs.M13) + lhs.M43 * (lhs.M11 * lhs.M32 - lhs.M31 * lhs.M12))),
+        invdet * (-(+lhs.M41 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M42 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M43 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
+        invdet * (+(+lhs.M31 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M32 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M33 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12)))
     };
 }
 
-matrix44 operator*(const matrix44& a, const matrix44& b)
+Matrix44 operator*(const Matrix44& lhs, const Matrix44& rhs)
 {
-    return matrix44 {
-        a.M11 * b.M11 + a.M12 * b.M21 + a.M13 * b.M31 + a.M14 * b.M41,
-        a.M11 * b.M12 + a.M12 * b.M22 + a.M13 * b.M32 + a.M14 * b.M42,
-        a.M11 * b.M13 + a.M12 * b.M23 + a.M13 * b.M33 + a.M14 * b.M43,
-        a.M11 * b.M14 + a.M12 * b.M24 + a.M13 * b.M34 + a.M14 * b.M44,
-        a.M21 * b.M11 + a.M22 * b.M21 + a.M23 * b.M31 + a.M24 * b.M41,
-        a.M21 * b.M12 + a.M22 * b.M22 + a.M23 * b.M32 + a.M24 * b.M42,
-        a.M21 * b.M13 + a.M22 * b.M23 + a.M23 * b.M33 + a.M24 * b.M43,
-        a.M21 * b.M14 + a.M22 * b.M24 + a.M23 * b.M34 + a.M24 * b.M44,
-        a.M31 * b.M11 + a.M32 * b.M21 + a.M33 * b.M31 + a.M34 * b.M41,
-        a.M31 * b.M12 + a.M32 * b.M22 + a.M33 * b.M32 + a.M34 * b.M42,
-        a.M31 * b.M13 + a.M32 * b.M23 + a.M33 * b.M33 + a.M34 * b.M43,
-        a.M31 * b.M14 + a.M32 * b.M24 + a.M33 * b.M34 + a.M34 * b.M44,
-        a.M41 * b.M11 + a.M42 * b.M21 + a.M43 * b.M31 + a.M44 * b.M41,
-        a.M41 * b.M12 + a.M42 * b.M22 + a.M43 * b.M32 + a.M44 * b.M42,
-        a.M41 * b.M13 + a.M42 * b.M23 + a.M43 * b.M33 + a.M44 * b.M43,
-        a.M41 * b.M14 + a.M42 * b.M24 + a.M43 * b.M34 + a.M44 * b.M44 };
+    return Matrix44 {
+        lhs.M11 * rhs.M11 + lhs.M12 * rhs.M21 + lhs.M13 * rhs.M31 + lhs.M14 * rhs.M41,
+        lhs.M11 * rhs.M12 + lhs.M12 * rhs.M22 + lhs.M13 * rhs.M32 + lhs.M14 * rhs.M42,
+        lhs.M11 * rhs.M13 + lhs.M12 * rhs.M23 + lhs.M13 * rhs.M33 + lhs.M14 * rhs.M43,
+        lhs.M11 * rhs.M14 + lhs.M12 * rhs.M24 + lhs.M13 * rhs.M34 + lhs.M14 * rhs.M44,
+        lhs.M21 * rhs.M11 + lhs.M22 * rhs.M21 + lhs.M23 * rhs.M31 + lhs.M24 * rhs.M41,
+        lhs.M21 * rhs.M12 + lhs.M22 * rhs.M22 + lhs.M23 * rhs.M32 + lhs.M24 * rhs.M42,
+        lhs.M21 * rhs.M13 + lhs.M22 * rhs.M23 + lhs.M23 * rhs.M33 + lhs.M24 * rhs.M43,
+        lhs.M21 * rhs.M14 + lhs.M22 * rhs.M24 + lhs.M23 * rhs.M34 + lhs.M24 * rhs.M44,
+        lhs.M31 * rhs.M11 + lhs.M32 * rhs.M21 + lhs.M33 * rhs.M31 + lhs.M34 * rhs.M41,
+        lhs.M31 * rhs.M12 + lhs.M32 * rhs.M22 + lhs.M33 * rhs.M32 + lhs.M34 * rhs.M42,
+        lhs.M31 * rhs.M13 + lhs.M32 * rhs.M23 + lhs.M33 * rhs.M33 + lhs.M34 * rhs.M43,
+        lhs.M31 * rhs.M14 + lhs.M32 * rhs.M24 + lhs.M33 * rhs.M34 + lhs.M34 * rhs.M44,
+        lhs.M41 * rhs.M11 + lhs.M42 * rhs.M21 + lhs.M43 * rhs.M31 + lhs.M44 * rhs.M41,
+        lhs.M41 * rhs.M12 + lhs.M42 * rhs.M22 + lhs.M43 * rhs.M32 + lhs.M44 * rhs.M42,
+        lhs.M41 * rhs.M13 + lhs.M42 * rhs.M23 + lhs.M43 * rhs.M33 + lhs.M44 * rhs.M43,
+        lhs.M41 * rhs.M14 + lhs.M42 * rhs.M24 + lhs.M43 * rhs.M34 + lhs.M44 * rhs.M44 };
 }
 
-matrix44 CreateMatrixRotation(const Quaternion& q)
+Matrix44 CreateMatrixRotation(const Quaternion& q)
 {
     float m11 = 1 - 2 * q.Y * q.Y - 2 * q.Z * q.Z;
     float m12 = 2 * (q.X * q.Y + q.Z * q.W);
@@ -76,18 +76,18 @@ matrix44 CreateMatrixRotation(const Quaternion& q)
     float m31 = 2 * (q.X * q.Z + q.Y * q.W);
     float m32 = 2 * (q.Y * q.Z - q.X * q.W);
     float m33 = 1 - 2 * q.X * q.X - 2 * q.Y * q.Y;
-    return matrix44 { m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, 0, 0, 0, 1 };
+    return Matrix44 { m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, 0, 0, 0, 1 };
 }
 
-Quaternion CreateQuaternionRotation(const float3& axis, float angle)
+Quaternion CreateQuaternionRotation(const Vector3& axis, float angle)
 {
     float radians_over_2 = (angle * M_PI / 180) / 2;
     float sin = sinf(radians_over_2);
-    float3 normalized_axis = Normalize(axis);
+    Vector3 normalized_axis = Normalize(axis);
     return { normalized_axis.X * sin, normalized_axis.Y * sin, normalized_axis.Z * sin, cosf(radians_over_2) };
 }
 
-Quaternion CreateQuaternionRotation(const matrix44& orthonormal)
+Quaternion CreateQuaternionRotation(const Matrix44& orthonormal)
 {
     float w = sqrtf(1 + orthonormal.M11 + orthonormal.M22 + orthonormal.M33) / 2;
     float x = (orthonormal.M23 - orthonormal.M32) / (4 * w);
@@ -96,12 +96,12 @@ Quaternion CreateQuaternionRotation(const matrix44& orthonormal)
     return Quaternion { x, y, z, w };
 }
 
-Quaternion Multiply(Quaternion a, Quaternion b)
+Quaternion Multiply(const Quaternion& lhs, const Quaternion& rhs)
 {
-    float t0 = b.W * a.W - b.X * a.X - b.Y * a.Y - b.Z * a.Z;
-    float t1 = b.W * a.X + b.X * a.W - b.Y * a.Z + b.Z * a.Y;
-    float t2 = b.W * a.Y + b.X * a.Z + b.Y * a.W - b.Z * a.X;
-    float t3 = b.W * a.Z - b.X * a.Y + b.Y * a.X + b.Z * a.W;
+    float t0 = rhs.W * lhs.W - rhs.X * lhs.X - rhs.Y * lhs.Y - rhs.Z * lhs.Z;
+    float t1 = rhs.W * lhs.X + rhs.X * lhs.W - rhs.Y * lhs.Z + rhs.Z * lhs.Y;
+    float t2 = rhs.W * lhs.Y + rhs.X * lhs.Z + rhs.Y * lhs.W - rhs.Z * lhs.X;
+    float t3 = rhs.W * lhs.Z - rhs.X * lhs.Y + rhs.Y * lhs.X + rhs.Z * lhs.W;
     float ln = 1 / sqrtf(t0 * t0 + t1 * t1 + t2 * t2 + t3 * t3);
     t0 *= ln; t1 *= ln; t2 *= ln; t3 *= ln;
     return Quaternion { t1, t2, t3, t0 };

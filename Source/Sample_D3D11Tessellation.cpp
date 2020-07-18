@@ -103,13 +103,13 @@ float4 mainPS() : SV_Target
         // Create a vertex buffer.
         CComPtr<ID3D11Buffer> m_pD3D11BufferVertex;
         {
-            float2 vertices[] = {
+            Vector2 vertices[] = {
                 {0, 0},
                 {0, 1},
                 {1, 0}
             };
             D3D11_BUFFER_DESC bufferdesc = {};
-            bufferdesc.ByteWidth = sizeof(float2) * 3;
+            bufferdesc.ByteWidth = sizeof(Vector2) * 3;
             bufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
             bufferdesc.BindFlags =  D3D11_BIND_VERTEX_BUFFER;
             D3D11_SUBRESOURCE_DATA data = {};
@@ -124,7 +124,7 @@ float4 mainPS() : SV_Target
         m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
         m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(m_pD3D11InputLayout);
         {
-            UINT uStrides[] = { sizeof(float2) };
+            UINT uStrides[] = { sizeof(Vector2) };
             UINT uOffsets[] = { 0 };
             m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(0, 1, &m_pD3D11BufferVertex.p, uStrides, uOffsets);
         }

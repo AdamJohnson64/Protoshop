@@ -22,7 +22,7 @@ private:
     CComPtr<ID3D11UnorderedAccessView> m_pD3D11UnorderedAccessViewImage;
     struct Constants
     {
-        matrix44 Transform;
+        Matrix44 Transform;
         int Width, Height;
     };
 public:

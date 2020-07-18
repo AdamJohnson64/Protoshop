@@ -1,7 +1,7 @@
 #include "Scene_Plane.h"
 #include <math.h>
 
-float3 Plane::getVertexPosition(float2 uv)
+Vector3 Plane::getVertexPosition(Vector2 uv)
 {
     // NOTE: We're animating on every vertex lookup - this is horrible but it's fun to look at.
     static float phase = 0;

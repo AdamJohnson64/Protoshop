@@ -20,7 +20,7 @@
 class Instance
 {
 public:
-    matrix44 Transform;
+    Matrix44 Transform;
     uint32_t GeometryIndex;
 };
 
@@ -29,7 +29,7 @@ class InstanceTable
 public:
     //uint32_t addMaterial(std::shared_ptr<Material> material);
     uint32_t addMesh(std::shared_ptr<Mesh> mesh);
-    uint32_t addInstance(const matrix44& transform, uint32_t geometryIndex);
+    uint32_t addInstance(const Matrix44& transform, uint32_t geometryIndex);
     std::vector<std::shared_ptr<Mesh>> Meshes;
     std::vector<Instance> Instances;
 };
@@ -41,7 +41,7 @@ uint32_t InstanceTable::addMesh(std::shared_ptr<Mesh> mesh)
     return index;
 }
 
-uint32_t InstanceTable::addInstance(const matrix44& transform, uint32_t geometryIndex)
+uint32_t InstanceTable::addInstance(const Matrix44& transform, uint32_t geometryIndex)
 {
     uint32_t index = Instances.size();
     Instances.push_back({ transform, geometryIndex });
@@ -140,7 +140,7 @@ public:
         std::shared_ptr<ParametricUV> _shape(new Plane());
         std::shared_ptr<Mesh> _mesh(new ParametricUVToMesh(_shape, 100, 100));
         uint32_t meshHandle = scene->addMesh(_mesh);
-        matrix44 transform = {};
+        Matrix44 transform = {};
         transform.M11 = 10;
         transform.M22 = 0.25f;
         transform.M33 = 10;
@@ -167,7 +167,7 @@ public:
             {
                 int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
                 std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-                scene->Meshes[i]->copyVertices(reinterpret_cast<float3*>(vertices.get()), sizeof(float3));
+                scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
                 vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
             }
             {

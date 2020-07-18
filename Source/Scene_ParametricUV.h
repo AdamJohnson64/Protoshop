@@ -5,5 +5,5 @@
 class ParametricUV
 {
 public:
-    virtual float3 getVertexPosition(float2 uv) = 0;
+    virtual Vector3 getVertexPosition(Vector2 uv) = 0;
 };

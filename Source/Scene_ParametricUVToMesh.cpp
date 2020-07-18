@@ -23,8 +23,8 @@ void ParametricUVToMesh::copyVertices(void* to, uint32_t stride)
     {
         for (int32_t u = 0; u <= m_stepsInU; ++u)
         {
-            *(reinterpret_cast<float3*>(to)) = m_shape->getVertexPosition({(float)u / m_stepsInU, (float)v / m_stepsInV });
-            to = reinterpret_cast<float3*>(reinterpret_cast<uint8_t*>(to) + stride);
+            *(reinterpret_cast<Vector3*>(to)) = m_shape->getVertexPosition({(float)u / m_stepsInU, (float)v / m_stepsInV });
+            to = reinterpret_cast<Vector3*>(reinterpret_cast<uint8_t*>(to) + stride);
         }
     }
 }

@@ -1,29 +1,29 @@
 #pragma once
 
-struct float2
+struct Vector2
 {
     float X, Y;
 };
 
-float2 operator*(const float& lhs, const float2& rhs);
-float2 operator*(const float2& lhs, const float& rhs);
-float2 operator+(const float2& lhs, const float2& rhs);
-float2 operator-(const float2& lhs, const float2& rhs);
-float Dot(const float2& lhs, const float2& rhs);
-float Length(const float2& lhs);
-float2 Normalize(const float2& lhs);
-float2 Perpendicular(const float2& lhs);
+Vector2 operator*(const float& lhs, const Vector2& rhs);
+Vector2 operator*(const Vector2& lhs, const float& rhs);
+Vector2 operator+(const Vector2& lhs, const Vector2& rhs);
+Vector2 operator-(const Vector2& lhs, const Vector2& rhs);
+float Dot(const Vector2& lhs, const Vector2& rhs);
+float Length(const Vector2& lhs);
+Vector2 Normalize(const Vector2& lhs);
+Vector2 Perpendicular(const Vector2& lhs);
 
-struct float3
+struct Vector3
 {
     float X, Y, Z;
 };
 
-float Dot(const float3& lhs, const float3& rhs);
-float Length(const float3& lhs);
-float3 Normalize(const float3& lhs);
+float Dot(const Vector3& lhs, const Vector3& rhs);
+float Length(const Vector3& lhs);
+Vector3 Normalize(const Vector3& lhs);
 
-struct matrix44
+struct Matrix44
 {
     float
         M11, M12, M13, M14,
@@ -32,16 +32,16 @@ struct matrix44
         M41, M42, M43, M44;
 };
 
-float Determinant(const matrix44& val);
-matrix44 Invert(const matrix44& val);
-matrix44 operator*(const matrix44& lhs, const matrix44& rhs);
+float Determinant(const Matrix44& lhs);
+Matrix44 Invert(const Matrix44& lhs);
+Matrix44 operator*(const Matrix44& lhs, const Matrix44& rhs);
 
 struct Quaternion
 {
     float X, Y, Z, W;
 };
 
-matrix44 CreateMatrixRotation(const Quaternion& q);
-Quaternion CreateQuaternionRotation(const float3& axis, float angle);
-Quaternion CreateQuaternionRotation(const matrix44& orthonormal);
-Quaternion Multiply(const Quaternion& a, const Quaternion& b);
+Matrix44 CreateMatrixRotation(const Quaternion& q);
+Quaternion CreateQuaternionRotation(const Vector3& axis, float angle);
+Quaternion CreateQuaternionRotation(const Matrix44& orthonormal);
+Quaternion Multiply(const Quaternion& lhs, const Quaternion& rhs);

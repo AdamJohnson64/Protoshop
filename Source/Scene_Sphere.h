@@ -6,5 +6,5 @@
 class Sphere : public Object, public ParametricUV
 {
 public:
-    float3 getVertexPosition(float2 uv) override;
+    Vector3 getVertexPosition(Vector2 uv) override;
 };

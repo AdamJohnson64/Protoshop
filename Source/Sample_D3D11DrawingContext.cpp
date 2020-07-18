@@ -49,10 +49,10 @@ float4 main() : SV_Target
     void RenderSample() override
     {
         // Simple DrawingContext.
-        std::vector<float2> vertices;
-        std::function<void(const float2&, const float2&)> DCDrawLine = [&](const float2& p0, const float2& p1)
+        std::vector<Vector2> vertices;
+        std::function<void(const Vector2&, const Vector2&)> DCDrawLine = [&](const Vector2& p0, const Vector2& p1)
         {
-            float2 bitangent = Normalize(Perpendicular(p1 - p0));
+            Vector2 bitangent = Normalize(Perpendicular(p1 - p0));
             vertices.push_back(p0 - bitangent);
             vertices.push_back(p1 - bitangent);
             vertices.push_back(p1 + bitangent);
@@ -65,7 +65,7 @@ float4 main() : SV_Target
             CComPtr<ID3D11Buffer> pD3D11BufferVertex;
             {
                 D3D11_BUFFER_DESC bufferdesc = {};
-                bufferdesc.ByteWidth = sizeof(float2) * vertices.size();
+                bufferdesc.ByteWidth = sizeof(Vector2) * vertices.size();
                 bufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
                 bufferdesc.BindFlags =  D3D11_BIND_VERTEX_BUFFER;
                 D3D11_SUBRESOURCE_DATA data = {};
@@ -73,7 +73,7 @@ float4 main() : SV_Target
                 TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&bufferdesc, &data, &pD3D11BufferVertex));
             }
             {
-                UINT uStrides[] = { sizeof(float2) };
+                UINT uStrides[] = { sizeof(Vector2) };
                 UINT uOffsets[] = { 0 };
                 m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(0, 1, &pD3D11BufferVertex.p, uStrides, uOffsets);
             }
