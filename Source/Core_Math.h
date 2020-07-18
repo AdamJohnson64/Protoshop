@@ -23,6 +23,15 @@ float Dot(const Vector3& lhs, const Vector3& rhs);
 float Length(const Vector3& lhs);
 Vector3 Normalize(const Vector3& lhs);
 
+struct Vector4
+{
+    float X, Y, Z, W;
+};
+
+Vector4 operator*(float lhs, const Vector4& rhs);
+Vector4 operator*(const Vector4& lhs, float rhs);
+Vector4 operator/(const Vector4& lhs, float rhs);
+
 struct Matrix44
 {
     float
@@ -34,6 +43,7 @@ struct Matrix44
 
 float Determinant(const Matrix44& lhs);
 Matrix44 Invert(const Matrix44& lhs);
+Vector4 Transform(const Matrix44& lhs, const Vector4& rhs);
 Matrix44 operator*(const Matrix44& lhs, const Matrix44& rhs);
 
 struct Quaternion
@@ -45,3 +55,5 @@ Matrix44 CreateMatrixRotation(const Quaternion& q);
 Quaternion CreateQuaternionRotation(const Vector3& axis, float angle);
 Quaternion CreateQuaternionRotation(const Matrix44& orthonormal);
 Quaternion Multiply(const Quaternion& lhs, const Quaternion& rhs);
+
+Matrix44 CreateProjection(float near_plane, float far_plane, float fov_horiz, float fov_vert);

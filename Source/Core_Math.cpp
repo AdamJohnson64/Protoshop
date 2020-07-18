@@ -16,6 +16,10 @@ float Dot(const Vector3& lhs, const Vector3& rhs) { return lhs.X * rhs.X + lhs.Y
 float Length(const Vector3& lhs) { return sqrtf(Dot(lhs, lhs)); }
 Vector3 Normalize(const Vector3& lhs) { return lhs * (1 / Length(lhs)); }
 
+Vector4 operator*(const Vector4& lhs, float rhs) { return { lhs.X * rhs, lhs.Y * rhs, lhs.Z * rhs, lhs.W * rhs }; }
+Vector4 operator*(float lhs, const Vector4& rhs) { return { lhs * rhs.X, lhs * rhs.Y, lhs * rhs.Z, lhs * rhs.W }; }
+Vector4 operator/(const Vector4& lhs, float rhs) { return lhs * (1 / rhs); }
+
 float Determinant(const Matrix44& lhs)
 {
     return (-lhs.M14 * (+lhs.M23 * (lhs.M31 * lhs.M42 - lhs.M32 * lhs.M41) - lhs.M33 * (lhs.M21 * lhs.M42 - lhs.M22 * lhs.M41) + lhs.M43 * (lhs.M21 * lhs.M32 - lhs.M22 * lhs.M31)) + lhs.M24 * (+lhs.M13 * (lhs.M31 * lhs.M42 - lhs.M32 * lhs.M41) - lhs.M33 * (lhs.M11 * lhs.M42 - lhs.M12 * lhs.M41) + lhs.M43 * (lhs.M11 * lhs.M32 - lhs.M12 * lhs.M31)) - lhs.M34 * (+lhs.M13 * (lhs.M21 * lhs.M42 - lhs.M22 * lhs.M41) - lhs.M23 * (lhs.M11 * lhs.M42 - lhs.M12 * lhs.M41) + lhs.M43 * (lhs.M11 * lhs.M22 - lhs.M12 * lhs.M21)) + lhs.M44 * (+lhs.M13 * (lhs.M21 * lhs.M32 - lhs.M22 * lhs.M31) - lhs.M23 * (lhs.M11 * lhs.M32 - lhs.M12 * lhs.M31) + lhs.M33 * (lhs.M11 * lhs.M22 - lhs.M12 * lhs.M21)));
@@ -42,6 +46,15 @@ Matrix44 Invert(const Matrix44& lhs)
         invdet * (-(+lhs.M41 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M42 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M43 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
         invdet * (+(+lhs.M31 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M32 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M33 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12)))
     };
+}
+
+Vector4 Transform(const Matrix44& lhs, const Vector4& rhs)
+{
+    return {
+        lhs.M11 * rhs.X + lhs.M21 * rhs.Y + lhs.M31 * rhs.Z + lhs.M41 * rhs.W,
+        lhs.M12 * rhs.X + lhs.M22 * rhs.Y + lhs.M32 * rhs.Z + lhs.M42 * rhs.W,
+        lhs.M13 * rhs.X + lhs.M23 * rhs.Y + lhs.M33 * rhs.Z + lhs.M43 * rhs.W,
+        lhs.M14 * rhs.X + lhs.M24 * rhs.Y + lhs.M34 * rhs.Z + lhs.M44 * rhs.W };
 }
 
 Matrix44 operator*(const Matrix44& lhs, const Matrix44& rhs)
@@ -105,4 +118,17 @@ Quaternion Multiply(const Quaternion& lhs, const Quaternion& rhs)
     float ln = 1 / sqrtf(t0 * t0 + t1 * t1 + t2 * t2 + t3 * t3);
     t0 *= ln; t1 *= ln; t2 *= ln; t3 *= ln;
     return Quaternion { t1, t2, t3, t0 };
+}
+
+Matrix44 CreateProjection(float near_plane, float far_plane, float fov_horiz, float fov_vert)
+{
+    float w = 1 / tanf(fov_horiz * 0.5);  // 1/tan(x) == cot(x)
+    float h = 1 / tanf(fov_vert * 0.5);   // 1/tan(x) == cot(x)
+    float Q = far_plane / (far_plane - near_plane);
+    return {
+        w, 0, 0, 0,
+        0, h, 0, 0,
+        0, 0, Q, 1,
+        0, 0, -Q * near_plane, 0
+    };
 }
