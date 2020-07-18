@@ -19,6 +19,10 @@ struct float3
     float X, Y, Z;
 };
 
+float Dot(const float3& lhs, const float3& rhs);
+float Length(const float3& lhs);
+float3 Normalize(const float3& lhs);
+
 struct matrix44
 {
     float
@@ -28,5 +32,16 @@ struct matrix44
         M41, M42, M43, M44;
 };
 
-float Determinant(matrix44 val);
+float Determinant(const matrix44& val);
 matrix44 Invert(const matrix44& val);
+matrix44 operator*(const matrix44& lhs, const matrix44& rhs);
+
+struct Quaternion
+{
+    float X, Y, Z, W;
+};
+
+matrix44 CreateMatrixRotation(const Quaternion& q);
+Quaternion CreateQuaternionRotation(const float3& axis, float angle);
+Quaternion CreateQuaternionRotation(const matrix44& orthonormal);
+Quaternion Multiply(const Quaternion& a, const Quaternion& b);
