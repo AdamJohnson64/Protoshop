@@ -1,3 +1,8 @@
+cbuffer Constants : register(b0)
+{
+    float4x4 transform;
+};
+
 struct HitInfo
 {
     float4 ColorAndLambda;
@@ -32,20 +37,14 @@ void RayGenerationDebug()
 [shader("raygeneration")]
 void RayGenerationRasterMatch()
 {
-    // This is Invert(CreateProjection(0.01f, 1.0f, 45deg, 45deg);
-    float4x4 imvp = {
-        2.12747860, 0.000000000, 0.000000000, 0.000000000,
-        0.000000000, 2.12747860, 0.000000000, 0.000000000,
-        0.000000000, 0.000000000, 1.00010002, 1.00000000,
-        0.000000000, 0.000000000, -0.0100010000, 0.000000000 };
     uint2 LaunchIndex = DispatchRaysIndex().xy;
     uint2 LaunchDimensions = DispatchRaysDimensions().xy;
     float normx = (float)LaunchIndex.x / (float)LaunchDimensions.x;
     float normy = (float)LaunchIndex.y / (float)LaunchDimensions.y;
     RayDesc ray;
-    float4 front = float4(-1 + 2 * normx, -1 + 2 * normy, 0, 1);
+    float4 front = mul(float4(-1 + 2 * normx, 1 - 2 * normy, 0, 1), transform);
     front /= front.w;
-    float4 back = float4(-1 + 2 * normx, -1 + 2 * normy, 1, 1);
+    float4 back = mul(float4(-1 + 2 * normx, 1 - 2 * normy, 1, 1), transform);
     back /= back.w;
     ray.Origin = front.xyz;
     ray.Direction = normalize(back.xyz - front.xyz);

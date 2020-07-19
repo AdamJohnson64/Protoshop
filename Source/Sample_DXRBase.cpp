@@ -31,6 +31,13 @@ Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::s
         descDescriptorRange[setupRange].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
         ++setupRange;
 
+        descDescriptorRange[setupRange].BaseShaderRegister = 0;
+        descDescriptorRange[setupRange].NumDescriptors = 1;
+        descDescriptorRange[setupRange].RegisterSpace = 0;
+        descDescriptorRange[setupRange].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+        descDescriptorRange[setupRange].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+        ++setupRange;
+
         D3D12_ROOT_PARAMETER descRootParameter = {};
         descRootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         descRootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;

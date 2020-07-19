@@ -2,8 +2,10 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "Core_Math.h"
 #include "Mixin_ImguiD3D12.h"
 #include "Sample_DXRBase.h"
+#include "Scene_InstanceTable.h"
 #include "generated.Sample_DXRImplicit.dxr.h"
 #include <array>
 #include <atlbase.h>
@@ -204,6 +206,9 @@ public:
                 UploadTLASCommandList->BuildRaytracingAccelerationStructure(&descBuild, 0, nullptr);
             });
         }
+        // Create a constant buffer view for top level data.
+        CComPtr<ID3D12Resource> ResourceConstants;
+        ResourceConstants.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Transpose(Invert(InstanceTable::CameraViewProjection())));
         // Establish resource views.
         {
     	    D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetCPUDescriptorHandleForHeapStart();
@@ -225,6 +230,14 @@ public:
     	        m_pDevice->GetID3D12Device()->CreateShaderResourceView(nullptr, &descSRV, descriptorBase);
                 descriptorBase.ptr += descriptorElementSize;
             }
+            // Create the CBV for the scene constants.
+            {
+                D3D12_CONSTANT_BUFFER_VIEW_DESC descCBV = {};
+                descCBV.BufferLocation = ResourceConstants->GetGPUVirtualAddress();
+    	        descCBV.SizeInBytes = 256;
+    	        m_pDevice->GetID3D12Device()->CreateConstantBufferView(&descCBV, descriptorBase);
+                descriptorBase.ptr += descriptorElementSize;
+            }
         }
         ////////////////////////////////////////////////////////////////////////////////
         // SHADER TABLE - Create a table of all shaders for the raytracer.
@@ -238,7 +251,7 @@ public:
             std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
             memset(&shaderTableCPU[0], 0, shaderTableSize);
             // Shader Index 0 - Ray Generation Shader
-            memcpy(&shaderTableCPU[shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"RayGenerationDebug"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"RayGenerationRasterMatch"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 0] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 1 - Miss Shader
             memcpy(&shaderTableCPU[shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
@@ -258,6 +271,9 @@ public:
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV() };
             RaytraceCommandList->SetDescriptorHeaps(1, descriptorHeaps);
+            {
+                //RaytraceCommandList->SetComputeRootConstantBufferView(0, ResourceShaderTable->GetGPUVirtualAddress());
+            }
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);
             {
                 D3D12_DISPATCH_RAYS_DESC descDispatchRays = {};

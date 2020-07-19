@@ -37,6 +37,12 @@ std::shared_ptr<InstanceTable> InstanceTable::Default()
     transform.M22 = 1;
     transform.M33 = 1;
     transform.M44 = 1;
+    transform.M42 = 1;
+    transform.M41 = -2;
+    scene->addInstance(transform, meshHandle);
+    transform.M41 = 0;
+    scene->addInstance(transform, meshHandle);
+    transform.M41 = 2;
     scene->addInstance(transform, meshHandle);
     return scene;
 }
