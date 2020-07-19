@@ -57,6 +57,15 @@ Vector4 Transform(const Matrix44& lhs, const Vector4& rhs)
         lhs.M14 * rhs.X + lhs.M24 * rhs.Y + lhs.M34 * rhs.Z + lhs.M44 * rhs.W };
 }
 
+Matrix44 Transpose(const Matrix44& lhs)
+{
+    return {
+        lhs.M11, lhs.M21, lhs.M31, lhs.M41,
+        lhs.M12, lhs.M22, lhs.M32, lhs.M42,
+        lhs.M13, lhs.M23, lhs.M33, lhs.M43,
+        lhs.M14, lhs.M24, lhs.M34, lhs.M44 };
+}
+
 Matrix44 operator*(const Matrix44& lhs, const Matrix44& rhs)
 {
     return Matrix44 {

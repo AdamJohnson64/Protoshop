@@ -44,6 +44,7 @@ struct Matrix44
 float Determinant(const Matrix44& lhs);
 Matrix44 Invert(const Matrix44& lhs);
 Vector4 Transform(const Matrix44& lhs, const Vector4& rhs);
+Matrix44 Transpose(const Matrix44& lhs);
 Matrix44 operator*(const Matrix44& lhs, const Matrix44& rhs);
 
 struct Quaternion

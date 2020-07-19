@@ -30,7 +30,7 @@ cbuffer Constants
 
 float4 main(float4 pos : SV_Position) : SV_Position
 {
-        return mul(pos, transpose(transform));
+        return mul(pos, transform);
 })SHADER");
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -103,9 +103,8 @@ float4 main() : SV_Target
         for (int i = 0; i < scene->Instances.size(); ++i)
         {
             {
-                Matrix44 transform = scene->Instances[i].Transform * InstanceTable::CameraViewProjection();
                 CComPtr<ID3D12Resource> constantBuffer;
-                constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &transform);
+                constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &Transpose(scene->Instances[i].Transform * InstanceTable::CameraViewProjection()));
                 constantBuffers.push_back(constantBuffer.Detach());
             }
             {
@@ -170,7 +169,7 @@ float4 main() : SV_Target
                     descIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
                     pD3D12GraphicsCommandList->IASetIndexBuffer(&descIndexBufferView);
                 }
-                pD3D12GraphicsCommandList->DrawIndexedInstanced(scene->Meshes[i]->getIndexCount(), 1, 0, 0, 0);
+                pD3D12GraphicsCommandList->DrawIndexedInstanced(scene->Meshes[meshIndex]->getIndexCount(), 1, 0, 0, 0);
             }
             // Transition the render target into presentation state for display.
             {
