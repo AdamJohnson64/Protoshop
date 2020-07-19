@@ -81,32 +81,57 @@ float4 main() : SV_Target
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
             m_pDevice->GetID3D12Device()->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
         }
-        CComPtr<ID3D12Resource> constantBuffer;
-        {
-            Matrix44 translate = {
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 5, 1
-            };
-            Matrix44 project = CreateProjection(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
-            Matrix44 transform = translate * project;
-            constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &transform);
-        }
-        {
-            D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
-            descConstantBuffer.BufferLocation = constantBuffer->GetGPUVirtualAddress();
-            descConstantBuffer.SizeInBytes = 256;
-            m_pDevice->GetID3D12Device()->CreateConstantBufferView(&descConstantBuffer, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetCPUDescriptorHandleForHeapStart());
-        }
         std::vector<CComPtr<ID3D12Resource>> vertexBuffers;
         std::vector<CComPtr<ID3D12Resource>> indexBuffers;
+        for (int i = 0; i < scene->Meshes.size(); ++i)
+        {
+            {
+                int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+                std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
+                scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
+                CComPtr<ID3D12Resource> vertexBuffer;
+                vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
+                vertexBuffers.push_back(vertexBuffer.Detach());
+            }
+            {
+                int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+                std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
+                scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
+                CComPtr<ID3D12Resource> indexBuffer;
+                indexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
+                indexBuffers.push_back(indexBuffer.Detach());
+            }
+        }
+        std::vector<CComPtr<ID3D12Resource>> constantBuffers;
+        for (int i = 0; i < scene->Instances.size(); ++i)
+        {
+            {
+                Matrix44 view = {
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, -1, 5, 1
+                };
+                Matrix44 project = CreateProjection(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
+                Matrix44 transform = scene->Instances[i].Transform * view * project;
+                CComPtr<ID3D12Resource> constantBuffer;
+                constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &transform);
+                constantBuffers.push_back(constantBuffer.Detach());
+            }
+            {
+                D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
+                descConstantBuffer.BufferLocation = constantBuffers[i]->GetGPUVirtualAddress();
+                descConstantBuffer.SizeInBytes = 256;
+                D3D12_CPU_DESCRIPTOR_HANDLE handle = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetCPUDescriptorHandleForHeapStart();
+                handle.ptr = handle.ptr + m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
+                m_pDevice->GetID3D12Device()->CreateConstantBufferView(&descConstantBuffer, handle);
+            }
+        }
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDevice->GetID3D12RootSignature());
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV() };
             pD3D12GraphicsCommandList->SetDescriptorHeaps(1, descriptorHeaps);
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_CBV, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
             // Put the RTV into render target state and clear it before use.
             {
                 D3D12_RESOURCE_BARRIER descBarrier = {};
@@ -135,35 +160,23 @@ float4 main() : SV_Target
                 pD3D12GraphicsCommandList->RSSetScissorRects(1, &descRect);
             }
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
-            for (int i = 0; i < scene->Meshes.size(); ++i)
+            for (int i = 0; i < scene->Instances.size(); ++i)
             {
-                {
-                    int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
-                    std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-                    scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
-                    CComPtr<ID3D12Resource> vertexBuffer;
-                    vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
-                    vertexBuffers.push_back(vertexBuffer.Detach());
-                }
-                {
-                    int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
-                    std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-                    scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
-                    CComPtr<ID3D12Resource> indexBuffer;
-                    indexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
-                    indexBuffers.push_back(indexBuffer.Detach());
-                }
+                D3D12_GPU_DESCRIPTOR_HANDLE handle = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
+                handle.ptr = handle.ptr + m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
+                pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_CBV, handle);
+                int32_t meshIndex = scene->Instances[i].GeometryIndex;
                 {
                     D3D12_VERTEX_BUFFER_VIEW descVertexBufferView = {};
-                    descVertexBufferView.BufferLocation = vertexBuffers[vertexBuffers.size() - 1]->GetGPUVirtualAddress();
-                    descVertexBufferView.SizeInBytes = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+                    descVertexBufferView.BufferLocation = vertexBuffers[meshIndex]->GetGPUVirtualAddress();
+                    descVertexBufferView.SizeInBytes = sizeof(float[3]) * scene->Meshes[meshIndex]->getVertexCount();
                     descVertexBufferView.StrideInBytes = sizeof(float[3]);
                     pD3D12GraphicsCommandList->IASetVertexBuffers(0, 1, &descVertexBufferView);
                 }
                 {
                     D3D12_INDEX_BUFFER_VIEW descIndexBufferView = {};
-                    descIndexBufferView.BufferLocation = indexBuffers[indexBuffers.size() - 1]->GetGPUVirtualAddress();
-                    descIndexBufferView.SizeInBytes = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+                    descIndexBufferView.BufferLocation = indexBuffers[meshIndex]->GetGPUVirtualAddress();
+                    descIndexBufferView.SizeInBytes = sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
                     descIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
                     pD3D12GraphicsCommandList->IASetIndexBuffer(&descIndexBufferView);
                 }

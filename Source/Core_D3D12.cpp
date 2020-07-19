@@ -89,7 +89,7 @@ public:
         {
             D3D12_DESCRIPTOR_HEAP_DESC descDescriptorHeap = {};
             descDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-            descDescriptorHeap.NumDescriptors = 2;
+            descDescriptorHeap.NumDescriptors = 1024;
             descDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
             TRYD3D(pD3D12Device->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pD3D12DescriptorHeapCBVSRVUAV));
             pD3D12DescriptorHeapCBVSRVUAV->SetName(L"D3D12DescriptorHeap (CBV/SRV/UAV)");
