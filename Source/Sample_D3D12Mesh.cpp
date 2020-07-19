@@ -7,8 +7,6 @@
 #include "Scene_InstanceTable.h"
 #include <atlbase.h>
 #include <functional>
-#define _USE_MATH_DEFINES
-#include <math.h>
 #include <memory>
 
 class Sample_D3D12Mesh : public Sample
@@ -22,7 +20,6 @@ public:
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
     {
-        Matrix44 mvp = CreateProjection(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
         ////////////////////////////////////////////////////////////////////////////////
         // Create a vertex shader.
         CComPtr<ID3DBlob> pD3DBlobCodeVS = CompileShader("vs_5_0", "main", R"SHADER(
@@ -55,7 +52,7 @@ float4 main() : SV_Target
             descPipeline.PS.BytecodeLength = pD3DBlobCodePS->GetBufferSize();
             descPipeline.BlendState.RenderTarget->RenderTargetWriteMask = 0xF;
             descPipeline.SampleMask = 0xFFFFFFFF;
-            descPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+            descPipeline.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
             descPipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
             D3D12_INPUT_ELEMENT_DESC descElement = {};
             descElement.SemanticName = "SV_Position";
@@ -106,14 +103,7 @@ float4 main() : SV_Target
         for (int i = 0; i < scene->Instances.size(); ++i)
         {
             {
-                Matrix44 view = {
-                    1, 0, 0, 0,
-                    0, 1, 0, 0,
-                    0, 0, 1, 0,
-                    0, -1, 5, 1
-                };
-                Matrix44 project = CreateProjection(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
-                Matrix44 transform = scene->Instances[i].Transform * view * project;
+                Matrix44 transform = scene->Instances[i].Transform * InstanceTable::CameraViewProjection();
                 CComPtr<ID3D12Resource> constantBuffer;
                 constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &transform);
                 constantBuffers.push_back(constantBuffer.Detach());

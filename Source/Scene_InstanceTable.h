@@ -16,6 +16,7 @@ public:
 class InstanceTable
 {
 public:
+    static Matrix44 CameraViewProjection();
     static std::shared_ptr<InstanceTable> Default();
     //uint32_t addMaterial(std::shared_ptr<Material> material);
     uint32_t addMesh(std::shared_ptr<Mesh> mesh);
