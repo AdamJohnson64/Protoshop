@@ -15,4 +15,9 @@ public:
     virtual ID3D12DescriptorHeap* GetID3D12DescriptorHeapSMP() = 0;
 };
 
+const uint32_t DESCRIPTOR_HEAP_CBV = 0;
+const uint32_t DESCRIPTOR_HEAP_SRV = 1;
+const uint32_t DESCRIPTOR_HEAP_SAMPLER = 2;
+//const uint32_t DESCRIPTOR_HEAP_UAV = 3;
+
 std::shared_ptr<Direct3D12Device> CreateDirect3D12Device();

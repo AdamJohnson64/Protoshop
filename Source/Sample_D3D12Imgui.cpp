@@ -36,8 +36,8 @@ public:
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDevice->GetID3D12RootSignature());
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV(), m_pDevice->GetID3D12DescriptorHeapSMP() };
             pD3D12GraphicsCommandList->SetDescriptorHeaps(2, descriptorHeaps);
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(0, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(1, m_pDevice->GetID3D12DescriptorHeapSMP()->GetGPUDescriptorHandleForHeapStart());
+            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SRV, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
+            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SAMPLER, m_pDevice->GetID3D12DescriptorHeapSMP()->GetGPUDescriptorHandleForHeapStart());
             // Put the RTV into render target state and clear it before use.
             {
                 D3D12_RESOURCE_BARRIER descBarrier = {};

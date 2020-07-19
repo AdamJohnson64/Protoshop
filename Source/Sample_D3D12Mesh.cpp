@@ -106,7 +106,7 @@ float4 main() : SV_Target
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDevice->GetID3D12RootSignature());
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV() };
             pD3D12GraphicsCommandList->SetDescriptorHeaps(1, descriptorHeaps);
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(2, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
+            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_CBV, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
             // Put the RTV into render target state and clear it before use.
             {
                 D3D12_RESOURCE_BARRIER descBarrier = {};
