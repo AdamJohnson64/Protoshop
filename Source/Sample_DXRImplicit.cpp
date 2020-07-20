@@ -66,7 +66,7 @@ public:
             ++setupSubobject;
 
             D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
-            descPipelineConfig.MaxTraceRecursionDepth = 2;
+            descPipelineConfig.MaxTraceRecursionDepth = 8;
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
             descSubobject[setupSubobject].pDesc = &descPipelineConfig;
             ++setupSubobject;
