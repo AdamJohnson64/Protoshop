@@ -1,11 +1,22 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_Math.h"
 #include "Core_Object.h"
 #include "Core_Window.h"
 #include "Sample.h"
+#include "Scene_Camera.h"
 #include <Windows.h>
 #include <functional>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <memory>
+
+static bool mouseDown = false;
+static int mouseX = 0;
+static int mouseY = 0;
+
+Vector3 cameraPos = { 0, 1, -5 };
+Quaternion cameraRot = { 0, 0, 0, 1 };
 
 class WindowImpl : public Window
 {
@@ -85,18 +96,36 @@ private:
         }
         if (uMsg == WM_MOUSEMOVE)
         {
+            if (mouseDown)
+            {
+                int mouseXNow = LOWORD(lParam);
+                int mouseYNow = HIWORD(lParam);
+                int mouseDeltaX = mouseXNow - mouseX;
+                int mouseDeltaY = mouseYNow - mouseY;
+                if (mouseDeltaX != 0) cameraRot = Multiply(CreateQuaternionRotation({0, 1, 0}, mouseDeltaX / (2 * M_PI)), cameraRot);
+                if (mouseDeltaY != 0) cameraRot = Multiply(cameraRot, CreateQuaternionRotation({1, 0, 0}, mouseDeltaY / (2 * M_PI)));
+                Matrix44 transform = CreateMatrixRotation(cameraRot);
+                transform.M41 = cameraPos.X;
+                transform.M42 = cameraPos.Y;
+                transform.M43 = cameraPos.Z;
+                SetCameraViewProjection(Invert(transform));
+            }
+            mouseX = LOWORD(lParam);
+            mouseY = HIWORD(lParam);
             MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
             if (mouse != nullptr) mouse->MouseMove(LOWORD(lParam), HIWORD(lParam));
             return 0;
         }
         if (uMsg == WM_LBUTTONDOWN)
         {
+            mouseDown = true;
             MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
             if (mouse != nullptr) mouse->MouseDown(LOWORD(lParam), HIWORD(lParam));
             return 0;
         }
         if (uMsg == WM_LBUTTONUP)
         {
+            mouseDown = false;
             MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
             if (mouse != nullptr) mouse->MouseUp(LOWORD(lParam), HIWORD(lParam));
             return 0;

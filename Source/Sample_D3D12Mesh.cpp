@@ -4,6 +4,7 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Sample.h"
+#include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include <atlbase.h>
 #include <functional>
@@ -104,7 +105,7 @@ float4 main() : SV_Target
         {
             {
                 CComPtr<ID3D12Resource> constantBuffer;
-                constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &Transpose(scene->Instances[i].Transform * InstanceTable::CameraViewProjection()));
+                constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &Transpose(scene->Instances[i].Transform * GetCameraViewProjection()));
                 constantBuffers.push_back(constantBuffer.Detach());
             }
             {

@@ -3,20 +3,6 @@
 #include "Scene_ParametricUVToMesh.h"
 #include "Scene_Plane.h"
 #include "Scene_Sphere.h"
-#define _USE_MATH_DEFINES
-#include <math.h>
-
-Matrix44 InstanceTable::CameraViewProjection()
-{
-    Matrix44 view = {
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, -1, 5, 1
-    };
-    Matrix44 project = CreateProjection(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
-    return view * project;
-}
 
 std::shared_ptr<InstanceTable> InstanceTable::Default()
 {

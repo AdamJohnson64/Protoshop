@@ -5,6 +5,7 @@
 #include "Core_Math.h"
 #include "Mixin_ImguiD3D12.h"
 #include "Sample_DXRBase.h"
+#include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include "generated.Sample_DXRImplicit.dxr.h"
 #include <array>
@@ -208,7 +209,7 @@ public:
         }
         // Create a constant buffer view for top level data.
         CComPtr<ID3D12Resource> ResourceConstants;
-        ResourceConstants.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Transpose(Invert(InstanceTable::CameraViewProjection())));
+        ResourceConstants.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Transpose(Invert(GetCameraViewProjection())));
         // Establish resource views.
         {
     	    D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetCPUDescriptorHandleForHeapStart();
