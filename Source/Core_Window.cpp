@@ -48,7 +48,7 @@ public:
         ShowWindow(m_hWindow, SW_SHOW);
         ////////////////////////////////////////////////////////////////////////////////
         // Start a timer to drive frames.
-        SetTimer(m_hWindow, 0, 100, [](HWND hWnd, UINT, UINT_PTR, DWORD)
+        SetTimer(m_hWindow, 0, 1000 / 30, [](HWND hWnd, UINT, UINT_PTR, DWORD)
             {
                 InvalidateRect(hWnd, nullptr, FALSE);
             });
