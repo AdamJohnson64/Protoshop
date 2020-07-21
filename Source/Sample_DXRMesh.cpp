@@ -16,6 +16,7 @@
 #include <atlbase.h>
 #include <array>
 #include <memory>
+#include <string>
 #include <vector>
 
 class Sample_DXRMesh : public Sample_DXRBase
@@ -26,12 +27,13 @@ public:
     Sample_DXRMesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
         Sample_DXRBase(pSwapChain, pDevice)
     {
+        std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
         ////////////////////////////////////////////////////////////////////////////////
         // PIPELINE - Build the pipeline with all ray shaders.
         {
             uint32_t setupSubobject = 0;
 
-            std::array<D3D12_STATE_SUBOBJECT, 8> descSubobject = {};
+            std::array<D3D12_STATE_SUBOBJECT, 256> descSubobject = {};
 
             D3D12_DXIL_LIBRARY_DESC descLibrary = {};
             descLibrary.DXILLibrary.pShaderBytecode = g_dxr_shader;
@@ -40,6 +42,38 @@ public:
             descSubobject[setupSubobject].pDesc = &descLibrary;
             ++setupSubobject;
 
+            std::vector<std::shared_ptr<std::wstring>> hitGroupNames;
+            std::vector<std::shared_ptr<D3D12_HIT_GROUP_DESC>> hitGroups;
+            std::vector<const WCHAR*> shaderExports;
+            shaderExports.push_back(L"RayGeneration");
+            shaderExports.push_back(L"Miss");
+            for (int i = 0; i < scene->Materials.size(); ++i)
+            {
+                const Material* pMaterial = scene->Materials[i].get();
+                std::shared_ptr<std::wstring> descHitGroupName(new std::wstring(std::wstring(L"HitGroup") + std::to_wstring(i)));
+                hitGroupNames.push_back(descHitGroupName);
+                std::shared_ptr<D3D12_HIT_GROUP_DESC> descHitGroup(new D3D12_HIT_GROUP_DESC());
+                hitGroups.push_back(descHitGroup);
+                shaderExports.push_back(descHitGroupName->c_str());
+                descHitGroup->HitGroupExport = descHitGroupName->c_str();
+                descHitGroup->Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+                if (dynamic_cast<const Checkerboard*>(pMaterial))
+                {
+                    descHitGroup->ClosestHitShaderImport = L"MaterialCheckerboard";
+                }
+                else if (dynamic_cast<const RedPlastic*>(pMaterial))
+                {
+                    descHitGroup->ClosestHitShaderImport = L"MaterialRedPlastic";
+                }
+                else
+                {
+                    throw std::exception("Unable to construct material.");
+                }
+                descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+                descSubobject[setupSubobject].pDesc = descHitGroup.get();
+                ++setupSubobject;
+            }
+
             D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig = {};
             descShaderConfig.MaxPayloadSizeInBytes = sizeof(float[3]) + sizeof(float); // RGB + Distance
             descShaderConfig.MaxAttributeSizeInBytes = D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
@@ -47,10 +81,9 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup", L"HitGroup2" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
-            descSubobjectExports.NumExports = _countof(shaderExports);
-            descSubobjectExports.pExports = shaderExports;
+            descSubobjectExports.NumExports = shaderExports.size();
+            descSubobjectExports.pExports = &shaderExports[0];
             descSubobjectExports.pSubobjectToAssociate = &descSubobject[setupSubobject - 1];
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
             descSubobject[setupSubobject].pDesc = &descSubobjectExports;
@@ -62,8 +95,8 @@ public:
             ++setupSubobject;
 
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descShaderRootSignature = {};
-            descShaderRootSignature.NumExports = _countof(shaderExports);
-            descShaderRootSignature.pExports = shaderExports;
+            descShaderRootSignature.NumExports = shaderExports.size();
+            descShaderRootSignature.pExports = &shaderExports[0];
             descShaderRootSignature.pSubobjectToAssociate = &descSubobject[setupSubobject - 1];
 
             D3D12_STATE_SUBOBJECT descShaderRootSignatureAssociation = {};
@@ -75,22 +108,6 @@ public:
             descPipelineConfig.MaxTraceRecursionDepth = 1;
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
             descSubobject[setupSubobject].pDesc = &descPipelineConfig;
-            ++setupSubobject;
-
-            D3D12_HIT_GROUP_DESC descHitGroup = {};
-            descHitGroup.HitGroupExport = L"HitGroup";
-            descHitGroup.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-            descHitGroup.ClosestHitShaderImport = L"MaterialCheckerboard";
-            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-            descSubobject[setupSubobject].pDesc = &descHitGroup;
-            ++setupSubobject;
-
-            D3D12_HIT_GROUP_DESC descHitGroup2 = {};
-            descHitGroup2.HitGroupExport = L"HitGroup2";
-            descHitGroup2.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-            descHitGroup2.ClosestHitShaderImport = L"MaterialRedPlastic";
-            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-            descSubobject[setupSubobject].pDesc = &descHitGroup2;
             ++setupSubobject;
 
             D3D12_STATE_OBJECT_DESC descStateObject = {};
@@ -179,7 +196,7 @@ public:
                 instanceDescs[i].Transform[2][3] = scene->Instances[i].Transform.M43;
                 instanceDescs[i].InstanceID = i;
                 instanceDescs[i].InstanceMask = 0xFF;
-                //instanceDescs[i].InstanceContributionToHitGroupIndex = scene->Instances[i].MaterialIndex;
+                instanceDescs[i].InstanceContributionToHitGroupIndex = scene->Instances[i].MaterialIndex;
                 instanceDescs[i].AccelerationStructure = BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress();
             }
             ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * scene->Instances.size(), sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * scene->Instances.size(), &instanceDescs[0]);
@@ -249,10 +266,10 @@ public:
             memcpy(&shaderTableCPU[shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 1] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 2 - Hit Shader 1
-            memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroup0"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 2] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 3 - Hit Shader 2
-            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroup2"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroup1"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 3] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             ResourceShaderTable.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");

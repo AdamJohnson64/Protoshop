@@ -17,6 +17,7 @@
     <ClInclude Include="Source\Core_Object.h" />
     <ClInclude Include="Source\Core_OpenGL.h" />
     <ClInclude Include="Source\Core_Window.h" />
+    <ClInclude Include="Source\Material.h" />
     <ClInclude Include="Source\Mixin_ImguiBase.h" />
     <ClInclude Include="Source\Mixin_ImguiD3D11.h" />
     <ClInclude Include="Source\Mixin_ImguiD3D12.h" />
