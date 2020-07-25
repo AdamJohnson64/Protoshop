@@ -82,50 +82,40 @@ void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
     // Basic Checkerboard Albedo.
     float3 colorAlbedo;
     {
-        float x = worldRayOrigin.x * 4;
-        float z = worldRayOrigin.z * 4;
-        x -= floor(x);
-        z -= floor(z);
-        x *= 2;
-        z *= 2;
+        float x = (worldRayOrigin.x - floor(worldRayOrigin.x)) * 2;
+        float z = (worldRayOrigin.z - floor(worldRayOrigin.z)) * 2;
         float blackOrWhite = ((int)x + (int)z) % 2;
         colorAlbedo = float3(blackOrWhite, blackOrWhite, blackOrWhite);
     }
-    // Basic Dot-Product Lighting.
+    // Basic Dot-Product Diffuse.
     float3 colorDiffuse;
     {
         float light = max(0, dot(attrib.Normal.xyz, vectorLight));
         colorDiffuse = colorAlbedo * light;
     }
     // Schlick Fresnel Reflection.
-    float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.5);
-    if (fresnel < 0.05)
+    float3 colorFresnel;
+    float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
     {
-        payload.ColorAndLambda = float4(colorDiffuse, 1);
-        return;
+        if (fresnel > 0.05)
+        {
+            float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
+            RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
+            HitInfo payloadReflect;
+            payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
+            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
+            colorFresnel = payloadReflect.ColorAndLambda.xyz;
+        }
     }
-    // Basic Reflection.
-    float3 colorReflect;
-    {
-        float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
-        RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
-        HitInfo payloadReflect;
-        payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
-        TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
-        colorReflect = payloadReflect.ColorAndLambda.xyz;
-    }
-    // Basic Specular Reflection.
+    // Phong Specular.
     float3 colorSpecular;
     {
         float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
-        RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
-        HitInfo payloadReflect;
-        payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
-        TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
-        colorSpecular = payloadReflect.ColorAndLambda.xyz;
+        float specular = pow(max(0, dot(vectorReflect, vectorLight)), 32);
+        colorSpecular = float3(specular, specular, specular);
     }
     // Final Color.
-    payload.ColorAndLambda = float4(lerp(colorDiffuse, colorSpecular, fresnel), 1);
+    payload.ColorAndLambda = float4(lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular, 1);
 }
 
 [shader("closesthit")]
@@ -135,31 +125,35 @@ void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
     const float3 worldRayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     // Solid Red Albedo.
     float3 colorAlbedo = float3(1, 0, 0);
-    // Basic Dot-Product Lighting.
+    // Basic Dot-Product Diffuse.
     float3 colorDiffuse;
     {
         float light = max(0, dot(attrib.Normal.xyz, vectorLight));
         colorDiffuse = colorAlbedo * light;
     }
     // Schlick Fresnel Reflection.
+    float3 colorFresnel;
     float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
-    if (fresnel < 0.05)
     {
-        payload.ColorAndLambda = float4(colorDiffuse, 1);
-        return;
+        if (fresnel > 0.05)
+        {
+            float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
+            RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
+            HitInfo payloadReflect;
+            payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
+            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
+            colorFresnel = payloadReflect.ColorAndLambda.xyz;
+        }
     }
-    // Basic Specular Reflection.
+    // Phong Specular.
     float3 colorSpecular;
     {
         float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
-        RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
-        HitInfo payloadReflect;
-        payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
-        TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
-        colorSpecular = payloadReflect.ColorAndLambda.xyz;
+        float specular = pow(max(0, dot(vectorReflect, vectorLight)), 8);
+        colorSpecular = float3(specular, specular, specular);
     }
     // Final Color.
-    payload.ColorAndLambda = float4(lerp(colorDiffuse, colorSpecular, fresnel), 1);
+    payload.ColorAndLambda = float4(lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular, 1);
 }
 
 [shader("intersection")]
