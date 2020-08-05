@@ -98,13 +98,36 @@ private:
         {
             if (mouseDown)
             {
+                bool modifierShift = (wParam & MK_SHIFT) == MK_SHIFT;
+                bool modifierCtrl = (wParam & MK_CONTROL) == MK_CONTROL;
                 int mouseXNow = LOWORD(lParam);
                 int mouseYNow = HIWORD(lParam);
                 int mouseDeltaX = mouseXNow - mouseX;
                 int mouseDeltaY = mouseYNow - mouseY;
-                if (mouseDeltaX != 0) cameraRot = Multiply<float>(CreateQuaternionRotation<float>({0, 1, 0}, mouseDeltaX / (2 * M_PI)), cameraRot);
-                if (mouseDeltaY != 0) cameraRot = Multiply<float>(cameraRot, CreateQuaternionRotation<float>({1, 0, 0}, mouseDeltaY / (2 * M_PI)));
                 Matrix44 transform = CreateMatrixRotation(cameraRot);
+                // Camera Truck
+                if (!modifierShift && !modifierCtrl)
+                {
+                    cameraPos.X += transform.M11 * -mouseDeltaX * 0.01f;
+                    cameraPos.Y += transform.M12 * -mouseDeltaX * 0.01f;
+                    cameraPos.Z += transform.M13 * -mouseDeltaX * 0.01f;
+                    cameraPos.X += transform.M21 * mouseDeltaY * 0.01f;
+                    cameraPos.Y += transform.M22 * mouseDeltaY * 0.01f;
+                    cameraPos.Z += transform.M23 * mouseDeltaY * 0.01f;
+                }
+                // Camera Pan/Tilt
+                if (!modifierShift && modifierCtrl)
+                {
+                    if (mouseDeltaX != 0) cameraRot = Multiply<float>(CreateQuaternionRotation<float>({0, 1, 0}, mouseDeltaX / (2 * M_PI)), cameraRot);
+                    if (mouseDeltaY != 0) cameraRot = Multiply<float>(cameraRot, CreateQuaternionRotation<float>({1, 0, 0}, mouseDeltaY / (2 * M_PI)));
+                }
+                // Camera Dolly
+                if (modifierShift && modifierCtrl)
+                {
+                    cameraPos.X += transform.M31 * -mouseDeltaY * 0.01f;
+                    cameraPos.Y += transform.M32 * -mouseDeltaY * 0.01f;
+                    cameraPos.Z += transform.M33 * -mouseDeltaY * 0.01f;
+                }
                 transform.M41 = cameraPos.X;
                 transform.M42 = cameraPos.Y;
                 transform.M43 = cameraPos.Z;
@@ -118,6 +141,7 @@ private:
         }
         if (uMsg == WM_LBUTTONDOWN)
         {
+            SetCapture(hWnd);
             mouseDown = true;
             MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
             if (mouse != nullptr) mouse->MouseDown(LOWORD(lParam), HIWORD(lParam));
@@ -125,6 +149,7 @@ private:
         }
         if (uMsg == WM_LBUTTONUP)
         {
+            ReleaseCapture();
             mouseDown = false;
             MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
             if (mouse != nullptr) mouse->MouseUp(LOWORD(lParam), HIWORD(lParam));
