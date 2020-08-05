@@ -1,7 +1,9 @@
 #pragma once
 
-#define _USE_MATH_DEFINES
-#include <math.h>
+#include <ctgmath>
+
+template <class T>
+constexpr T Pi = static_cast<T>(3.1415926535897932384626433832795029L);
 
 ////////////////////////////////////////////////////////////////////////////////
 // 2D Vectors (XY)
@@ -81,7 +83,7 @@ template <class T>
 float Dot(const TVector2<T>& lhs, const TVector2<T>& rhs) { return lhs.X * rhs.X + lhs.Y * rhs.Y; }
 
 template <class T>
-float Length(const TVector2<T>& lhs) { return sqrtf(Dot(lhs, lhs)); }
+float Length(const TVector2<T>& lhs) { return sqrt(Dot(lhs, lhs)); }
 
 template <class T>
 TVector2<T> Normalize(const TVector2<T>& lhs) { return lhs * (1 / Length(lhs)); }
@@ -99,7 +101,7 @@ template <class T>
 float Dot(const TVector3<T>& lhs, const TVector3<T>& rhs) { return lhs.X * rhs.X + lhs.Y * rhs.Y + lhs.Z * rhs.Z; }
 
 template <class T>
-float Length(const TVector3<T>& lhs) { return sqrtf(Dot(lhs, lhs)); }
+float Length(const TVector3<T>& lhs) { return sqrt(Dot(lhs, lhs)); }
 
 template <class T>
 TVector3<T> Normalize(const TVector3<T>& lhs) { return lhs * (1 / Length(lhs)); }
@@ -212,16 +214,16 @@ TMatrix44<T> CreateMatrixRotation(const TQuaternion<T>& q)
 template <class T>
 TQuaternion<T> CreateQuaternionRotation(const TVector3<T>& axis, T angle)
 {
-    T radians_over_2 = (angle * M_PI / 180) / 2;
-    T sin = sinf(radians_over_2);
+    T radians_over_2 = (angle * Pi<T> / 180) / 2;
+    T sinvalue = sin(radians_over_2);
     TVector3<T> normalized_axis = Normalize(axis);
-    return { normalized_axis.X * sin, normalized_axis.Y * sin, normalized_axis.Z * sin, cosf(radians_over_2) };
+    return { normalized_axis.X * sinvalue, normalized_axis.Y * sinvalue, normalized_axis.Z * sinvalue, cos(radians_over_2) };
 }
 
 template <class T>
 TQuaternion<T> CreateQuaternionRotation(const TMatrix44<T>& orthonormal)
 {
-    T w = sqrtf(1 + orthonormal.M11 + orthonormal.M22 + orthonormal.M33) / 2;
+    T w = sqrt(1 + orthonormal.M11 + orthonormal.M22 + orthonormal.M33) / 2;
     T x = (orthonormal.M23 - orthonormal.M32) / (4 * w);
     T y = (orthonormal.M31 - orthonormal.M13) / (4 * w);
     T z = (orthonormal.M12 - orthonormal.M21) / (4 * w);
@@ -235,7 +237,7 @@ TQuaternion<T> Multiply(const TQuaternion<T>& lhs, const TQuaternion<T>& rhs)
     T t1 = rhs.W * lhs.X + rhs.X * lhs.W - rhs.Y * lhs.Z + rhs.Z * lhs.Y;
     T t2 = rhs.W * lhs.Y + rhs.X * lhs.Z + rhs.Y * lhs.W - rhs.Z * lhs.X;
     T t3 = rhs.W * lhs.Z - rhs.X * lhs.Y + rhs.Y * lhs.X + rhs.Z * lhs.W;
-    T ln = 1 / sqrtf(t0 * t0 + t1 * t1 + t2 * t2 + t3 * t3);
+    T ln = 1 / sqrt(t0 * t0 + t1 * t1 + t2 * t2 + t3 * t3);
     t0 *= ln; t1 *= ln; t2 *= ln; t3 *= ln;
     return TQuaternion<T> { t1, t2, t3, t0 };
 }
@@ -243,8 +245,8 @@ TQuaternion<T> Multiply(const TQuaternion<T>& lhs, const TQuaternion<T>& rhs)
 template <class T>
 TMatrix44<T> CreateProjection(T near_plane, T far_plane, T fov_horiz, T fov_vert)
 {
-    T w = 1 / tanf(fov_horiz * 0.5);  // 1/tan(x) == cot(x)
-    T h = 1 / tanf(fov_vert * 0.5);   // 1/tan(x) == cot(x)
+    T w = 1 / tan(fov_horiz * 0.5);  // 1/tan(x) == cot(x)
+    T h = 1 / tan(fov_vert * 0.5);   // 1/tan(x) == cot(x)
     T Q = far_plane / (far_plane - near_plane);
     return {
         w, 0, 0, 0,
