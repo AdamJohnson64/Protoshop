@@ -102,8 +102,8 @@ private:
                 int mouseYNow = HIWORD(lParam);
                 int mouseDeltaX = mouseXNow - mouseX;
                 int mouseDeltaY = mouseYNow - mouseY;
-                if (mouseDeltaX != 0) cameraRot = Multiply(CreateQuaternionRotation({0, 1, 0}, mouseDeltaX / (2 * M_PI)), cameraRot);
-                if (mouseDeltaY != 0) cameraRot = Multiply(cameraRot, CreateQuaternionRotation({1, 0, 0}, mouseDeltaY / (2 * M_PI)));
+                if (mouseDeltaX != 0) cameraRot = Multiply<float>(CreateQuaternionRotation<float>({0, 1, 0}, mouseDeltaX / (2 * M_PI)), cameraRot);
+                if (mouseDeltaY != 0) cameraRot = Multiply<float>(cameraRot, CreateQuaternionRotation<float>({1, 0, 0}, mouseDeltaY / (2 * M_PI)));
                 Matrix44 transform = CreateMatrixRotation(cameraRot);
                 transform.M41 = cameraPos.X;
                 transform.M42 = cameraPos.Y;

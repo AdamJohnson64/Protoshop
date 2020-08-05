@@ -11,7 +11,7 @@ static Matrix44 cameraVP = {
 
 Matrix44 GetCameraViewProjection()
 {
-    Matrix44 project = CreateProjection(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
+    Matrix44 project = CreateProjection<float>(0.01f, 100.0f, 45 / (2 * M_PI), 45 / (2 * M_PI));
     return cameraVP * project;
 }
 

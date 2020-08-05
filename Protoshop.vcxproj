@@ -39,7 +39,6 @@
     <ClCompile Include="Source\Core_D3D12Util.cpp" />
     <ClCompile Include="Source\Core_D3DCompiler.cpp" />
     <ClCompile Include="Source\Core_DXGI.cpp" />
-    <ClCompile Include="Source\Core_Math.cpp" />
     <ClCompile Include="Source\Core_OpenGL.cpp" />
     <ClCompile Include="Source\Core_Window.cpp" />
     <ClCompile Include="Source\Mixin_ImguiBase.cpp" />
