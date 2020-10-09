@@ -1,3 +1,5 @@
+#define MAXIMUM_RAY_RECURSION_DEPTH 2
+
 cbuffer Constants : register(b0)
 {
     float4x4 transform;
@@ -6,6 +8,7 @@ cbuffer Constants : register(b0)
 struct HitInfo
 {
     float4 ColorAndLambda;
+    int RecursionClamp;
 };
 
 struct Attributes
@@ -30,6 +33,7 @@ void RayGenerationDebug()
     ray.TMax = 1000;
     HitInfo payload;
     payload.ColorAndLambda = float4(0, 0, 0, 1);
+    payload.RecursionClamp = MAXIMUM_RAY_RECURSION_DEPTH - 1; // NOTE: Primary eye ray counts as one recursion level.
     TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
     RTOutput[LaunchIndex.xy] = float4(payload.ColorAndLambda.rgb, 1.f);
 }
@@ -52,6 +56,7 @@ void RayGenerationRasterMatch()
     ray.TMax = 1000;
     HitInfo payload;
     payload.ColorAndLambda = float4(0, 0, 0, 1);
+    payload.RecursionClamp = MAXIMUM_RAY_RECURSION_DEPTH - 1; // NOTE: Primary eye ray counts as one recursion level.
     TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
     RTOutput[LaunchIndex.xy] = float4(payload.ColorAndLambda.rgb, 1.f);
 }
@@ -97,12 +102,13 @@ void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
     float3 colorFresnel;
     float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
     {
-        if (fresnel > 0.05)
+        if (payload.RecursionClamp > 0 && fresnel > 0.05)
         {
             float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
             RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
             HitInfo payloadReflect;
             payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
+            payloadReflect.RecursionClamp = payload.RecursionClamp - 1;
             TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
             colorFresnel = payloadReflect.ColorAndLambda.xyz;
         }
@@ -135,12 +141,13 @@ void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
     float3 colorFresnel;
     float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
     {
-        if (fresnel > 0.05)
+        if (payload.RecursionClamp > 0 && fresnel > 0.05)
         {
             float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
             RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
             HitInfo payloadReflect;
             payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
+            payloadReflect.RecursionClamp = payload.RecursionClamp - 1;
             TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
             colorFresnel = payloadReflect.ColorAndLambda.xyz;
         }
