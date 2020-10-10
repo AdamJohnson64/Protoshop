@@ -89,7 +89,7 @@ float4 main() : SV_Target
                 scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
                 CComPtr<ID3D12Resource> vertexBuffer;
                 vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
-                vertexBuffers.push_back(vertexBuffer.Detach());
+                vertexBuffers.push_back(vertexBuffer);
             }
             {
                 int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
@@ -97,7 +97,7 @@ float4 main() : SV_Target
                 scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
                 CComPtr<ID3D12Resource> indexBuffer;
                 indexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
-                indexBuffers.push_back(indexBuffer.Detach());
+                indexBuffers.push_back(indexBuffer);
             }
         }
         std::vector<CComPtr<ID3D12Resource>> constantBuffers;
@@ -106,7 +106,7 @@ float4 main() : SV_Target
             {
                 CComPtr<ID3D12Resource> constantBuffer;
                 constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &Transpose(scene->Instances[i].Transform * GetCameraViewProjection()));
-                constantBuffers.push_back(constantBuffer.Detach());
+                constantBuffers.push_back(constantBuffer);
             }
             {
                 D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};

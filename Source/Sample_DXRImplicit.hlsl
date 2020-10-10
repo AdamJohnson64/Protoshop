@@ -93,13 +93,13 @@ void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
         colorAlbedo = float3(blackOrWhite, blackOrWhite, blackOrWhite);
     }
     // Basic Dot-Product Diffuse.
-    float3 colorDiffuse;
+    float3 colorDiffuse = float3(0, 0, 0);
     {
         float light = max(0, dot(attrib.Normal.xyz, vectorLight));
         colorDiffuse = colorAlbedo * light;
     }
     // Schlick Fresnel Reflection.
-    float3 colorFresnel;
+    float3 colorFresnel = float3(0, 0, 0);
     float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
     {
         if (payload.RecursionClamp > 0 && fresnel > 0.05)
@@ -114,7 +114,7 @@ void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
         }
     }
     // Phong Specular.
-    float3 colorSpecular;
+    float3 colorSpecular = float3(0, 0, 0);
     {
         float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
         float specular = pow(max(0, dot(vectorReflect, vectorLight)), 32);
@@ -132,13 +132,13 @@ void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
     // Solid Red Albedo.
     float3 colorAlbedo = float3(1, 0, 0);
     // Basic Dot-Product Diffuse.
-    float3 colorDiffuse;
+    float3 colorDiffuse = float3(0, 0, 0);
     {
         float light = max(0, dot(attrib.Normal.xyz, vectorLight));
         colorDiffuse = colorAlbedo * light;
     }
     // Schlick Fresnel Reflection.
-    float3 colorFresnel;
+    float3 colorFresnel = float3(0, 0, 0);
     float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
     {
         if (payload.RecursionClamp > 0 && fresnel > 0.05)
@@ -153,7 +153,7 @@ void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
         }
     }
     // Phong Specular.
-    float3 colorSpecular;
+    float3 colorSpecular = float3(0, 0, 0);
     {
         float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
         float specular = pow(max(0, dot(vectorReflect, vectorLight)), 8);
