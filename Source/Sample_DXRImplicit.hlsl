@@ -1,4 +1,14 @@
-#define MAXIMUM_RAY_RECURSION_DEPTH 2
+#define MAXIMUM_RAY_RECURSION_DEPTH 4
+
+// To prevent combinatoric explosion we don't allow previously reflected rays
+// to refract, nor do we allow refracted rays to reflect. These flags
+// indicate that a ray has traversed this ray path.
+#define RAY_FLAG_REFLECTED 1
+#define RAY_FLAG_REFRACTED 2
+
+#define IOR_VACUUM 1.00
+#define IOR_GLASS 1.52
+#define IOR_PLASTIC 1.46
 
 cbuffer Constants : register(b0)
 {
@@ -7,13 +17,14 @@ cbuffer Constants : register(b0)
 
 struct HitInfo
 {
-    float4 ColorAndLambda;
-    int RecursionClamp;
+    float3 Color;
+    int RecursionLevel;
+    int Flags;
 };
 
 struct Attributes
 {
-    float4 Normal;
+    float3 Normal;
 };
 
 RWTexture2D<float4> RTOutput             : register(u0);
@@ -31,11 +42,12 @@ void RayGenerationDebug()
     ray.Direction = normalize(float3(-1 + normx * 2, 1 - normy * 2, 1));
     ray.TMin = 0.001f;
     ray.TMax = 1000;
-    HitInfo payload;
-    payload.ColorAndLambda = float4(0, 0, 0, 1);
-    payload.RecursionClamp = MAXIMUM_RAY_RECURSION_DEPTH - 1; // NOTE: Primary eye ray counts as one recursion level.
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
-    RTOutput[LaunchIndex.xy] = float4(payload.ColorAndLambda.rgb, 1.f);
+    HitInfo rayOut;
+    rayOut.Color = float3(0, 0, 0);
+    rayOut.RecursionLevel = 1;
+    rayOut.Flags = 0;
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, rayOut);
+    RTOutput[LaunchIndex.xy] = float4(rayOut.Color, 1);
 }
 
 [shader("raygeneration")]
@@ -54,22 +66,30 @@ void RayGenerationRasterMatch()
     ray.Direction = normalize(back.xyz - front.xyz);
     ray.TMin = 0.001f;
     ray.TMax = 1000;
-    HitInfo payload;
-    payload.ColorAndLambda = float4(0, 0, 0, 1);
-    payload.RecursionClamp = MAXIMUM_RAY_RECURSION_DEPTH - 1; // NOTE: Primary eye ray counts as one recursion level.
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
-    RTOutput[LaunchIndex.xy] = float4(payload.ColorAndLambda.rgb, 1.f);
+    HitInfo rayOut;
+    rayOut.Color = float3(0, 0, 0);
+    rayOut.RecursionLevel = 1;
+    rayOut.Flags = 0;
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, rayOut);
+    RTOutput[LaunchIndex.xy] = float4(rayOut.Color, 1);
 }
 
 [shader("miss")]
-void Miss(inout HitInfo payload)
+void Miss(inout HitInfo rayIn)
 {
-    payload.ColorAndLambda = float4(0.25f, 0.25f, 0.25f, 1);
+    rayIn.Color = float3(0.25f, 0.25f, 0.25f);
 }
 
-float3 reflect(float3 i, float3 n)
+float3 refract2(float3 incident, float3 normal, float ior)
 {
-     return i - 2 * n * dot(i, n);
+	float cosi = clamp(dot(incident, normal), -1, 1);
+	float etai = 1, etat = ior;
+	float3 n = normal;
+	if (cosi < 0) { cosi = -cosi; }
+	else { float tmp = etai; etai = etat; etat = tmp; n = -normal; }
+	float eta = etai / etat;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+	return k < 0 ? float3(0, 0, 0) : (eta * incident + (eta * cosi - sqrt(k)) * n);
 }
 
 float schlick(float3 incident, float3 normal, float ior1, float ior2)
@@ -80,7 +100,7 @@ float schlick(float3 incident, float3 normal, float ior1, float ior2)
 }
 
 [shader("closesthit")]
-void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
+void MaterialCheckerboard(inout HitInfo rayIn, Attributes attrib)
 {
     const float3 vectorLight = normalize(float3(1, 1, -1));
     const float3 worldRayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
@@ -95,37 +115,38 @@ void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
     // Basic Dot-Product Diffuse.
     float3 colorDiffuse = float3(0, 0, 0);
     {
-        float light = max(0, dot(attrib.Normal.xyz, vectorLight));
+        float light = max(0, dot(attrib.Normal, vectorLight));
         colorDiffuse = colorAlbedo * light;
     }
     // Schlick Fresnel Reflection.
-    float3 colorFresnel = float3(0, 0, 0);
-    float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
+    float3 colorFresnel = colorDiffuse;
+    float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
     {
-        if (payload.RecursionClamp > 0 && fresnel > 0.05)
+        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0 && fresnel > 0.05)
         {
-            float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
+            float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
             RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
-            HitInfo payloadReflect;
-            payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
-            payloadReflect.RecursionClamp = payload.RecursionClamp - 1;
-            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
-            colorFresnel = payloadReflect.ColorAndLambda.xyz;
+            HitInfo rayOut;
+            rayOut.Color = float3(0, 0, 0);
+            rayOut.RecursionLevel = rayIn.RecursionLevel + 1;
+            rayOut.Flags = rayIn.Flags | RAY_FLAG_REFLECTED;
+            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, rayOut);
+            colorFresnel = rayOut.Color;
         }
     }
     // Phong Specular.
     float3 colorSpecular = float3(0, 0, 0);
     {
-        float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
-        float specular = pow(max(0, dot(vectorReflect, vectorLight)), 32);
+        float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
+        float specular = pow(max(0, dot(vectorReflect, vectorLight)), 64);
         colorSpecular = float3(specular, specular, specular);
     }
     // Final Color.
-    payload.ColorAndLambda = float4(lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular, 1);
+    rayIn.Color = lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular;
 }
 
 [shader("closesthit")]
-void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
+void MaterialRedPlastic(inout HitInfo rayIn, Attributes attrib)
 {
     const float3 vectorLight = normalize(float3(1, 1, -1));
     const float3 worldRayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
@@ -134,33 +155,83 @@ void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
     // Basic Dot-Product Diffuse.
     float3 colorDiffuse = float3(0, 0, 0);
     {
-        float light = max(0, dot(attrib.Normal.xyz, vectorLight));
+        float light = max(0, dot(attrib.Normal, vectorLight));
         colorDiffuse = colorAlbedo * light;
     }
     // Schlick Fresnel Reflection.
-    float3 colorFresnel = float3(0, 0, 0);
-    float fresnel = schlick(WorldRayDirection(), attrib.Normal.xyz, 1, 1.3);
+    float3 colorFresnel = colorDiffuse;
+    float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
     {
-        if (payload.RecursionClamp > 0 && fresnel > 0.05)
+        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0 && fresnel > 0.05)
         {
-            float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
+            float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
             RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
-            HitInfo payloadReflect;
-            payloadReflect.ColorAndLambda = float4(0, 0, 0, 1);
-            payloadReflect.RecursionClamp = payload.RecursionClamp - 1;
-            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payloadReflect);
-            colorFresnel = payloadReflect.ColorAndLambda.xyz;
+            HitInfo rayOut;
+            rayOut.Color = float3(0, 0, 0);
+            rayOut.RecursionLevel = rayIn.RecursionLevel + 1;
+            rayOut.Flags = rayOut.Flags | RAY_FLAG_REFLECTED;
+            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, rayOut);
+            colorFresnel = rayOut.Color;
         }
     }
     // Phong Specular.
     float3 colorSpecular = float3(0, 0, 0);
     {
-        float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal.xyz);
+        float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
         float specular = pow(max(0, dot(vectorReflect, vectorLight)), 8);
         colorSpecular = float3(specular, specular, specular);
     }
     // Final Color.
-    payload.ColorAndLambda = float4(lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular, 1);
+    rayIn.Color = lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular;
+}
+
+[shader("closesthit")]
+void MaterialGlass(inout HitInfo rayIn, Attributes attrib)
+{
+    const float3 vectorLight = normalize(float3(1, 1, -1));
+    const float3 worldRayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+    // Solid Red Albedo.
+    float3 colorAlbedo = float3(1, 0, 0);
+    // Basic Dot-Product Diffuse.
+    float3 colorDiffuse = float3(0, 0, 0);
+    {
+        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFLECTED) == 0)
+        {
+            float3 vectorRefract = refract2(WorldRayDirection(), attrib.Normal, IOR_GLASS);
+            RayDesc ray = { worldRayOrigin + vectorRefract * 0.0001, 0, vectorRefract, 100000 };
+            HitInfo rayOut;
+            rayOut.Color = float3(0, 0, 0);
+            rayOut.RecursionLevel = rayIn.RecursionLevel + 1;
+            rayOut.Flags = rayIn.Flags | RAY_FLAG_REFRACTED;
+            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, rayOut);
+            colorDiffuse = rayOut.Color;
+        }
+    }
+    // Schlick Fresnel Reflection.
+    float3 colorFresnel = colorDiffuse;
+    float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_GLASS);
+    {
+        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0 && fresnel > 0.05)
+        {
+            float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
+            RayDesc ray = { worldRayOrigin + vectorReflect * 0.0001, 0, vectorReflect, 100000 };
+            HitInfo rayOut;
+            rayOut.Color = float3(0, 0, 0);
+            rayOut.RecursionLevel = rayIn.RecursionLevel + 1;
+            rayOut.Flags = rayOut.Flags | RAY_FLAG_REFLECTED;
+            TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, rayOut);
+            colorFresnel = rayOut.Color;
+        }
+    }
+    // Phong Specular.
+    float3 colorSpecular = float3(0, 0, 0);
+    {
+        float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
+        float specular = pow(max(0, dot(vectorReflect, vectorLight)), 256);
+        colorSpecular = float3(specular, specular, specular);
+    }
+    // Final Color.
+    rayIn.Color = lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular;
 }
 
 [shader("intersection")]
@@ -175,7 +246,7 @@ void IntersectPlane()
     if (lambda < 0) return;
     float3 intersection = origin + direction * lambda;
     if (intersection.x < -1 || intersection.x > 1 || intersection.z < -1 || intersection.z > 1) return;
-    attributes.Normal = float4(plane.xyz, 0);
+    attributes.Normal = plane.xyz;
     ReportHit(lambda, 0, attributes);
 }
 
@@ -194,13 +265,13 @@ void IntersectSphere()
     float hitFront = (-b - solution) / (2 * a);
     if (hitFront >= 0)
     {
-        attributes.Normal = float4(normalize(mul(origin + direction * hitFront, (float3x3)ObjectToWorld3x4())), 0);
+        attributes.Normal = normalize(mul(origin + direction * hitFront, (float3x3)ObjectToWorld3x4()));
         ReportHit(hitFront, 0, attributes);
     }
     float hitBack = (-b + solution) / (2 * a);
     if (hitBack >= 0)
     {
-        attributes.Normal = float4(normalize(mul(origin + direction * hitBack, (float3x3)ObjectToWorld3x4())), 0);
+        attributes.Normal = normalize(mul(origin + direction * hitBack, (float3x3)ObjectToWorld3x4()));
         ReportHit(hitBack, 0, attributes);
     }
 }

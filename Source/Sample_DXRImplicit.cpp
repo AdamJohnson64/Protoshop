@@ -25,7 +25,7 @@ public:
         {
             uint32_t setupSubobject = 0;
 
-            std::array<D3D12_STATE_SUBOBJECT, 8> descSubobject = {};
+            std::array<D3D12_STATE_SUBOBJECT, 16> descSubobject = {};
 
             D3D12_DXIL_LIBRARY_DESC descLibrary = {};
             descLibrary.DXILLibrary.pShaderBytecode = g_dxr_shader;
@@ -41,7 +41,7 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"RayGenerationDebug", L"RayGenerationRasterMatch", L"Miss", L"HitGroup1", L"HitGroup2", L"IntersectPlane", L"IntersectSphere" };
+            const WCHAR* shaderExports[] = { L"RayGenerationDebug", L"RayGenerationRasterMatch", L"Miss", L"HitGroupCheckerboard", L"HitGroupRedPlastic", L"HitGroupGlass", L"IntersectPlane", L"IntersectSphere" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
             descSubobjectExports.NumExports = _countof(shaderExports);
             descSubobjectExports.pExports = shaderExports;
@@ -66,27 +66,36 @@ public:
             ++setupSubobject;
 
             D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
-            descPipelineConfig.MaxTraceRecursionDepth = 2;
+            descPipelineConfig.MaxTraceRecursionDepth = 4;
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
             descSubobject[setupSubobject].pDesc = &descPipelineConfig;
             ++setupSubobject;
 
-            D3D12_HIT_GROUP_DESC descHitGroup1 = {};
-            descHitGroup1.HitGroupExport = L"HitGroup1";
-            descHitGroup1.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-            descHitGroup1.ClosestHitShaderImport = L"MaterialCheckerboard";
-            descHitGroup1.IntersectionShaderImport = L"IntersectPlane";
+            D3D12_HIT_GROUP_DESC descHitGroupCheckerboard = {};
+            descHitGroupCheckerboard.HitGroupExport = L"HitGroupCheckerboard";
+            descHitGroupCheckerboard.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+            descHitGroupCheckerboard.ClosestHitShaderImport = L"MaterialCheckerboard";
+            descHitGroupCheckerboard.IntersectionShaderImport = L"IntersectPlane";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-            descSubobject[setupSubobject].pDesc = &descHitGroup1;
+            descSubobject[setupSubobject].pDesc = &descHitGroupCheckerboard;
             ++setupSubobject;
 
-            D3D12_HIT_GROUP_DESC descHitGroup2 = {};
-            descHitGroup2.HitGroupExport = L"HitGroup2";
-            descHitGroup2.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-            descHitGroup2.ClosestHitShaderImport = L"MaterialRedPlastic";
-            descHitGroup2.IntersectionShaderImport = L"IntersectSphere";
+            D3D12_HIT_GROUP_DESC descHitGroupRedPlastic = {};
+            descHitGroupRedPlastic.HitGroupExport = L"HitGroupRedPlastic";
+            descHitGroupRedPlastic.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+            descHitGroupRedPlastic.ClosestHitShaderImport = L"MaterialRedPlastic";
+            descHitGroupRedPlastic.IntersectionShaderImport = L"IntersectSphere";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-            descSubobject[setupSubobject].pDesc = &descHitGroup2;
+            descSubobject[setupSubobject].pDesc = &descHitGroupRedPlastic;
+            ++setupSubobject;
+
+            D3D12_HIT_GROUP_DESC descHitGroupGlass = {};
+            descHitGroupGlass.HitGroupExport = L"HitGroupGlass";
+            descHitGroupGlass.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+            descHitGroupGlass.ClosestHitShaderImport = L"MaterialGlass";
+            descHitGroupGlass.IntersectionShaderImport = L"IntersectSphere";
+            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+            descSubobject[setupSubobject].pDesc = &descHitGroupGlass;
             ++setupSubobject;
 
             D3D12_STATE_OBJECT_DESC descStateObject = {};
@@ -178,7 +187,7 @@ public:
             DxrInstance[3].Transform[0][3] = 2;
             DxrInstance[3].Transform[1][3] = 1;
             DxrInstance[3].InstanceMask = 0xFF;
-            DxrInstance[3].InstanceContributionToHitGroupIndex = 1;
+            DxrInstance[3].InstanceContributionToHitGroupIndex = 2;
             DxrInstance[3].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
             ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(DxrInstance), sizeof(DxrInstance), &DxrInstance);
         }
@@ -248,7 +257,7 @@ public:
             CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
             TRYD3D(m_pPipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(&stateObjectProperties));
             uint32_t shaderEntrySize = 64;
-            uint32_t shaderTableSize = shaderEntrySize * 4;
+            uint32_t shaderTableSize = shaderEntrySize * 5;
             std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
             memset(&shaderTableCPU[0], 0, shaderTableSize);
             // Shader Index 0 - Ray Generation Shader
@@ -258,11 +267,14 @@ public:
             memcpy(&shaderTableCPU[shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 1] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 2 - Hit Shader 1
-            memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroup1"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroupCheckerboard"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 2] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
-            // Shader Index 3 - Hit Shader 1
-            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroup2"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            // Shader Index 3 - Hit Shader 2
+            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroupRedPlastic"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 3] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
+            // Shader Index 4 - Hit Shader 3
+            memcpy(&shaderTableCPU[shaderEntrySize * 4], stateObjectProperties->GetShaderIdentifier(L"HitGroupGlass"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 4] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
             ResourceShaderTable.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
