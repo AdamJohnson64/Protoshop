@@ -129,18 +129,20 @@ public:
         BottomLevelAS.resize(scene->Meshes.size());
         for (int i = 0; i < scene->Meshes.size(); ++i)
         {
+            const Mesh* mesh = dynamic_cast<const Mesh*>(scene->Meshes[i].get());
+            if (mesh == nullptr) continue;
             CComPtr<ID3D12Resource> vertexBuffer;
             CComPtr<ID3D12Resource> indexBuffer;
             {
-                int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+                int sizeVertex = sizeof(float[3]) * mesh->getVertexCount();
                 std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-                scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
+                mesh->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
                 vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
             }
             {
-                int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+                int sizeIndices = sizeof(int32_t) * mesh->getIndexCount();
                 std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-                scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
+                mesh->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
                 indexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
             }
             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
@@ -153,8 +155,8 @@ public:
             descGeometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
             descGeometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
             descGeometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-            descGeometry.Triangles.IndexCount = scene->Meshes[i]->getIndexCount();
-            descGeometry.Triangles.VertexCount = scene->Meshes[i]->getVertexCount();
+            descGeometry.Triangles.IndexCount = mesh->getIndexCount();
+            descGeometry.Triangles.VertexCount = mesh->getVertexCount();
             descGeometry.Triangles.IndexBuffer = indexBuffer->GetGPUVirtualAddress();
             descGeometry.Triangles.VertexBuffer.StartAddress = vertexBuffer->GetGPUVirtualAddress();
             descGeometry.Triangles.VertexBuffer.StrideInBytes = sizeof(float[3]);

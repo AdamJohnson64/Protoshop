@@ -83,18 +83,20 @@ float4 main() : SV_Target
         std::vector<CComPtr<ID3D12Resource>> indexBuffers;
         for (int i = 0; i < scene->Meshes.size(); ++i)
         {
+            const Mesh* mesh = dynamic_cast<const Mesh*>(scene->Meshes[i].get());
+            if (mesh == nullptr) continue;
             {
-                int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+                int sizeVertex = sizeof(float[3]) * mesh->getVertexCount();
                 std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-                scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
+                mesh->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
                 CComPtr<ID3D12Resource> vertexBuffer;
                 vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
                 vertexBuffers.push_back(vertexBuffer);
             }
             {
-                int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+                int sizeIndices = sizeof(int32_t) * mesh->getIndexCount();
                 std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-                scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
+                mesh->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
                 CComPtr<ID3D12Resource> indexBuffer;
                 indexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
                 indexBuffers.push_back(indexBuffer);
@@ -152,25 +154,27 @@ float4 main() : SV_Target
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             for (int i = 0; i < scene->Instances.size(); ++i)
             {
+                int32_t meshIndex = scene->Instances[i].GeometryIndex;
+                const Mesh* mesh = dynamic_cast<const Mesh*>(scene->Meshes[meshIndex].get());
+                if (mesh == nullptr) continue;
                 D3D12_GPU_DESCRIPTOR_HANDLE handle = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
                 handle.ptr = handle.ptr + m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
                 pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_CBV, handle);
-                int32_t meshIndex = scene->Instances[i].GeometryIndex;
                 {
                     D3D12_VERTEX_BUFFER_VIEW descVertexBufferView = {};
                     descVertexBufferView.BufferLocation = vertexBuffers[meshIndex]->GetGPUVirtualAddress();
-                    descVertexBufferView.SizeInBytes = sizeof(float[3]) * scene->Meshes[meshIndex]->getVertexCount();
+                    descVertexBufferView.SizeInBytes = sizeof(float[3]) * mesh->getVertexCount();
                     descVertexBufferView.StrideInBytes = sizeof(float[3]);
                     pD3D12GraphicsCommandList->IASetVertexBuffers(0, 1, &descVertexBufferView);
                 }
                 {
                     D3D12_INDEX_BUFFER_VIEW descIndexBufferView = {};
                     descIndexBufferView.BufferLocation = indexBuffers[meshIndex]->GetGPUVirtualAddress();
-                    descIndexBufferView.SizeInBytes = sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
+                    descIndexBufferView.SizeInBytes = sizeof(int32_t) * mesh->getIndexCount();
                     descIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
                     pD3D12GraphicsCommandList->IASetIndexBuffer(&descIndexBufferView);
                 }
-                pD3D12GraphicsCommandList->DrawIndexedInstanced(scene->Meshes[meshIndex]->getIndexCount(), 1, 0, 0, 0);
+                pD3D12GraphicsCommandList->DrawIndexedInstanced(mesh->getIndexCount(), 1, 0, 0, 0);
             }
             // Transition the render target into presentation state for display.
             {

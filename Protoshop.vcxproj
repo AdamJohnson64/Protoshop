@@ -26,6 +26,7 @@
     <ClInclude Include="Source\Sample_DXRBase.h" />
     <ClInclude Include="Source\Sample_Manifest.h" />
     <ClInclude Include="Source\Scene_Camera.h" />
+    <ClInclude Include="Source\Scene_Geometry.h" />
     <ClInclude Include="Source\Scene_InstanceTable.h" />
     <ClInclude Include="Source\Scene_Mesh.h" />
     <ClInclude Include="Source\Scene_ParametricUV.h" />
