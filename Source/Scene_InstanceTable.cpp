@@ -15,7 +15,7 @@ std::shared_ptr<InstanceTable> InstanceTable::Default()
     // Create Geometry.
     std::shared_ptr<ParametricUV> _plane(new Plane());
     std::shared_ptr<Mesh> _mesh(new ParametricUVToMesh(_plane, 100, 100));
-    uint32_t hPlane = scene->addMesh(_mesh);
+    uint32_t hPlane = scene->addGeometry(_mesh);
     std::shared_ptr<ParametricUV> _sphere(new Sphere());
     std::shared_ptr<Mesh> _mesh2(new ParametricUVToMesh(_sphere, 100, 100));
     // Create Instances.
@@ -25,7 +25,7 @@ std::shared_ptr<InstanceTable> InstanceTable::Default()
     transform.M33 = 10;
     transform.M44 = 1;
     scene->addInstance(transform, hPlane, hCheckerboard);
-    uint32_t hSphere = scene->addMesh(_mesh2);
+    uint32_t hSphere = scene->addGeometry(_mesh2);
     transform.M11 = 1;
     transform.M22 = 1;
     transform.M33 = 1;
@@ -47,10 +47,10 @@ uint32_t InstanceTable::addMaterial(std::shared_ptr<Material> material)
     return index;
 }
 
-uint32_t InstanceTable::addMesh(std::shared_ptr<Mesh> mesh)
+uint32_t InstanceTable::addGeometry(std::shared_ptr<Geometry> geometry)
 {
     uint32_t index = Meshes.size();
-    Meshes.push_back(mesh);
+    Meshes.push_back(geometry);
     return index;
 }
 
