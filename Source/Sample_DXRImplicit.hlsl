@@ -135,18 +135,17 @@ void MaterialCheckerboard(inout HitInfo rayIn, Attributes attrib)
     // Basic Lambertian Diffuse.
     float3 colorDiffuse = colorAlbedo * lambert(attrib.Normal);
     // Schlick Fresnel Reflection.
-    float3 colorFresnel = colorDiffuse;
-    float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
     {
+        float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
         if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0)
         {
-            colorFresnel = RecurseRay(worldHit, reflect(WorldRayDirection(), attrib.Normal), rayIn, RAY_FLAG_REFLECTED);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), attrib.Normal), rayIn, RAY_FLAG_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
     float3 colorSpecular = phong(reflect(WorldRayDirection(), attrib.Normal), 64);
     // Final Color.
-    rayIn.Color = lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular;
+    rayIn.Color = colorDiffuse + colorSpecular;
 }
 
 [shader("closesthit")]
@@ -158,18 +157,17 @@ void MaterialRedPlastic(inout HitInfo rayIn, Attributes attrib)
     // Basic Lambertian Diffuse.
     float3 colorDiffuse = colorAlbedo * lambert(attrib.Normal);
     // Schlick Fresnel Reflection.
-    float3 colorFresnel = colorDiffuse;
-    float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
     {
+        float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
         if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0)
         {
-            colorFresnel = RecurseRay(worldHit, reflect(WorldRayDirection(), attrib.Normal), rayIn, RAY_FLAG_REFLECTED);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), attrib.Normal), rayIn, RAY_FLAG_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
     float3 colorSpecular = phong(reflect(WorldRayDirection(), attrib.Normal), 8);
     // Final Color.
-    rayIn.Color = lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular;
+    rayIn.Color = colorDiffuse + colorSpecular;
 }
 
 [shader("closesthit")]
@@ -186,18 +184,17 @@ void MaterialGlass(inout HitInfo rayIn, Attributes attrib)
         }
     }
     // Schlick Fresnel Reflection.
-    float3 colorFresnel = colorDiffuse;
-    float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_GLASS);
     {
+        float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_GLASS);
         if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0)
         {
-            colorFresnel = RecurseRay(worldHit, vectorReflect, rayIn, RAY_FLAG_REFLECTED);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, vectorReflect, rayIn, RAY_FLAG_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
     float3 colorSpecular = phong(vectorReflect, 256);
     // Final Color.
-    rayIn.Color = lerp(colorDiffuse, colorFresnel, fresnel) + colorSpecular;
+    rayIn.Color = colorDiffuse + colorSpecular;
 }
 
 [shader("intersection")]
