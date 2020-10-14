@@ -1,5 +1,7 @@
 #define MAXIMUM_RAY_RECURSION_DEPTH 4
 
+#define DEFAULT_TMAX 1000000000
+
 // To prevent combinatoric explosion we don't allow previously reflected rays
 // to refract, nor do we allow refracted rays to reflect. These flags
 // indicate that a ray has traversed this ray path.
@@ -18,6 +20,7 @@ cbuffer Constants : register(b0)
 struct HitInfo
 {
     float3 Color;
+    float TMax;
     int RecursionLevel;
     int Flags;
 };
@@ -39,9 +42,10 @@ void RayGenerationDebug()
     float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
     ray.Direction = normalize(float3(NormalizedX, NormalizedY, 1));
     ray.TMin = 0.001f;
-    ray.TMax = 1000;
+    ray.TMax = DEFAULT_TMAX;
     HitInfo rayOut;
     rayOut.Color = float3(0, 0, 0);
+    rayOut.TMax = DEFAULT_TMAX;
     rayOut.RecursionLevel = 1;
     rayOut.Flags = 0;
     TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, rayOut);
@@ -63,9 +67,10 @@ void RayGenerationRasterMatch()
     ray.Origin = front.xyz;
     ray.Direction = normalize(back.xyz - front.xyz);
     ray.TMin = 0.001f;
-    ray.TMax = 1000;
+    ray.TMax = DEFAULT_TMAX;
     HitInfo rayOut;
     rayOut.Color = float3(0, 0, 0);
+    rayOut.TMax = DEFAULT_TMAX;
     rayOut.RecursionLevel = 1;
     rayOut.Flags = 0;
     TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, rayOut);
@@ -111,19 +116,43 @@ float schlick(float3 incident, float3 normal, float ior1, float ior2)
 
 float3 RecurseRay(float3 origin, float3 direction, in HitInfo rayIn, int rayType)
 {
-    RayDesc ray = { origin + direction * 0.0001, 0, direction, 100000 };
+    RayDesc ray = { origin + direction * 0.0001, 0, direction, DEFAULT_TMAX };
     HitInfo rayOut;
     rayOut.Color = float3(0, 0, 0);
+    rayOut.TMax = DEFAULT_TMAX;
     rayOut.RecursionLevel = rayIn.RecursionLevel + 1;
     rayOut.Flags = rayIn.Flags | rayType;
     TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, rayOut);
     return rayOut.Color;
 }
 
+bool Shadowed(float3 origin)
+{
+    const float3 light = normalize(float3(1, 1, -1));
+    RayDesc ray = { origin + light * 0.0001, 0, light, DEFAULT_TMAX };
+    HitInfo rayOut;
+    rayOut.Color = float3(0, 0, 0);
+    rayOut.TMax = DEFAULT_TMAX;
+    rayOut.RecursionLevel = 65536; // Do not recurse.
+    rayOut.Flags = 65535; // Do not spawn new rays.
+    TraceRay(SceneBVH, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, ray, rayOut);
+    return rayOut.TMax < DEFAULT_TMAX;
+}
+
 [shader("closesthit")]
 void MaterialCheckerboard(inout HitInfo rayIn, Attributes attrib)
 {
+    rayIn.TMax = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+    // Shadow Ray.
+    if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayIn.Flags != 65535)
+    {
+        if (Shadowed(worldHit))
+        {
+            rayIn.Color = float3(0, 0, 0);
+            return;
+        }
+    }
     // Basic Checkerboard Albedo.
     float3 colorAlbedo;
     {
@@ -151,7 +180,17 @@ void MaterialCheckerboard(inout HitInfo rayIn, Attributes attrib)
 [shader("closesthit")]
 void MaterialRedPlastic(inout HitInfo rayIn, Attributes attrib)
 {
+    rayIn.TMax = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+    // Shadow Ray.
+    if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayIn.Flags != 65535)
+    {
+        if (Shadowed(worldHit))
+        {
+            rayIn.Color = float3(0, 0, 0);
+            return;
+        }
+    }
     // Solid Red Albedo.
     float3 colorAlbedo = float3(1, 0, 0);
     // Basic Lambertian Diffuse.
@@ -173,6 +212,7 @@ void MaterialRedPlastic(inout HitInfo rayIn, Attributes attrib)
 [shader("closesthit")]
 void MaterialGlass(inout HitInfo rayIn, Attributes attrib)
 {
+    rayIn.TMax = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     const float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
     // Refraction.
