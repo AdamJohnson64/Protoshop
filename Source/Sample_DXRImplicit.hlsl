@@ -210,8 +210,8 @@ void IntersectPlane()
     float divisor = dot(plane.xyz, direction);
     float lambda = (plane.w - dot(origin, plane.xyz)) / divisor;
     if (lambda < 0) return;
-    //float3 intersection = origin + direction * lambda;
-    //if (intersection.x < -1 || intersection.x > 1 || intersection.z < -1 || intersection.z > 1) return;
+    float3 intersection = origin + direction * lambda;
+    if (intersection.x < -1 || intersection.x > 1 || intersection.z < -1 || intersection.z > 1) return;
     attributes.Normal = plane.xyz;
     ReportHit(lambda, 0, attributes);
 }
