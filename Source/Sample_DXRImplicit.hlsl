@@ -35,9 +35,9 @@ void RayGenerationDebug()
 {
     RayDesc ray;
     ray.Origin = float3(0, 1, -3);
-    float normx = (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
-    float normy = (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
-    ray.Direction = normalize(float3(-1 + normx * 2, 1 - normy * 2, 1));
+    float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
+    float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
+    ray.Direction = normalize(float3(NormalizedX, NormalizedY, 1));
     ray.TMin = 0.001f;
     ray.TMax = 1000;
     HitInfo rayOut;
@@ -210,8 +210,8 @@ void IntersectPlane()
     float divisor = dot(plane.xyz, direction);
     float lambda = (plane.w - dot(origin, plane.xyz)) / divisor;
     if (lambda < 0) return;
-    float3 intersection = origin + direction * lambda;
-    if (intersection.x < -1 || intersection.x > 1 || intersection.z < -1 || intersection.z > 1) return;
+    //float3 intersection = origin + direction * lambda;
+    //if (intersection.x < -1 || intersection.x > 1 || intersection.z < -1 || intersection.z > 1) return;
     attributes.Normal = plane.xyz;
     ReportHit(lambda, 0, attributes);
 }
