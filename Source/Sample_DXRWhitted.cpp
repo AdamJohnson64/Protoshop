@@ -7,16 +7,16 @@
 #include "Sample_DXRBase.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
-#include "generated.Sample_DXRImplicit.dxr.h"
+#include "generated.Sample_DXRWhitted.dxr.h"
 #include <array>
 #include <atlbase.h>
 
-class Sample_DXRImplicit : public Sample_DXRBase, public Mixin_ImguiD3D12
+class Sample_DXRWhitted : public Sample_DXRBase, public Mixin_ImguiD3D12
 {
 private:
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
 public:
-    Sample_DXRImplicit(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
+    Sample_DXRWhitted(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
         Sample_DXRBase(pSwapChain, pDevice),
         Mixin_ImguiD3D12(pDevice)
     {
@@ -315,7 +315,7 @@ public:
     }
 };
 
-std::shared_ptr<Sample> CreateSample_DXRImplicit(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
+std::shared_ptr<Sample> CreateSample_DXRWhitted(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
 {
-    return std::shared_ptr<Sample>(new Sample_DXRImplicit(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_DXRWhitted(pSwapChain, pDevice));
 }

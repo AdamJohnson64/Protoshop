@@ -46,11 +46,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> pWindowDXRBasic(CreateNewWindow());
         pWindowDXRBasic->SetSample(CreateSample_DXRBasic(CreateDXGISwapChain(pDevice12, pWindowDXRBasic->GetWindowHandle()), pDevice12));
 
-        std::shared_ptr<Window> pWindowDXRImplicit(CreateNewWindow());
-        pWindowDXRImplicit->SetSample(CreateSample_DXRImplicit(CreateDXGISwapChain(pDevice12, pWindowDXRImplicit->GetWindowHandle()), pDevice12));
-
         std::shared_ptr<Window> pWindowDXRMesh(CreateNewWindow());
         pWindowDXRMesh->SetSample(CreateSample_DXRMesh(CreateDXGISwapChain(pDevice12, pWindowDXRMesh->GetWindowHandle()), pDevice12));
+
+        std::shared_ptr<Window> pWindowDXRWhitted(CreateNewWindow());
+        pWindowDXRWhitted->SetSample(CreateSample_DXRWhitted(CreateDXGISwapChain(pDevice12, pWindowDXRWhitted->GetWindowHandle()), pDevice12));
 
         std::shared_ptr<Window> pWindowGLBasic(CreateNewWindow());
         pWindowGLBasic->SetSample(CreateSample_OpenGLBasic(pDeviceGL, pWindowGLBasic));

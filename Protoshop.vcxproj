@@ -57,7 +57,7 @@
     <ClCompile Include="Source\Sample_DXRBase.cpp" />
     <ClCompile Include="Source\Sample_DXRBasic.cpp" />
     <ClCompile Include="Source\Sample_D3D12Imgui.cpp" />
-    <ClCompile Include="Source\Sample_DXRImplicit.cpp" />
+    <ClCompile Include="Source\Sample_DXRWhitted.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
     <ClCompile Include="Source\Scene_Camera.cpp" />
     <ClCompile Include="Source\Scene_InstanceTable.cpp" />
@@ -90,7 +90,7 @@
       <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
       <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
     </FxCompile>
-    <FxCompile Include="Source\Sample_DXRImplicit.hlsl">
+    <FxCompile Include="Source\Sample_DXRWhitted.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </EntryPointName>
