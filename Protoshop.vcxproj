@@ -75,38 +75,10 @@
     <Text Include="LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Source\Sample_DXRAmbientOcclusion.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </EntryPointName>
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Source\Sample_DXRMesh.hlsl">
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </EntryPointName>
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
-    </FxCompile>
-    <FxCompile Include="Source\Sample_DXRBasic.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </EntryPointName>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
-    </FxCompile>
-    <FxCompile Include="Source\Sample_DXRWhitted.hlsl">
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_dxr_shader</VariableName>
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
-    </FxCompile>
+    <FxCompile Include="Source\Sample_DXRAmbientOcclusion.hlsl" />
+    <FxCompile Include="Source\Sample_DXRMesh.hlsl" />
+    <FxCompile Include="Source\Sample_DXRBasic.hlsl" />
+    <FxCompile Include="Source\Sample_DXRWhitted.hlsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -133,14 +105,20 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile />
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)Submodules\imgui</AdditionalIncludeDirectories>
+    </ClCompile>
+    <FxCompile>
+      <EntryPointName />
+      <HeaderFileOutput>$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
+      <ShaderModel>6.4</ShaderModel>
+      <ShaderType>Library</ShaderType>
+      <VariableName>g_dxr_shader</VariableName>
+    </FxCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)Submodules\imgui</AdditionalIncludeDirectories>
-    </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
