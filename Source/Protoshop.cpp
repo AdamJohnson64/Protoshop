@@ -43,14 +43,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> pWindowD3D12Mesh(CreateNewWindow());
         pWindowD3D12Mesh->SetSample(CreateSample_D3D12Mesh(CreateDXGISwapChain(pDevice12, pWindowD3D12Mesh->GetWindowHandle()), pDevice12));
 
+        std::shared_ptr<Window> pWindowDXRAmbientOcclusion(CreateNewWindow());
+        pWindowDXRAmbientOcclusion->SetSample(CreateSample_DXRAmbientOcclusion(CreateDXGISwapChain(pDevice12, pWindowDXRAmbientOcclusion->GetWindowHandle()), pDevice12));
+
         std::shared_ptr<Window> pWindowDXRBasic(CreateNewWindow());
         pWindowDXRBasic->SetSample(CreateSample_DXRBasic(CreateDXGISwapChain(pDevice12, pWindowDXRBasic->GetWindowHandle()), pDevice12));
 
-        std::shared_ptr<Window> pWindowDXRImplicit(CreateNewWindow());
-        pWindowDXRImplicit->SetSample(CreateSample_DXRImplicit(CreateDXGISwapChain(pDevice12, pWindowDXRImplicit->GetWindowHandle()), pDevice12));
-
         std::shared_ptr<Window> pWindowDXRMesh(CreateNewWindow());
         pWindowDXRMesh->SetSample(CreateSample_DXRMesh(CreateDXGISwapChain(pDevice12, pWindowDXRMesh->GetWindowHandle()), pDevice12));
+
+        std::shared_ptr<Window> pWindowDXRWhitted(CreateNewWindow());
+        pWindowDXRWhitted->SetSample(CreateSample_DXRWhitted(CreateDXGISwapChain(pDevice12, pWindowDXRWhitted->GetWindowHandle()), pDevice12));
 
         std::shared_ptr<Window> pWindowGLBasic(CreateNewWindow());
         pWindowGLBasic->SetSample(CreateSample_OpenGLBasic(pDeviceGL, pWindowGLBasic));
