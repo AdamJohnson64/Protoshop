@@ -30,6 +30,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> pWindowD3D11Imgui(CreateNewWindow());
         pWindowD3D11Imgui->SetSample(CreateSample_D3D11Imgui(CreateDXGISwapChain(pDevice11, pWindowD3D11Imgui->GetWindowHandle()), pDevice11));
 
+        std::shared_ptr<Window> pWindowD3D11Scene(CreateNewWindow());
+        pWindowD3D11Scene->SetSample(CreateSample_D3D11Scene(CreateDXGISwapChain(pDevice11, pWindowD3D11Scene->GetWindowHandle()), pDevice11));
+
         std::shared_ptr<Window> pWindowD3D11Tessellation(CreateNewWindow());
         pWindowD3D11Tessellation->SetSample(CreateSample_D3D11Tessellation(CreateDXGISwapChain(pDevice11, pWindowD3D11Tessellation->GetWindowHandle()), pDevice11));
 
