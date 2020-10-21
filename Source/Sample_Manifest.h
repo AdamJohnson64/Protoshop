@@ -20,6 +20,7 @@ std::shared_ptr<Sample> CreateSample_D3D12Mesh(std::shared_ptr<DXGISwapChain> pS
 std::shared_ptr<Sample> CreateSample_DXRAmbientOcclusion(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 std::shared_ptr<Sample> CreateSample_DXRBasic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 std::shared_ptr<Sample> CreateSample_DXRMesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
+std::shared_ptr<Sample> CreateSample_DXRPathTrace(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 std::shared_ptr<Sample> CreateSample_DXRWhitted(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 
 std::shared_ptr<Sample> CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> pDevice, std::shared_ptr<Window> pWindow);

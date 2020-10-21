@@ -55,6 +55,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> pWindowDXRMesh(CreateNewWindow());
         pWindowDXRMesh->SetSample(CreateSample_DXRMesh(CreateDXGISwapChain(pDevice12, pWindowDXRMesh->GetWindowHandle()), pDevice12));
 
+        std::shared_ptr<Window> pWindowDXRPathTrace(CreateNewWindow());
+        pWindowDXRPathTrace->SetSample(CreateSample_DXRPathTrace(CreateDXGISwapChain(pDevice12, pWindowDXRPathTrace->GetWindowHandle()), pDevice12));
+
         std::shared_ptr<Window> pWindowDXRWhitted(CreateNewWindow());
         pWindowDXRWhitted->SetSample(CreateSample_DXRWhitted(CreateDXGISwapChain(pDevice12, pWindowDXRWhitted->GetWindowHandle()), pDevice12));
 
