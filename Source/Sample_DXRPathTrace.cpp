@@ -185,7 +185,7 @@ public:
             DxrInstance[2].Transform[1][1] = 1;
             DxrInstance[2].Transform[2][2] = 1;
             DxrInstance[2].Transform[0][3] = cosf(rotate) * 2;
-            DxrInstance[2].Transform[1][3] = 2;
+            DxrInstance[2].Transform[1][3] = 1;
             DxrInstance[2].Transform[2][3] = sinf(rotate) * 2;
             DxrInstance[2].InstanceMask = 0xFF;
             DxrInstance[2].InstanceContributionToHitGroupIndex = 2;
@@ -194,7 +194,7 @@ public:
             DxrInstance[3].Transform[1][1] = 1;
             DxrInstance[3].Transform[2][2] = 1;
             DxrInstance[3].Transform[0][3] = -cosf(rotate) * 2;
-            DxrInstance[3].Transform[1][3] = 2;
+            DxrInstance[3].Transform[1][3] = 1;
             DxrInstance[3].Transform[2][3] = -sinf(rotate) * 2;
             DxrInstance[3].InstanceMask = 0xFF;
             DxrInstance[3].InstanceContributionToHitGroupIndex = 3;

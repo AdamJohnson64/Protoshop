@@ -1,6 +1,6 @@
 struct HitInfo
 {
-    float4 ColorAndLambda;
+    float3 Color;
 };
 
 struct Attributes
@@ -9,11 +9,6 @@ struct Attributes
 
 RWTexture2D<float4> RTOutput             : register(u0);
 RaytracingAccelerationStructure SceneBVH : register(t0);
-
-struct VertexAttributes
-{
-    float3 position;
-};
 
 [shader("raygeneration")]
 void raygeneration()
@@ -26,19 +21,19 @@ void raygeneration()
     ray.TMin = 0.001f;
     ray.TMax = 1000;
     HitInfo payload;
-    payload.ColorAndLambda = float4(0, 0, 0, 1);
+    payload.Color = float3(0, 0, 0);
     TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
-    RTOutput[LaunchIndex.xy] = float4(payload.ColorAndLambda.rgb, 1.f);
+    RTOutput[LaunchIndex.xy] = float4(payload.Color, 1);
 }
 
 [shader("closesthit")]
 void closesthit(inout HitInfo payload, Attributes attrib)
 {
-    payload.ColorAndLambda = float4(0, 1, 0, 1);
+    payload.Color = float3(0, 1, 0);
 }
 
 [shader("miss")]
 void miss(inout HitInfo payload)
 {
-    payload.ColorAndLambda = float4(1, 0, 0, 1);
+    payload.Color = float3(1, 0, 0);
 }
