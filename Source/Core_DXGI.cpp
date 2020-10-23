@@ -1,4 +1,5 @@
 #include "Core_D3D.h"
+#include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
 #include <atlbase.h>
 #include <memory>
@@ -26,7 +27,15 @@ public:
             TRYD3D(pDXGISwapChain1->QueryInterface<IDXGISwapChain4>(&pDXGISwapChain));
         }
     }
-    DXGISwapChainImpl(std::shared_ptr<Direct3D12Device> pDevice, HWND hWindow)
+    ~DXGISwapChainImpl()
+    {
+        if (pDevice12 != nullptr)
+        {
+            D3D12WaitForGPUIdle(pDevice12);
+        }
+    }
+    DXGISwapChainImpl(std::shared_ptr<Direct3D12Device> pDevice, HWND hWindow) :
+        pDevice12(pDevice)
     {
         CComPtr<IDXGIFactory7> pDXGIFactory;
         TRYD3D(CreateDXGIFactory(__uuidof(IDXGIFactory7), (void**)&pDXGIFactory));
@@ -49,6 +58,7 @@ public:
         return pDXGISwapChain.p;
     }
 private:
+    std::shared_ptr<Direct3D12Device> pDevice12;
     CComPtr<IDXGISwapChain4> pDXGISwapChain;
 };
 
