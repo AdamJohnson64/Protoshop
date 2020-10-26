@@ -110,6 +110,29 @@ struct IntersectionAttributes
 // Registers
 ///////////////////////////////////////////////////////////////////////////////
 
+// Declare our global layout of registers as consumed by every shader in the
+// DXR pipeline. Right now we don't use any textures so there's no need to
+// define more than the raytracing acceleration structure SRV.
+//
+// NOTE: We're appliying a subtle but important concept here in the ordering
+// of these inputs. In the root signature setup we define UAV, then SRV, then
+// CBV. There's no real requirement that we order things this way but in
+// general it's good practice to order your inputs by most common to least
+// common, or most general to least general. For our purposes we are
+// raytracing; whatever we do MUST have a UAV to output onto so this is our
+// most general input/output. We must also have a SRV to contain the
+// raytracing acceleration structure, but we might define effects that
+// operate only on the UAV without raytracing (hence this is second).
+// Finally we need a CBV to contain the camera configuration for the ray
+// generation shader. Only the ray generator needs this so passing this into
+// other shaders is superfluous but harmless.
+//
+// Otherwise the ordering here is completely unimportant. We make this
+// consistent only to solidify the principle as it appears on paper.
+
+RWTexture2D<float4> RTOutput             : register(u0);
+RaytracingAccelerationStructure SceneBVH : register(t0);
+
 // The raytracer needs only one big global constant fed into the top level
 // ray generator which describes the camera transform. In order to get a good
 // match to a raster render we use the inverse of the MVP transform (general
@@ -122,9 +145,6 @@ cbuffer Constants : register(b0)
 {
     float4x4 Transform;
 };
-
-RWTexture2D<float4> RTOutput             : register(u0);
-RaytracingAccelerationStructure SceneBVH : register(t0);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Common Raytracer Entrypoints
