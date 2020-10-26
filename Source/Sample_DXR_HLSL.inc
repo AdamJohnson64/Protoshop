@@ -90,7 +90,7 @@ float3 HaltonSample(int x)
 // we're using a globally consistent maximum this makes it relatively easy to
 // determine the no-hit condition.
 
-struct HitInfo
+struct RayPayload
 {
     float3 Color;
     float TMax;
@@ -101,7 +101,7 @@ struct HitInfo
 // All primitive intersections will return this structure. The only thing we
 // need to know about the impact point is the local surface normal.
 
-struct Attributes
+struct IntersectionAttributes
 {
     float3 Normal;
 };
@@ -144,31 +144,31 @@ void RayGenerationRasterMatch()
     const uint2 LaunchDimensions = DispatchRaysDimensions().xy;
     const float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
     const float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
-    RayDesc ray;
+    RayDesc rayDesc;
     float4 front = mul(float4(NormalizedX, NormalizedY, 0, 1), Transform);
     front /= front.w;
     float4 back = mul(float4(NormalizedX, NormalizedY, 1, 1), Transform);
     back /= back.w;
-    ray.Origin = front.xyz;
-    ray.Direction = normalize(back.xyz - front.xyz);
-    ray.TMin = 0.001f;
-    ray.TMax = DEFAULT_TMAX;
-    HitInfo rayOut;
-    rayOut.Color = float3(0, 0, 0);
-    rayOut.TMax = DEFAULT_TMAX;
-    rayOut.RecursionLevel = 0;
-    rayOut.Flags = 0;
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, rayOut);
-    RTOutput[DispatchRaysIndex().xy] = float4(rayOut.Color, 1);
+    rayDesc.Origin = front.xyz;
+    rayDesc.Direction = normalize(back.xyz - front.xyz);
+    rayDesc.TMin = 0.001;
+    rayDesc.TMax = DEFAULT_TMAX;
+    RayPayload rayPayload;
+    rayPayload.Color = float3(0, 0, 0);
+    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.RecursionLevel = 0;
+    rayPayload.Flags = 0;
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    RTOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
 }
 
 // The general miss shader. All rays which hit nothing will return
 // black/zero/nothingness in the ray color.
 
 [shader("miss")]
-void Miss(inout HitInfo rayIn)
+void Miss(inout RayPayload rayPayload)
 {
-    rayIn.Color = float3(0, 0, 0);
+    rayPayload.Color = float3(0, 0, 0);
 }
 
 // Plane intersection. Use the general plane intersection equation to determine
@@ -178,7 +178,7 @@ void Miss(inout HitInfo rayIn)
 [shader("intersection")]
 void IntersectPlane()
 {
-    Attributes attributes;
+    IntersectionAttributes intersectionAttributes;
     const float3 origin = ObjectRayOrigin();
     const float3 direction = ObjectRayDirection();
     const float3 plane = float3(0, 1, 0);
@@ -187,8 +187,8 @@ void IntersectPlane()
     if (lambda < 0) return;
     const float3 intersection = origin + direction * lambda;
     if (intersection.x < -1 || intersection.x > 1 || intersection.z < -1 || intersection.z > 1) return;
-    attributes.Normal = plane;
-    ReportHit(lambda, 0, attributes);
+    intersectionAttributes.Normal = plane;
+    ReportHit(lambda, 0, intersectionAttributes);
 }
 
 // Sphere intersection. Use the general quadratic solution to find the lambda
@@ -201,7 +201,7 @@ void IntersectPlane()
 [shader("intersection")]
 void IntersectSphere()
 {
-    Attributes attributes;
+    IntersectionAttributes intersectionAttributes;
     float3 origin = ObjectRayOrigin();
     float3 direction = ObjectRayDirection();
     float a = dot(direction, direction);
@@ -212,13 +212,13 @@ void IntersectSphere()
     float hitFront = (-b - solution) / (2 * a);
     if (hitFront >= 0)
     {
-        attributes.Normal = normalize(mul(origin + direction * hitFront, (float3x3)ObjectToWorld3x4()));
-        ReportHit(hitFront, 0, attributes);
+        intersectionAttributes.Normal = normalize(mul(origin + direction * hitFront, (float3x3)ObjectToWorld3x4()));
+        ReportHit(hitFront, 0, intersectionAttributes);
     }
     float hitBack = (-b + solution) / (2 * a);
     if (hitBack >= 0)
     {
-        attributes.Normal = normalize(mul(origin + direction * hitBack, (float3x3)ObjectToWorld3x4()));
-        ReportHit(hitBack, 0, attributes);
+        intersectionAttributes.Normal = normalize(mul(origin + direction * hitBack, (float3x3)ObjectToWorld3x4()));
+        ReportHit(hitBack, 0, intersectionAttributes);
     }
 }

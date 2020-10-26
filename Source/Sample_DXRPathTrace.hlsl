@@ -1,21 +1,21 @@
 #include "Sample_DXR_HLSL.inc"
 
 [shader("closesthit")]
-void MaterialDiffuse(inout HitInfo rayIn, Attributes attrib)
+void MaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    if (rayIn.RecursionLevel >= 1)
+    if (rayPayload.RecursionLevel >= 1)
     {
-        rayIn.Color = float3(0, 0, 0);
+        rayPayload.Color = float3(0, 0, 0);
         return;
     }
     uint2 LaunchIndex = DispatchRaysIndex().xy;
-    rayIn.TMax = RayTCurrent();
-    if (rayIn.Flags != 0) return;
+    rayPayload.TMax = RayTCurrent();
+    if (rayPayload.Flags != 0) return;
     float3 localX = float3(1, 0, 0);
-    float3 localY = attrib.Normal;
+    float3 localY = intersectionAttributes.Normal;
     float3 localZ = normalize(cross(localX, localY));
     localX = normalize(cross(localY, localZ));
-    float3 rayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent() + attrib.Normal * 0.001;
+    float3 rayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent() + intersectionAttributes.Normal * 0.001;
     float3 accumulatedIrradiance = 0;
     for (int i = 0; i < 32; ++i)
     {
@@ -23,26 +23,26 @@ void MaterialDiffuse(inout HitInfo rayIn, Attributes attrib)
         // Moire interference pattern that looks like old-school dithering; nice.
         float3 hemisphere = HaltonSample(i + LaunchIndex.x * LaunchIndex.y * 16);
         float3 hemisphereInTangentFrame = hemisphere.x * localX + hemisphere.z * localY + hemisphere.y * localZ;
-        RayDesc ray = { rayOrigin, 0, hemisphereInTangentFrame, DEFAULT_TMAX };
-        HitInfo rayOut;
-        rayOut.Color = float3(0, 0, 0);
-        rayOut.TMax = DEFAULT_TMAX;
-        rayOut.Flags = 1; // Do not spawn new rays.
-        rayOut.RecursionLevel = rayIn.RecursionLevel + 1;
-        TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, rayOut);
-        accumulatedIrradiance += rayOut.Color;
+        RayDesc newRayDesc = { rayOrigin, 0, hemisphereInTangentFrame, DEFAULT_TMAX };
+        RayPayload recurseRayPayload;
+        recurseRayPayload.Color = float3(0, 0, 0);
+        recurseRayPayload.TMax = DEFAULT_TMAX;
+        recurseRayPayload.Flags = 1; // Do not spawn new rays.
+        recurseRayPayload.RecursionLevel = rayPayload.RecursionLevel + 1;
+        TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, newRayDesc, recurseRayPayload);
+        accumulatedIrradiance += recurseRayPayload.Color;
     }
-    rayIn.Color = accumulatedIrradiance / 32;
+    rayPayload.Color = accumulatedIrradiance / 32;
 }
 
 [shader("closesthit")]
-void MaterialEmissiveRed(inout HitInfo rayIn, Attributes attrib)
+void MaterialEmissiveRed(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayIn.Color = float3(1, 0, 0);
+    rayPayload.Color = float3(1, 0, 0);
 }
 
 [shader("closesthit")]
-void MaterialEmissiveGreen(inout HitInfo rayIn, Attributes attrib)
+void MaterialEmissiveGreen(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayIn.Color = float3(0, 1, 0);
+    rayPayload.Color = float3(0, 1, 0);
 }

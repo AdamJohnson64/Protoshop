@@ -17,7 +17,7 @@ cbuffer Constants : register(b0)
     float4x4 Transform;
 };
 
-struct HitInfo
+struct RayPayload
 {
     float3 Color;
     float TMax;
@@ -25,7 +25,7 @@ struct HitInfo
     int Flags;
 };
 
-struct Attributes
+struct IntersectionAttributes
 {
     float3 Normal;
 };
@@ -36,20 +36,16 @@ RaytracingAccelerationStructure SceneBVH : register(t0);
 [shader("raygeneration")]
 void RayGenerationDebug()
 {
-    RayDesc ray;
-    ray.Origin = float3(0, 1, -3);
     float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
     float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
-    ray.Direction = normalize(float3(NormalizedX, NormalizedY, 1));
-    ray.TMin = 0.001f;
-    ray.TMax = DEFAULT_TMAX;
-    HitInfo rayOut;
-    rayOut.Color = float3(0, 0, 0);
-    rayOut.TMax = DEFAULT_TMAX;
-    rayOut.RecursionLevel = 1;
-    rayOut.Flags = 0;
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, rayOut);
-    RTOutput[DispatchRaysIndex().xy] = float4(rayOut.Color, 1);
+    RayDesc rayDesc = { float3(0, 1, -3), 0.001, normalize(float3(NormalizedX, NormalizedY, 1)), DEFAULT_TMAX };
+    RayPayload rayPayload;
+    rayPayload.Color = float3(0, 0, 0);
+    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.RecursionLevel = 1;
+    rayPayload.Flags = 0;
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    RTOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
 }
 
 [shader("raygeneration")]
@@ -59,28 +55,28 @@ void RayGenerationRasterMatch()
     uint2 LaunchDimensions = DispatchRaysDimensions().xy;
     float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
     float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
-    RayDesc ray;
+    RayDesc rayDesc;
     float4 front = mul(float4(NormalizedX, NormalizedY, 0, 1), Transform);
     front /= front.w;
     float4 back = mul(float4(NormalizedX, NormalizedY, 1, 1), Transform);
     back /= back.w;
-    ray.Origin = front.xyz;
-    ray.Direction = normalize(back.xyz - front.xyz);
-    ray.TMin = 0.001f;
-    ray.TMax = DEFAULT_TMAX;
-    HitInfo rayOut;
-    rayOut.Color = float3(0, 0, 0);
-    rayOut.TMax = DEFAULT_TMAX;
-    rayOut.RecursionLevel = 1;
-    rayOut.Flags = 0;
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, rayOut);
-    RTOutput[DispatchRaysIndex().xy] = float4(rayOut.Color, 1);
+    rayDesc.Origin = front.xyz;
+    rayDesc.Direction = normalize(back.xyz - front.xyz);
+    rayDesc.TMin = 0.001;
+    rayDesc.TMax = DEFAULT_TMAX;
+    RayPayload rayPayload;
+    rayPayload.Color = float3(0, 0, 0);
+    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.RecursionLevel = 1;
+    rayPayload.Flags = 0;
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    RTOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
 }
 
 [shader("miss")]
-void Miss(inout HitInfo rayIn)
+void Miss(inout RayPayload rayPayload)
 {
-    rayIn.Color = float3(0.25f, 0.25f, 0.25f);
+    rayPayload.Color = float3(0.25f, 0.25f, 0.25f);
 }
 
 float lambert(float3 normal)
@@ -114,42 +110,42 @@ float schlick(float3 incident, float3 normal, float ior1, float ior2)
 	return coeff + (1 - coeff) * pow((1 - dot(-incident, normal)), 5);
 }
 
-float3 RecurseRay(float3 origin, float3 direction, in HitInfo rayIn, int rayType)
+float3 RecurseRay(float3 origin, float3 direction, in RayPayload rayPayload, int rayType)
 {
-    RayDesc ray = { origin + direction * 0.0001, 0, direction, DEFAULT_TMAX };
-    HitInfo rayOut;
-    rayOut.Color = float3(0, 0, 0);
-    rayOut.TMax = DEFAULT_TMAX;
-    rayOut.RecursionLevel = rayIn.RecursionLevel + 1;
-    rayOut.Flags = rayIn.Flags | rayType;
-    TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, rayOut);
-    return rayOut.Color;
+    RayDesc rayDesc = { origin + direction * 0.0001, 0, direction, DEFAULT_TMAX };
+    RayPayload recurseRayPayload;
+    recurseRayPayload.Color = float3(0, 0, 0);
+    recurseRayPayload.TMax = DEFAULT_TMAX;
+    recurseRayPayload.RecursionLevel = rayPayload.RecursionLevel + 1;
+    recurseRayPayload.Flags = rayPayload.Flags | rayType;
+    TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, rayDesc, recurseRayPayload);
+    return recurseRayPayload.Color;
 }
 
 bool Shadowed(float3 origin)
 {
     const float3 light = normalize(float3(1, 1, -1));
-    RayDesc ray = { origin + light * 0.0001, 0, light, DEFAULT_TMAX };
-    HitInfo rayOut;
-    rayOut.Color = float3(0, 0, 0);
-    rayOut.TMax = DEFAULT_TMAX;
-    rayOut.RecursionLevel = 65536; // Do not recurse.
-    rayOut.Flags = 65535; // Do not spawn new rays.
-    TraceRay(SceneBVH, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, ray, rayOut);
-    return rayOut.TMax < DEFAULT_TMAX;
+    RayDesc rayDesc = { origin + light * 0.0001, 0, light, DEFAULT_TMAX };
+    RayPayload rayPayload;
+    rayPayload.Color = float3(0, 0, 0);
+    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.RecursionLevel = 65536; // Do not recurse.
+    rayPayload.Flags = 65535; // Do not spawn new rays.
+    TraceRay(SceneBVH, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    return rayPayload.TMax < DEFAULT_TMAX;
 }
 
 [shader("closesthit")]
-void MaterialCheckerboard(inout HitInfo rayIn, Attributes attrib)
+void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayIn.TMax = RayTCurrent();
+    rayPayload.TMax = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     // Shadow Ray.
-    if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayIn.Flags != 65535)
+    if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayPayload.Flags != 65535)
     {
         if (Shadowed(worldHit))
         {
-            rayIn.Color = float3(0, 0, 0);
+            rayPayload.Color = float3(0, 0, 0);
             return;
         }
     }
@@ -162,85 +158,85 @@ void MaterialCheckerboard(inout HitInfo rayIn, Attributes attrib)
         colorAlbedo = float3(blackOrWhite, blackOrWhite, blackOrWhite);
     }
     // Basic Lambertian Diffuse.
-    float3 colorDiffuse = colorAlbedo * lambert(attrib.Normal);
+    float3 colorDiffuse = colorAlbedo * lambert(intersectionAttributes.Normal);
     // Schlick Fresnel Reflection.
     {
-        float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
-        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0)
+        float fresnel = schlick(WorldRayDirection(), intersectionAttributes.Normal, IOR_VACUUM, IOR_PLASTIC);
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFRACTED) == 0)
         {
-            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), attrib.Normal), rayIn, RAY_FLAG_REFLECTED), fresnel);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), intersectionAttributes.Normal), rayPayload, RAY_FLAG_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
-    float3 colorSpecular = phong(reflect(WorldRayDirection(), attrib.Normal), 64);
+    float3 colorSpecular = phong(reflect(WorldRayDirection(), intersectionAttributes.Normal), 64);
     // Final Color.
-    rayIn.Color = colorDiffuse + colorSpecular;
+    rayPayload.Color = colorDiffuse + colorSpecular;
 }
 
 [shader("closesthit")]
-void MaterialRedPlastic(inout HitInfo rayIn, Attributes attrib)
+void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayIn.TMax = RayTCurrent();
+    rayPayload.TMax = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     // Shadow Ray.
-    if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayIn.Flags != 65535)
+    if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayPayload.Flags != 65535)
     {
         if (Shadowed(worldHit))
         {
-            rayIn.Color = float3(0, 0, 0);
+            rayPayload.Color = float3(0, 0, 0);
             return;
         }
     }
     // Solid Red Albedo.
     float3 colorAlbedo = float3(1, 0, 0);
     // Basic Lambertian Diffuse.
-    float3 colorDiffuse = colorAlbedo * lambert(attrib.Normal);
+    float3 colorDiffuse = colorAlbedo * lambert(intersectionAttributes.Normal);
     // Schlick Fresnel Reflection.
     {
-        float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_PLASTIC);
-        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0)
+        float fresnel = schlick(WorldRayDirection(), intersectionAttributes.Normal, IOR_VACUUM, IOR_PLASTIC);
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFRACTED) == 0)
         {
-            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), attrib.Normal), rayIn, RAY_FLAG_REFLECTED), fresnel);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), intersectionAttributes.Normal), rayPayload, RAY_FLAG_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
-    float3 colorSpecular = phong(reflect(WorldRayDirection(), attrib.Normal), 8);
+    float3 colorSpecular = phong(reflect(WorldRayDirection(), intersectionAttributes.Normal), 8);
     // Final Color.
-    rayIn.Color = colorDiffuse + colorSpecular;
+    rayPayload.Color = colorDiffuse + colorSpecular;
 }
 
 [shader("closesthit")]
-void MaterialGlass(inout HitInfo rayIn, Attributes attrib)
+void MaterialGlass(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayIn.TMax = RayTCurrent();
+    rayPayload.TMax = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
-    const float3 vectorReflect = reflect(WorldRayDirection(), attrib.Normal);
+    const float3 vectorReflect = reflect(WorldRayDirection(), intersectionAttributes.Normal);
     // Refraction.
     float3 colorDiffuse = float3(0, 0, 0);
     {
-        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFLECTED) == 0)
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFLECTED) == 0)
         {
-            colorDiffuse = RecurseRay(worldHit, refract2(WorldRayDirection(), attrib.Normal, IOR_GLASS), rayIn, RAY_FLAG_REFRACTED);
+            colorDiffuse = RecurseRay(worldHit, refract2(WorldRayDirection(), intersectionAttributes.Normal, IOR_GLASS), rayPayload, RAY_FLAG_REFRACTED);
         }
     }
     // Schlick Fresnel Reflection.
     {
-        float fresnel = schlick(WorldRayDirection(), attrib.Normal, IOR_VACUUM, IOR_GLASS);
-        if (rayIn.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayIn.Flags & RAY_FLAG_REFRACTED) == 0)
+        float fresnel = schlick(WorldRayDirection(), intersectionAttributes.Normal, IOR_VACUUM, IOR_GLASS);
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFRACTED) == 0)
         {
-            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, vectorReflect, rayIn, RAY_FLAG_REFLECTED), fresnel);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, vectorReflect, rayPayload, RAY_FLAG_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
     float3 colorSpecular = phong(vectorReflect, 256);
     // Final Color.
-    rayIn.Color = colorDiffuse + colorSpecular;
+    rayPayload.Color = colorDiffuse + colorSpecular;
 }
 
 [shader("intersection")]
 void IntersectPlane()
 {
-    Attributes attributes;
+    IntersectionAttributes attributes;
     float3 origin = ObjectRayOrigin();
     float3 direction = ObjectRayDirection();
     float4 plane = float4(0,1,0, 0);
@@ -256,7 +252,7 @@ void IntersectPlane()
 [shader("intersection")]
 void IntersectSphere()
 {
-    Attributes attributes;
+    IntersectionAttributes attributes;
     float3 origin = ObjectRayOrigin();
     float3 direction = ObjectRayDirection();
     float a = dot(direction, direction);

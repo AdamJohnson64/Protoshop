@@ -1,10 +1,11 @@
-struct HitInfo
+struct RayPayload
 {
-    float4 ColorAndLambda;
+    float3 Color;
 };
 
-struct Attributes
+struct IntersectionAttributes
 {
+    float3 Normal;
 };
 
 RWTexture2D<float4> RTOutput             : register(u0);
@@ -13,29 +14,23 @@ RaytracingAccelerationStructure SceneBVH : register(t0);
 [shader("raygeneration")]
 void RayGeneration()
 {
-    uint2 LaunchIndex = DispatchRaysIndex().xy;
-    uint2 LaunchDimensions = DispatchRaysDimensions().xy;
-    RayDesc ray;
-    ray.Origin = float3(0, 1, -3);
-    float normx = (float)LaunchIndex.x / (float)LaunchDimensions.x;
-    float normy = (float)LaunchIndex.y / (float)LaunchDimensions.y;
-    ray.Direction = normalize(float3(-1 + normx * 2, 1 - normy * 2, 1));
-    ray.TMin = 0.001f;
-    ray.TMax = 1000;
-    HitInfo payload;
-    payload.ColorAndLambda = float4(0, 0, 0, 1);
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
-    RTOutput[LaunchIndex.xy] = float4(payload.ColorAndLambda.rgb, 1.f);
+    float normx = (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
+    float normy = (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
+    RayDesc rayDesc = { float3(0, 1, -3), 0.001, normalize(float3(-1 + normx * 2, 1 - normy * 2, 1)), 1000 };
+    RayPayload payload;
+    payload.Color = float3(0, 0, 0);
+    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, payload);
+    RTOutput[DispatchRaysIndex().xy] = float4(payload.Color, 1.f);
 }
 
 [shader("miss")]
-void Miss(inout HitInfo payload)
+void Miss(inout RayPayload rayPayload)
 {
-    payload.ColorAndLambda = float4(0.25f, 0.25f, 0.25f, 1);
+    rayPayload.Color = float3(0.25f, 0.25f, 0.25f);
 }
 
 [shader("closesthit")]
-void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
+void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
     float3 worldRayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     float x = worldRayOrigin.x * 4;
@@ -45,11 +40,11 @@ void MaterialCheckerboard(inout HitInfo payload, Attributes attrib)
     x *= 2;
     z *= 2;
     float checker = ((int)x + (int)z) % 2;
-    payload.ColorAndLambda = float4(checker, checker, checker, 1);
+    rayPayload.Color = float3(checker, checker, checker);
 }
 
 [shader("closesthit")]
-void MaterialRedPlastic(inout HitInfo payload, Attributes attrib)
+void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    payload.ColorAndLambda = float4(1, 0, 0, 1);
+    rayPayload.Color = float3(1, 0, 0);
 }

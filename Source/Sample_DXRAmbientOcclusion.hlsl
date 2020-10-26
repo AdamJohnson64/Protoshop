@@ -2,26 +2,26 @@
 
 bool Illuminated(float3 origin, float3 direction)
 {
-    RayDesc ray = { origin, 0, direction, DEFAULT_TMAX };
-    HitInfo rayOut;
-    rayOut.Color = float3(0, 0, 0);
-    rayOut.TMax = DEFAULT_TMAX;
-    rayOut.Flags = 1; // Do not spawn new rays.
-    TraceRay(SceneBVH, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, ray, rayOut);
-    return rayOut.TMax == DEFAULT_TMAX;
+    RayDesc rayDesc = { origin, 0, direction, DEFAULT_TMAX };
+    RayPayload rayPayload;
+    rayPayload.Color = float3(0, 0, 0);
+    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.Flags = 1; // Do not spawn new rays.
+    TraceRay(SceneBVH, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    return rayPayload.TMax == DEFAULT_TMAX;
 }
 
 [shader("closesthit")]
-void MaterialAmbientOcclusion(inout HitInfo rayIn, Attributes attrib)
+void MaterialAmbientOcclusion(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
     uint2 LaunchIndex = DispatchRaysIndex().xy;
-    rayIn.TMax = RayTCurrent();
-    if (rayIn.Flags != 0) return;
+    rayPayload.TMax = RayTCurrent();
+    if (rayPayload.Flags != 0) return;
     float3 localX = float3(1, 0, 0);
-    float3 localY = attrib.Normal;
+    float3 localY = intersectionAttributes.Normal;
     float3 localZ = normalize(cross(localX, localY));
     localX = normalize(cross(localY, localZ));
-    float3 rayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent() + attrib.Normal * 0.001;
+    float3 rayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent() + intersectionAttributes.Normal * 0.001;
     float illuminated = 0;
     for (int i = 0; i < 32; ++i)
     {
@@ -34,5 +34,5 @@ void MaterialAmbientOcclusion(inout HitInfo rayIn, Attributes attrib)
             ++illuminated;
         }
     }
-    rayIn.Color = illuminated / 32;
+    rayPayload.Color = illuminated / 32;
 }

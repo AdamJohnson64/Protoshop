@@ -75,7 +75,7 @@ public:
             }
 
             D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig = {};
-            descShaderConfig.MaxPayloadSizeInBytes = sizeof(float[3]) + sizeof(float); // RGB + Distance
+            descShaderConfig.MaxPayloadSizeInBytes = sizeof(float[3]); // Size of RayPayload
             descShaderConfig.MaxAttributeSizeInBytes = D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
