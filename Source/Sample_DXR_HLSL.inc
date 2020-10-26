@@ -9,6 +9,7 @@
 
 static const float M_PI = 3.14159265f;
 
+static const float DEFAULT_TMIN = 0.0001;
 static const float DEFAULT_TMAX = 1000000000;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -93,7 +94,7 @@ float3 HaltonSample(int x)
 struct RayPayload
 {
     float3 Color;
-    float TMax;
+    float IntersectionT;
     int RecursionLevel;
     int Flags;
 };
@@ -130,8 +131,8 @@ struct IntersectionAttributes
 // Otherwise the ordering here is completely unimportant. We make this
 // consistent only to solidify the principle as it appears on paper.
 
-RWTexture2D<float4> RTOutput             : register(u0);
-RaytracingAccelerationStructure SceneBVH : register(t0);
+RWTexture2D<float4> renderTargetOutput                          : register(u0);
+RaytracingAccelerationStructure raytracingAccelerationStructure : register(t0);
 
 // The raytracer needs only one big global constant fed into the top level
 // ray generator which describes the camera transform. In order to get a good
@@ -169,15 +170,15 @@ void RayGenerationMVPClip()
     back /= back.w;
     rayDesc.Origin = front.xyz;
     rayDesc.Direction = normalize(back.xyz - front.xyz);
-    rayDesc.TMin = 0.001;
+    rayDesc.TMin = DEFAULT_TMIN;
     rayDesc.TMax = DEFAULT_TMAX;
     RayPayload rayPayload;
     rayPayload.Color = float3(0, 0, 0);
-    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.IntersectionT = DEFAULT_TMAX;
     rayPayload.RecursionLevel = 0;
-    rayPayload.Flags = 0;
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
-    RTOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
+    rayPayload.Flags = RAY_FLAG_NONE;
+    TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    renderTargetOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
 }
 
 // The general miss shader. All rays which hit nothing will return

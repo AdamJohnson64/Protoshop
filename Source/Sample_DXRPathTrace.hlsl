@@ -9,8 +9,8 @@ void MaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes inte
         return;
     }
     uint2 LaunchIndex = DispatchRaysIndex().xy;
-    rayPayload.TMax = RayTCurrent();
-    if (rayPayload.Flags != 0) return;
+    rayPayload.IntersectionT = RayTCurrent();
+    if (rayPayload.Flags != RAY_FLAG_NONE) return;
     float3 localX = float3(1, 0, 0);
     float3 localY = intersectionAttributes.Normal;
     float3 localZ = normalize(cross(localX, localY));
@@ -23,13 +23,13 @@ void MaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes inte
         // Moire interference pattern that looks like old-school dithering; nice.
         float3 hemisphere = HaltonSample(i + LaunchIndex.x * LaunchIndex.y * 16);
         float3 hemisphereInTangentFrame = hemisphere.x * localX + hemisphere.z * localY + hemisphere.y * localZ;
-        RayDesc newRayDesc = { rayOrigin, 0, hemisphereInTangentFrame, DEFAULT_TMAX };
+        RayDesc newRayDesc = { rayOrigin, DEFAULT_TMIN, hemisphereInTangentFrame, DEFAULT_TMAX };
         RayPayload recurseRayPayload;
         recurseRayPayload.Color = float3(0, 0, 0);
-        recurseRayPayload.TMax = DEFAULT_TMAX;
+        recurseRayPayload.IntersectionT = DEFAULT_TMAX;
         recurseRayPayload.Flags = 1; // Do not spawn new rays.
         recurseRayPayload.RecursionLevel = rayPayload.RecursionLevel + 1;
-        TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, newRayDesc, recurseRayPayload);
+        TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, newRayDesc, recurseRayPayload);
         accumulatedIrradiance += recurseRayPayload.Color;
     }
     rayPayload.Color = accumulatedIrradiance / 32;

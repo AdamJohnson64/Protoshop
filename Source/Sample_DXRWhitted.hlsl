@@ -1,16 +1,33 @@
-#define MAXIMUM_RAY_RECURSION_DEPTH 4
+static const int MAXIMUM_RAY_RECURSION_DEPTH = 4;
 
-#define DEFAULT_TMAX 1000000000
+// In general when we re-emit rays for reflection or refraction we need to
+// offset them by some small amount so we don't just end up hitting the same
+// object that spawned them at the same intersection site. We need this to be
+// small, but not so small that float-precision becomes a problem. Setting
+// this too low will produce a salt-n-pepper image as the precision breaks up.
+static const float DEFAULT_TMIN = 0.001;
+
+// We need a ray termination distance which is a big number initially. We
+// could just use +INF but there's no clear way to define that in HLSL and I
+// hate using divide-by-zero tricks in the compiler. Just use a big number.
+// 1,000 kilometers ought to be enough for anyone...
+static const float DEFAULT_TMAX = 1000000; 
 
 // To prevent combinatoric explosion we don't allow previously reflected rays
 // to refract, nor do we allow refracted rays to reflect. These flags
 // indicate that a ray has traversed this ray path.
-#define RAY_FLAG_REFLECTED 1
-#define RAY_FLAG_REFRACTED 2
+static const unsigned int RAY_IS_PRIMARY = 0;
+static const unsigned int RAY_WAS_REFLECTED = 1;
+static const unsigned int RAY_WAS_REFRACTED = 2;
+// Also note that we use RAY_FLAG_NONE in places, but we don't define it. It
+// turns out that HLSL provides this for us and it just so happens to have a
+// nice name that conveys the right sentiment. Steal it unashamedly.
 
-#define IOR_VACUUM 1.00
-#define IOR_GLASS 1.52
-#define IOR_PLASTIC 1.46
+// Handy dandy indices of refraction for various materials. We'll use this for
+// both refraction rays and Fresnel calculation.
+static const float IOR_VACUUM = 1.00;
+static const float IOR_GLASS = 1.52;
+static const float IOR_PLASTIC = 1.46;
 
 cbuffer Constants : register(b0)
 {
@@ -20,7 +37,7 @@ cbuffer Constants : register(b0)
 struct RayPayload
 {
     float3 Color;
-    float TMax;
+    float IntersectionT;
     int RecursionLevel;
     int Flags;
 };
@@ -30,8 +47,8 @@ struct IntersectionAttributes
     float3 Normal;
 };
 
-RWTexture2D<float4> RTOutput             : register(u0);
-RaytracingAccelerationStructure SceneBVH : register(t0);
+RWTexture2D<float4> renderTargetOutput                          : register(u0);
+RaytracingAccelerationStructure raytracingAccelerationStructure : register(t0);
 
 [shader("raygeneration")]
 void RayGenerationMVPClip()
@@ -45,15 +62,15 @@ void RayGenerationMVPClip()
     back /= back.w;
     rayDesc.Origin = front.xyz;
     rayDesc.Direction = normalize(back.xyz - front.xyz);
-    rayDesc.TMin = 0.001;
+    rayDesc.TMin = DEFAULT_TMIN;
     rayDesc.TMax = DEFAULT_TMAX;
     RayPayload rayPayload;
     rayPayload.Color = float3(0, 0, 0);
-    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.IntersectionT = DEFAULT_TMAX;
     rayPayload.RecursionLevel = 1;
-    rayPayload.Flags = 0;
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
-    RTOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
+    rayPayload.Flags = RAY_IS_PRIMARY;
+    TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    renderTargetOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
 }
 
 [shader("miss")]
@@ -95,33 +112,33 @@ float schlick(float3 incident, float3 normal, float ior1, float ior2)
 
 float3 RecurseRay(float3 origin, float3 direction, in RayPayload rayPayload, int rayType)
 {
-    RayDesc rayDesc = { origin + direction * 0.0001, 0, direction, DEFAULT_TMAX };
+    RayDesc rayDesc = { origin + direction * DEFAULT_TMIN, 0, direction, DEFAULT_TMAX };
     RayPayload recurseRayPayload;
     recurseRayPayload.Color = float3(0, 0, 0);
-    recurseRayPayload.TMax = DEFAULT_TMAX;
+    recurseRayPayload.IntersectionT = DEFAULT_TMAX;
     recurseRayPayload.RecursionLevel = rayPayload.RecursionLevel + 1;
     recurseRayPayload.Flags = rayPayload.Flags | rayType;
-    TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, rayDesc, recurseRayPayload);
+    TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, recurseRayPayload);
     return recurseRayPayload.Color;
 }
 
 bool Shadowed(float3 origin)
 {
     const float3 light = normalize(float3(1, 1, -1));
-    RayDesc rayDesc = { origin + light * 0.0001, 0, light, DEFAULT_TMAX };
+    RayDesc rayDesc = { origin + light * DEFAULT_TMIN, 0, light, DEFAULT_TMAX };
     RayPayload rayPayload;
     rayPayload.Color = float3(0, 0, 0);
-    rayPayload.TMax = DEFAULT_TMAX;
+    rayPayload.IntersectionT = DEFAULT_TMAX;
     rayPayload.RecursionLevel = 65536; // Do not recurse.
     rayPayload.Flags = 65535; // Do not spawn new rays.
-    TraceRay(SceneBVH, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, rayDesc, rayPayload);
-    return rayPayload.TMax < DEFAULT_TMAX;
+    TraceRay(raytracingAccelerationStructure, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, rayDesc, rayPayload);
+    return rayPayload.IntersectionT < DEFAULT_TMAX;
 }
 
 [shader("closesthit")]
 void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayPayload.TMax = RayTCurrent();
+    rayPayload.IntersectionT = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     // Shadow Ray.
     if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayPayload.Flags != 65535)
@@ -145,9 +162,9 @@ void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes
     // Schlick Fresnel Reflection.
     {
         float fresnel = schlick(WorldRayDirection(), intersectionAttributes.Normal, IOR_VACUUM, IOR_PLASTIC);
-        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFRACTED) == 0)
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_WAS_REFRACTED) == 0)
         {
-            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), intersectionAttributes.Normal), rayPayload, RAY_FLAG_REFLECTED), fresnel);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), intersectionAttributes.Normal), rayPayload, RAY_WAS_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
@@ -159,7 +176,7 @@ void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes
 [shader("closesthit")]
 void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayPayload.TMax = RayTCurrent();
+    rayPayload.IntersectionT = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     // Shadow Ray.
     if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && rayPayload.Flags != 65535)
@@ -177,9 +194,9 @@ void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes i
     // Schlick Fresnel Reflection.
     {
         float fresnel = schlick(WorldRayDirection(), intersectionAttributes.Normal, IOR_VACUUM, IOR_PLASTIC);
-        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFRACTED) == 0)
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_WAS_REFRACTED) == 0)
         {
-            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), intersectionAttributes.Normal), rayPayload, RAY_FLAG_REFLECTED), fresnel);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, reflect(WorldRayDirection(), intersectionAttributes.Normal), rayPayload, RAY_WAS_REFLECTED), fresnel);
         }
     }
     // Phong Specular.
@@ -191,23 +208,23 @@ void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes i
 [shader("closesthit")]
 void MaterialGlass(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayPayload.TMax = RayTCurrent();
+    rayPayload.IntersectionT = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     const float3 vectorReflect = reflect(WorldRayDirection(), intersectionAttributes.Normal);
     // Refraction.
     float3 colorDiffuse = float3(0, 0, 0);
     {
-        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFLECTED) == 0)
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_WAS_REFLECTED) == 0)
         {
-            colorDiffuse = RecurseRay(worldHit, refract2(WorldRayDirection(), intersectionAttributes.Normal, IOR_GLASS), rayPayload, RAY_FLAG_REFRACTED);
+            colorDiffuse = RecurseRay(worldHit, refract2(WorldRayDirection(), intersectionAttributes.Normal, IOR_GLASS), rayPayload, RAY_WAS_REFRACTED);
         }
     }
     // Schlick Fresnel Reflection.
     {
         float fresnel = schlick(WorldRayDirection(), intersectionAttributes.Normal, IOR_VACUUM, IOR_GLASS);
-        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_FLAG_REFRACTED) == 0)
+        if (rayPayload.RecursionLevel < MAXIMUM_RAY_RECURSION_DEPTH && (rayPayload.Flags & RAY_WAS_REFRACTED) == 0)
         {
-            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, vectorReflect, rayPayload, RAY_FLAG_REFLECTED), fresnel);
+            colorDiffuse = lerp(colorDiffuse, RecurseRay(worldHit, vectorReflect, rayPayload, RAY_WAS_REFLECTED), fresnel);
         }
     }
     // Phong Specular.

@@ -8,8 +8,8 @@ struct IntersectionAttributes
     float3 Normal;
 };
 
-RWTexture2D<float4> RTOutput             : register(u0);
-RaytracingAccelerationStructure SceneBVH : register(t0);
+RWTexture2D<float4> renderTargetOutput                          : register(u0);
+RaytracingAccelerationStructure raytracingAccelerationStructure : register(t0);
 
 [shader("raygeneration")]
 void RayGeneration()
@@ -19,8 +19,8 @@ void RayGeneration()
     RayDesc rayDesc = { float3(0, 1, -3), 0.001, normalize(float3(-1 + normx * 2, 1 - normy * 2, 1)), 1000 };
     RayPayload payload;
     payload.Color = float3(0, 0, 0);
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, payload);
-    RTOutput[DispatchRaysIndex().xy] = float4(payload.Color, 1.f);
+    TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, payload);
+    renderTargetOutput[DispatchRaysIndex().xy] = float4(payload.Color, 1.f);
 }
 
 [shader("miss")]
