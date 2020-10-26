@@ -34,25 +34,8 @@ RWTexture2D<float4> RTOutput             : register(u0);
 RaytracingAccelerationStructure SceneBVH : register(t0);
 
 [shader("raygeneration")]
-void RayGenerationDebug()
+void RayGenerationMVPClip()
 {
-    float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
-    float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
-    RayDesc rayDesc = { float3(0, 1, -3), 0.001, normalize(float3(NormalizedX, NormalizedY, 1)), DEFAULT_TMAX };
-    RayPayload rayPayload;
-    rayPayload.Color = float3(0, 0, 0);
-    rayPayload.TMax = DEFAULT_TMAX;
-    rayPayload.RecursionLevel = 1;
-    rayPayload.Flags = 0;
-    TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
-    RTOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
-}
-
-[shader("raygeneration")]
-void RayGenerationRasterMatch()
-{
-    uint2 LaunchIndex = DispatchRaysIndex().xy;
-    uint2 LaunchDimensions = DispatchRaysDimensions().xy;
     float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
     float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
     RayDesc rayDesc;

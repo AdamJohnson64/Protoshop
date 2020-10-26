@@ -138,10 +138,8 @@ RaytracingAccelerationStructure SceneBVH : register(t0);
 // precision loss.
 
 [shader("raygeneration")]
-void RayGenerationRasterMatch()
+void RayGenerationMVPClip()
 {
-    const uint2 LaunchIndex = DispatchRaysIndex().xy;
-    const uint2 LaunchDimensions = DispatchRaysDimensions().xy;
     const float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
     const float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
     RayDesc rayDesc;
