@@ -39,13 +39,7 @@ public:
             pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SRV, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
             pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SAMPLER, m_pDevice->GetID3D12DescriptorHeapSMP()->GetGPUDescriptorHandleForHeapStart());
             // Put the RTV into render target state and clear it before use.
-            {
-                D3D12_RESOURCE_BARRIER descBarrier = {};
-                descBarrier.Transition.pResource = pD3D12Resource;
-                descBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-                descBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-                pD3D12GraphicsCommandList->ResourceBarrier(1, &descBarrier);
-            }
+            pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
             {
                 static float r = 0;
                 float color[4] = {r, 1, 0, 1};
@@ -71,13 +65,7 @@ public:
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             RenderImgui(pD3D12GraphicsCommandList);
             // Transition the render target into presentation state for display.
-            {
-                D3D12_RESOURCE_BARRIER descBarrier = {};
-                descBarrier.Transition.pResource = pD3D12Resource;
-                descBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-                descBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-                pD3D12GraphicsCommandList->ResourceBarrier(1, &descBarrier);
-            }
+            pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
         });
         // Swap the backbuffer and send this to the desktop composer for display.
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));

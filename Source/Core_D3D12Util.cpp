@@ -52,17 +52,21 @@ ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D
         // Copy this staging buffer to the GPU-only buffer.
         RunOnGPU(device, [&](ID3D12GraphicsCommandList5* uploadCommandList) {
             uploadCommandList->CopyResource(pD3D12Resource, pD3D12ResourceUpload);
-            {
-                D3D12_RESOURCE_BARRIER descBarrier = {};
-                descBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                descBarrier.Transition.pResource = pD3D12Resource;
-                descBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-                descBarrier.Transition.StateAfter = state;
-                uploadCommandList->ResourceBarrier(1, &descBarrier);
-            }
+            uploadCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, state));
         });
     }
     return pD3D12Resource.Detach();
+}
+
+D3D12_RESOURCE_BARRIER D3D12MakeResourceTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to)
+{
+    D3D12_RESOURCE_BARRIER desc = {};
+    desc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    desc.Transition.pResource = resource;
+    desc.Transition.StateBefore = from;
+    desc.Transition.StateAfter = to;
+    desc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    return desc;
 }
 
 void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device)

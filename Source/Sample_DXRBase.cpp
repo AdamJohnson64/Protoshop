@@ -93,44 +93,12 @@ void Sample_DXRBase::Render()
     // Copy the raytracer output from UAV to the back-buffer.
     ////////////////////////////////////////////////////////////////////////////////
     RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* RaytraceCommandList) {
-        {
-            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
-            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            descResourceBarrier.Transition.pResource = m_pResourceTargetUAV;
-            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
-        }
-        {
-            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
-            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            descResourceBarrier.Transition.pResource = pD3D12Resource;
-            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
-        }
+        RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
+        RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
         RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);
-        {
-            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
-            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            descResourceBarrier.Transition.pResource = m_pResourceTargetUAV;
-            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
-        }
+        RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON));
         // Note: We're going to detour through RenderTarget state since we may need to scribble some UI over the top.
-        {
-            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
-            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            descResourceBarrier.Transition.pResource = pD3D12Resource;
-            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
-        }
+        RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET));
         // Set up Rasterizer Stage (RS) for the viewport and scissor.
         {
             D3D12_VIEWPORT descViewport = {};
@@ -148,18 +116,8 @@ void Sample_DXRBase::Render()
         // Set up the Output Merger (OM) to define the target to render into.
         RaytraceCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
         RenderPost(RaytraceCommandList);
-        ////////////////////////////////////////////////////////////////////////////////
         // Note: Now we can transition back.
-        ////////////////////////////////////////////////////////////////////////////////
-        {
-            D3D12_RESOURCE_BARRIER descResourceBarrier = {};
-            descResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            descResourceBarrier.Transition.pResource = pD3D12Resource;
-            descResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-            descResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-            descResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            RaytraceCommandList->ResourceBarrier(1, &descResourceBarrier);
-        }
+        RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON));
     });
     // Swap the backbuffer and send this to the desktop composer for display.
     TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));

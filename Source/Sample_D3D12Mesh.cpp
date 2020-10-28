@@ -123,13 +123,7 @@ float4 main() : SV_Target
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV() };
             pD3D12GraphicsCommandList->SetDescriptorHeaps(1, descriptorHeaps);
             // Put the RTV into render target state and clear it before use.
-            {
-                D3D12_RESOURCE_BARRIER descBarrier = {};
-                descBarrier.Transition.pResource = pD3D12Resource;
-                descBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-                descBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-                pD3D12GraphicsCommandList->ResourceBarrier(1, &descBarrier);
-            }
+            pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
             {
                 float color[4] = { 0.25f, 0.25f, 0.25f, 1 };
                 pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
@@ -173,13 +167,7 @@ float4 main() : SV_Target
                 pD3D12GraphicsCommandList->DrawIndexedInstanced(scene->Meshes[meshIndex]->getIndexCount(), 1, 0, 0, 0);
             }
             // Transition the render target into presentation state for display.
-            {
-                D3D12_RESOURCE_BARRIER descBarrier = {};
-                descBarrier.Transition.pResource = pD3D12Resource;
-                descBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-                descBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-                pD3D12GraphicsCommandList->ResourceBarrier(1, &descBarrier);
-            }
+            pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
         });
         // Swap the backbuffer and send this to the desktop composer for display.
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
