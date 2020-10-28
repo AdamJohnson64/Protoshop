@@ -100,13 +100,7 @@ void Sample_DXRBase::Render()
         // Note: We're going to detour through RenderTarget state since we may need to scribble some UI over the top.
         RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET));
         // Set up Rasterizer Stage (RS) for the viewport and scissor.
-        {
-            D3D12_VIEWPORT descViewport = {};
-            descViewport.Width = RENDERTARGET_WIDTH;
-            descViewport.Height = RENDERTARGET_HEIGHT;
-            descViewport.MaxDepth = 1.0f;
-            RaytraceCommandList->RSSetViewports(1, &descViewport);
-        }
+        RaytraceCommandList->RSSetViewports(1, &D3D12MakeViewport(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
         RaytraceCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
         // Set up the Output Merger (OM) to define the target to render into.
         RaytraceCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);

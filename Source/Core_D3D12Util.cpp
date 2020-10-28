@@ -77,6 +77,15 @@ D3D12_RESOURCE_BARRIER D3D12MakeResourceTransitionBarrier(ID3D12Resource* resour
     return desc;
 }
 
+D3D12_VIEWPORT D3D12MakeViewport(FLOAT width, FLOAT height)
+{
+    D3D12_VIEWPORT desc = {};
+    desc.Width = RENDERTARGET_WIDTH;
+    desc.Height = RENDERTARGET_HEIGHT;
+    desc.MaxDepth = 1.0f;
+    return desc;
+}
+
 void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device)
 {
     CComPtr<ID3D12Fence> pD3D12Fence;

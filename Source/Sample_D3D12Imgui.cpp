@@ -48,13 +48,7 @@ public:
                 pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
             }
             // Set up Rasterizer Stage (RS) for the viewport and scissor.
-            {
-                D3D12_VIEWPORT descViewport = {};
-                descViewport.Width = RENDERTARGET_WIDTH;
-                descViewport.Height = RENDERTARGET_HEIGHT;
-                descViewport.MaxDepth = 1.0f;
-                pD3D12GraphicsCommandList->RSSetViewports(1, &descViewport);
-            }
+            pD3D12GraphicsCommandList->RSSetViewports(1, &D3D12MakeViewport(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             pD3D12GraphicsCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             // Set up the Output Merger (OM) to define the target to render into.
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);

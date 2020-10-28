@@ -130,13 +130,7 @@ float4 main() : SV_Target
             }
             pD3D12GraphicsCommandList->SetPipelineState(m_pPipelineState);
             pD3D12GraphicsCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            {
-                D3D12_VIEWPORT descViewport = {};
-                descViewport.Width = RENDERTARGET_WIDTH;
-                descViewport.Height = RENDERTARGET_HEIGHT;
-                descViewport.MaxDepth = 1.0f;
-                pD3D12GraphicsCommandList->RSSetViewports(1, &descViewport);
-            }
+            pD3D12GraphicsCommandList->RSSetViewports(1, &D3D12MakeViewport(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             pD3D12GraphicsCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             for (int i = 0; i < scene->Instances.size(); ++i)

@@ -13,6 +13,8 @@ D3D12_RECT D3D12MakeRect(LONG width, LONG height);
 
 D3D12_RESOURCE_BARRIER D3D12MakeResourceTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
 
+D3D12_VIEWPORT D3D12MakeViewport(FLOAT width, FLOAT height);
+
 void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device);
 
 void RunOnGPU(std::shared_ptr<Direct3D12Device> device, std::function<void(ID3D12GraphicsCommandList5*)> fn);
