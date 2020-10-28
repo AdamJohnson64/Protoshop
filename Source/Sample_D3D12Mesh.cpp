@@ -137,12 +137,7 @@ float4 main() : SV_Target
                 descViewport.MaxDepth = 1.0f;
                 pD3D12GraphicsCommandList->RSSetViewports(1, &descViewport);
             }
-            {
-                D3D12_RECT descRect = {};
-                descRect.right = RENDERTARGET_WIDTH;
-                descRect.bottom = RENDERTARGET_HEIGHT;
-                pD3D12GraphicsCommandList->RSSetScissorRects(1, &descRect);
-            }
+            pD3D12GraphicsCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             for (int i = 0; i < scene->Instances.size(); ++i)
             {

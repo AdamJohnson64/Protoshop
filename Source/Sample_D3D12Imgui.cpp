@@ -55,12 +55,7 @@ public:
                 descViewport.MaxDepth = 1.0f;
                 pD3D12GraphicsCommandList->RSSetViewports(1, &descViewport);
             }
-            {
-                D3D12_RECT descScissor = {};
-                descScissor.right = RENDERTARGET_WIDTH;
-                descScissor.bottom = RENDERTARGET_HEIGHT;
-                pD3D12GraphicsCommandList->RSSetScissorRects(1, &descScissor);
-            }
+            pD3D12GraphicsCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             // Set up the Output Merger (OM) to define the target to render into.
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             RenderImgui(pD3D12GraphicsCommandList);

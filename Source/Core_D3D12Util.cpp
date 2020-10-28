@@ -58,6 +58,14 @@ ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D
     return pD3D12Resource.Detach();
 }
 
+D3D12_RECT D3D12MakeRect(LONG width, LONG height)
+{
+    D3D12_RECT desc = {};
+    desc.right = width;
+    desc.bottom = height;
+    return desc;
+}
+
 D3D12_RESOURCE_BARRIER D3D12MakeResourceTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to)
 {
     D3D12_RESOURCE_BARRIER desc = {};

@@ -107,12 +107,7 @@ void Sample_DXRBase::Render()
             descViewport.MaxDepth = 1.0f;
             RaytraceCommandList->RSSetViewports(1, &descViewport);
         }
-        {
-            D3D12_RECT descScissor = {};
-            descScissor.right = RENDERTARGET_WIDTH;
-            descScissor.bottom = RENDERTARGET_HEIGHT;
-            RaytraceCommandList->RSSetScissorRects(1, &descScissor);
-        }
+        RaytraceCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
         // Set up the Output Merger (OM) to define the target to render into.
         RaytraceCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
         RenderPost(RaytraceCommandList);
