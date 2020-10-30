@@ -3,6 +3,7 @@
 #include "Core_D3D11.h"
 #include "Core_DXGI.h"
 #include "Core_OpenGL.h"
+#include "Core_VK.h"
 #include "Core_Window.h"
 #include <memory>
 
@@ -24,3 +25,7 @@ std::shared_ptr<Sample> CreateSample_DXRPathTrace(std::shared_ptr<DXGISwapChain>
 std::shared_ptr<Sample> CreateSample_DXRWhitted(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice);
 
 std::shared_ptr<Sample> CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> pDevice, std::shared_ptr<Window> pWindow);
+
+#if VULKAN_INSTALLED
+std::shared_ptr<Sample> CreateSample_VKBasic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<VKDevice> pDeviceVK, std::shared_ptr<Direct3D12Device> pDeviceD3D12);
+#endif // VULKAN_INSTALLED

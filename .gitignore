@@ -2,6 +2,8 @@
 !/.gitignore
 !/.gitmodules
 !/LICENSE.txt
+!/*.props
+!/*.targets
 !/*.vcxproj
 !/Source
 !/Submodules
