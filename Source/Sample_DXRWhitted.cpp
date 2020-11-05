@@ -50,7 +50,6 @@ public:
             descSubobject[setupSubobject].pDesc = &descSubobjectExports;
             ++setupSubobject;
 
-            D3D12_STATE_SUBOBJECT descRootSignature = {};
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
             descSubobject[setupSubobject].pDesc = &m_pRootSignature.p;
             ++setupSubobject;
@@ -59,8 +58,6 @@ public:
             descShaderRootSignature.NumExports = _countof(shaderExports);
             descShaderRootSignature.pExports = shaderExports;
             descShaderRootSignature.pSubobjectToAssociate = &descSubobject[setupSubobject - 1];
-
-            D3D12_STATE_SUBOBJECT descShaderRootSignatureAssociation = {};
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
             descSubobject[setupSubobject].pDesc = &descShaderRootSignature;
             ++setupSubobject;
