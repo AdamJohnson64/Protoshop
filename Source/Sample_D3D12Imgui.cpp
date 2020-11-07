@@ -4,17 +4,19 @@
 #include "Core_DXGI.h"
 #include "Mixin_ImguiD3D12.h"
 #include "Sample.h"
+#include "Sample_D3D12Signature.h"
 #include <atlbase.h>
 #include <functional>
 #include <memory>
 
-class Sample_D3D12Imgui : public Sample, public Mixin_ImguiD3D12
+class Sample_D3D12Imgui : public Sample, public Sample_D3D12Signature, public Mixin_ImguiD3D12
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     std::shared_ptr<Direct3D12Device> m_pDevice;
 public:
     Sample_D3D12Imgui(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
+        Sample_D3D12Signature(pDevice->GetID3D12Device()),
         Mixin_ImguiD3D12(pDevice),
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
@@ -33,11 +35,11 @@ public:
         }
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
-            pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDevice->GetID3D12RootSignature());
-            ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV(), m_pDevice->GetID3D12DescriptorHeapSMP() };
+            pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pRootSignature);
+            ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV, m_pDescriptorHeapSMP };
             pD3D12GraphicsCommandList->SetDescriptorHeaps(2, descriptorHeaps);
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SRV, m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart());
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SAMPLER, m_pDevice->GetID3D12DescriptorHeapSMP()->GetGPUDescriptorHandleForHeapStart());
+            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SRV, m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
+            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SAMPLER, m_pDescriptorHeapSMP->GetGPUDescriptorHandleForHeapStart());
             // Put the RTV into render target state and clear it before use.
             pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
             {

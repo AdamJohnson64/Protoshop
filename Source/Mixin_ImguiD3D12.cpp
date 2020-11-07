@@ -34,7 +34,6 @@ void Mixin_ImguiD3D12::RenderImgui(ID3D12GraphicsCommandList5* pD3D12GraphicsCom
     ImGui::NewFrame();
     BuildImguiUI();
     ImGui::Render();
-    pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDeviceImgui->GetID3D12RootSignature());
     ID3D12DescriptorHeap* descriptorHeaps[] = { pD3D12DescriptorHeapImgui };
     pD3D12GraphicsCommandList->SetDescriptorHeaps(1, descriptorHeaps);
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pD3D12GraphicsCommandList);

@@ -4,13 +4,14 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Sample.h"
+#include "Sample_D3D12Signature.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include <atlbase.h>
 #include <functional>
 #include <memory>
 
-class Sample_D3D12Mesh : public Sample
+class Sample_D3D12Mesh : public Sample, public Sample_D3D12Signature
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
@@ -18,6 +19,7 @@ private:
     CComPtr<ID3D12PipelineState> m_pPipelineState;
 public:
     Sample_D3D12Mesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
+        Sample_D3D12Signature(pDevice->GetID3D12Device()),
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
     {
@@ -46,7 +48,7 @@ float4 main() : SV_Target
         // Create a pipeline with these shaders.
         {
             D3D12_GRAPHICS_PIPELINE_STATE_DESC descPipeline = {};
-            descPipeline.pRootSignature = pDevice->GetID3D12RootSignature();
+            descPipeline.pRootSignature = m_pRootSignature;
             descPipeline.VS.pShaderBytecode = pD3DBlobCodeVS->GetBufferPointer();
             descPipeline.VS.BytecodeLength = pD3DBlobCodeVS->GetBufferSize();
             descPipeline.PS.pShaderBytecode = pD3DBlobCodePS->GetBufferPointer();
@@ -112,15 +114,15 @@ float4 main() : SV_Target
                 D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
                 descConstantBuffer.BufferLocation = constantBuffers[i]->GetGPUVirtualAddress();
                 descConstantBuffer.SizeInBytes = 256;
-                D3D12_CPU_DESCRIPTOR_HANDLE handle = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetCPUDescriptorHandleForHeapStart();
+                D3D12_CPU_DESCRIPTOR_HANDLE handle = m_pDescriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
                 handle.ptr = handle.ptr + m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
                 m_pDevice->GetID3D12Device()->CreateConstantBufferView(&descConstantBuffer, handle);
             }
         }
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
-            pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pDevice->GetID3D12RootSignature());
-            ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV() };
+            pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pRootSignature);
+            ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV };
             pD3D12GraphicsCommandList->SetDescriptorHeaps(1, descriptorHeaps);
             // Put the RTV into render target state and clear it before use.
             pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
@@ -135,7 +137,7 @@ float4 main() : SV_Target
             pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             for (int i = 0; i < scene->Instances.size(); ++i)
             {
-                D3D12_GPU_DESCRIPTOR_HANDLE handle = m_pDevice->GetID3D12DescriptorHeapCBVSRVUAV()->GetGPUDescriptorHandleForHeapStart();
+                D3D12_GPU_DESCRIPTOR_HANDLE handle = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
                 handle.ptr = handle.ptr + m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
                 pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_CBV, handle);
                 int32_t meshIndex = scene->Instances[i].GeometryIndex;

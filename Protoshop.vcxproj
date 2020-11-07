@@ -24,6 +24,7 @@
     <ClInclude Include="Source\Mixin_ImguiD3D12.h" />
     <ClInclude Include="Source\Sample.h" />
     <ClInclude Include="Source\Sample_D3D11Base.h" />
+    <ClInclude Include="Source\Sample_D3D12Signature.h" />
     <ClInclude Include="Source\Sample_DXRBase.h" />
     <ClInclude Include="Source\Sample_DXR_HLSL.inc" />
     <ClInclude Include="Source\Sample_Manifest.h" />
@@ -55,6 +56,7 @@
     <ClCompile Include="Source\Sample_D3D11Imgui.cpp" />
     <ClCompile Include="Source\Sample_D3D11Scene.cpp" />
     <ClCompile Include="Source\Sample_D3D11Tessellation.cpp" />
+    <ClCompile Include="Source\Sample_D3D12Signature.cpp" />
     <ClCompile Include="Source\Sample_D3D12Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D12Mesh.cpp" />
     <ClCompile Include="Source\Sample_DXRAmbientOcclusion.cpp" />

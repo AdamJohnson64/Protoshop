@@ -7,6 +7,7 @@
 #include <d3d12.h>
 
 Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
+    Sample_D3D12Signature(pDevice->GetID3D12Device()),
     m_pSwapChain(pSwapChain),
     m_pDevice(pDevice)
 {
