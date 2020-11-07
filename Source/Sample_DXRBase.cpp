@@ -7,7 +7,6 @@
 #include <d3d12.h>
 
 Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-    Sample_D3D12Signature(pDevice->m_pDevice),
     m_pSwapChain(pSwapChain),
     m_pDevice(pDevice)
 {
@@ -72,6 +71,16 @@ Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::s
         descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         TRYD3D(m_pDevice->m_pDevice->CreateCommittedResource(&descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource1), (void**)&m_pResourceTargetUAV));
         m_pResourceTargetUAV->SetName(L"DXR Output Texture2D UAV");
+    }
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create a descriptor heap for the SRVs.
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC descDescriptorHeap = {};
+        descDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        descDescriptorHeap.NumDescriptors = 256;
+        descDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        TRYD3D(m_pDevice->m_pDevice->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&m_pDescriptorHeapCBVSRVUAV));
+        m_pDescriptorHeapCBVSRVUAV->SetName(L"D3D12DescriptorHeap (CBV/SRV/UAV)");
     }
 }
 
