@@ -22,7 +22,7 @@ ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D
     descResource.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     descResource.Flags = flags;
     CComPtr<ID3D12Resource1> pD3D12Resource;
-    TRYD3D(device->GetID3D12Device()->CreateCommittedResource(heap, D3D12_HEAP_FLAG_NONE, &descResource, state, nullptr, __uuidof(ID3D12Resource1), (void**)&pD3D12Resource.p));
+    TRYD3D(device->m_pDevice->CreateCommittedResource(heap, D3D12_HEAP_FLAG_NONE, &descResource, state, nullptr, __uuidof(ID3D12Resource1), (void**)&pD3D12Resource.p));
     TRYD3D(pD3D12Resource->SetName(L"D3D12CreateBuffer"));
     return pD3D12Resource.Detach();
 }
@@ -89,9 +89,9 @@ D3D12_VIEWPORT D3D12MakeViewport(FLOAT width, FLOAT height)
 void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device)
 {
     CComPtr<ID3D12Fence> pD3D12Fence;
-    TRYD3D(device->GetID3D12Device()->CreateFence(1, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&pD3D12Fence));
+    TRYD3D(device->m_pDevice->CreateFence(1, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&pD3D12Fence));
     pD3D12Fence->SetName(L"D3D12Fence");
-    device->GetID3D12CommandQueue()->Signal(pD3D12Fence, 123);
+    device->m_pCommandQueue->Signal(pD3D12Fence, 123);
     // Set Fence to zero and wait for queue empty.
     HANDLE hWait = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     TRYD3D(pD3D12Fence->SetEventOnCompletion(123, hWait));
@@ -104,13 +104,13 @@ void RunOnGPU(std::shared_ptr<Direct3D12Device> device, std::function<void(ID3D1
     CComPtr<ID3D12GraphicsCommandList5> pD3D12GraphicsCommandList;
     {
         CComPtr<ID3D12CommandAllocator> pD3D12CommandAllocator;
-        TRYD3D(device->GetID3D12Device()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&pD3D12CommandAllocator));
+        TRYD3D(device->m_pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&pD3D12CommandAllocator));
         pD3D12CommandAllocator->SetName(L"D3D12CommandAllocator");
-        TRYD3D(device->GetID3D12Device()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pD3D12CommandAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList5), (void**)&pD3D12GraphicsCommandList));
+        TRYD3D(device->m_pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pD3D12CommandAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList5), (void**)&pD3D12GraphicsCommandList));
         pD3D12GraphicsCommandList->SetName(L"D3D12GraphicsCommandList");
     }
     fn(pD3D12GraphicsCommandList);
     pD3D12GraphicsCommandList->Close();
-    device->GetID3D12CommandQueue()->ExecuteCommandLists(1, (ID3D12CommandList**)&pD3D12GraphicsCommandList.p);
+    device->m_pCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**)&pD3D12GraphicsCommandList.p);
     D3D12WaitForGPUIdle(device);
 };

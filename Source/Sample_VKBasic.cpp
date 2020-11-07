@@ -61,14 +61,14 @@ public:
                 descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
                 descResource.SampleDesc.Count = 1;
                 descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-                TRYD3D(m_pDeviceD3D12->GetID3D12Device()->CreateCommittedResource1(&descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES | D3D12_HEAP_FLAG_SHARED, &descResource, D3D12_RESOURCE_STATE_COMMON, &descClear, nullptr, __uuidof(ID3D12Resource1), (void**)&pD3D12Backbuffer.p));
+                TRYD3D(m_pDeviceD3D12->m_pDevice->CreateCommittedResource1(&descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES | D3D12_HEAP_FLAG_SHARED, &descResource, D3D12_RESOURCE_STATE_COMMON, &descClear, nullptr, __uuidof(ID3D12Resource1), (void**)&pD3D12Backbuffer.p));
                 pD3D12Backbuffer->SetName(L"D3D12Resource (Backbuffer)");
             }
         }
         
         // Open a shared NT handle to the image (true HANDLE; must be closed later).
         std::unique_ptr<HANDLE, AutoCloseHandle> hD3D12Backbuffer;
-        TRYD3D(m_pDeviceD3D12->GetID3D12Device()->CreateSharedHandle(pD3D12Backbuffer, nullptr, GENERIC_ALL, nullptr, (HANDLE*)&hD3D12Backbuffer));
+        TRYD3D(m_pDeviceD3D12->m_pDevice->CreateSharedHandle(pD3D12Backbuffer, nullptr, GENERIC_ALL, nullptr, (HANDLE*)&hD3D12Backbuffer));
         
         // Create a Vulkan image to render into.
         vk::UniqueImage vkImage;
@@ -144,7 +144,7 @@ public:
                 D3D12_RENDER_TARGET_VIEW_DESC descRTV = {};
                 descRTV.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
                 descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-                m_pDeviceD3D12->GetID3D12Device()->CreateRenderTargetView(pD3D12SwapChainBuffer, &descRTV, m_pDeviceD3D12->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
+                m_pDeviceD3D12->m_pDevice->CreateRenderTargetView(pD3D12SwapChainBuffer, &descRTV, m_pDeviceD3D12->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
             }
 
             // Perform a copy of our intermediate D3D12 image (written by Vulkan) to the DXGI buffer.

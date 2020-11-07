@@ -19,7 +19,7 @@ private:
     CComPtr<ID3D12PipelineState> m_pPipelineState;
 public:
     Sample_D3D12Mesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-        Sample_D3D12Signature(pDevice->GetID3D12Device()),
+        Sample_D3D12Signature(pDevice->m_pDevice),
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
     {
@@ -66,7 +66,7 @@ float4 main() : SV_Target
             descPipeline.NumRenderTargets = 1;
             descPipeline.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
             descPipeline.SampleDesc.Count = 1;
-            TRYD3D(pDevice->GetID3D12Device()->CreateGraphicsPipelineState(&descPipeline, __uuidof(ID3D12PipelineState), (void**)&m_pPipelineState.p));
+            TRYD3D(pDevice->m_pDevice->CreateGraphicsPipelineState(&descPipeline, __uuidof(ID3D12PipelineState), (void**)&m_pPipelineState.p));
         }
     }
     void Render() override
@@ -79,7 +79,7 @@ float4 main() : SV_Target
             D3D12_RENDER_TARGET_VIEW_DESC descRTV = {};
             descRTV.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-            m_pDevice->GetID3D12Device()->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
+            m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
         }
         std::vector<CComPtr<ID3D12Resource>> vertexBuffers;
         std::vector<CComPtr<ID3D12Resource>> indexBuffers;
@@ -115,8 +115,8 @@ float4 main() : SV_Target
                 descConstantBuffer.BufferLocation = constantBuffers[i]->GetGPUVirtualAddress();
                 descConstantBuffer.SizeInBytes = 256;
                 D3D12_CPU_DESCRIPTOR_HANDLE handle = m_pDescriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
-                handle.ptr = handle.ptr + m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
-                m_pDevice->GetID3D12Device()->CreateConstantBufferView(&descConstantBuffer, handle);
+                handle.ptr = handle.ptr + m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
+                m_pDevice->m_pDevice->CreateConstantBufferView(&descConstantBuffer, handle);
             }
         }
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
@@ -128,17 +128,17 @@ float4 main() : SV_Target
             pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
             {
                 float color[4] = { 0.25f, 0.25f, 0.25f, 1 };
-                pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
+                pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
             }
             pD3D12GraphicsCommandList->SetPipelineState(m_pPipelineState);
             pD3D12GraphicsCommandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             pD3D12GraphicsCommandList->RSSetViewports(1, &D3D12MakeViewport(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             pD3D12GraphicsCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-            pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
+            pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             for (int i = 0; i < scene->Instances.size(); ++i)
             {
                 D3D12_GPU_DESCRIPTOR_HANDLE handle = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
-                handle.ptr = handle.ptr + m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
+                handle.ptr = handle.ptr + m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
                 pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_CBV, handle);
                 int32_t meshIndex = scene->Instances[i].GeometryIndex;
                 {

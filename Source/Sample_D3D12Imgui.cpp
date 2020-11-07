@@ -16,7 +16,7 @@ private:
     std::shared_ptr<Direct3D12Device> m_pDevice;
 public:
     Sample_D3D12Imgui(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-        Sample_D3D12Signature(pDevice->GetID3D12Device()),
+        Sample_D3D12Signature(pDevice->m_pDevice),
         Mixin_ImguiD3D12(pDevice),
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
@@ -31,7 +31,7 @@ public:
             D3D12_RENDER_TARGET_VIEW_DESC descRTV = {};
             descRTV.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-            m_pDevice->GetID3D12Device()->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
+            m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
         }
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
@@ -47,13 +47,13 @@ public:
                 float color[4] = {r, 1, 0, 1};
                 r += 0.01f;
                 if (r > 1.0f) r -= 1.0f;
-                pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
+                pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
             }
             // Set up Rasterizer Stage (RS) for the viewport and scissor.
             pD3D12GraphicsCommandList->RSSetViewports(1, &D3D12MakeViewport(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             pD3D12GraphicsCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
             // Set up the Output Merger (OM) to define the target to render into.
-            pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
+            pD3D12GraphicsCommandList->OMSetRenderTargets(1, &m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
             RenderImgui(pD3D12GraphicsCommandList);
             // Transition the render target into presentation state for display.
             pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));

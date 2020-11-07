@@ -12,10 +12,10 @@ Mixin_ImguiD3D12::Mixin_ImguiD3D12(std::shared_ptr<Direct3D12Device> pDevice) :
         descDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         descDescriptorHeap.NumDescriptors = 32;
         descDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        TRYD3D(pDevice->GetID3D12Device()->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pD3D12DescriptorHeapImgui));
+        TRYD3D(pDevice->m_pDevice->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pD3D12DescriptorHeapImgui));
         pD3D12DescriptorHeapImgui->SetName(L"D3D12DescriptorHeap (Imgui)");
     }
-    ImGui_ImplDX12_Init(pDevice->GetID3D12Device(), 1, DXGI_FORMAT_B8G8R8A8_UNORM, pD3D12DescriptorHeapImgui, pD3D12DescriptorHeapImgui->GetCPUDescriptorHandleForHeapStart(), pD3D12DescriptorHeapImgui->GetGPUDescriptorHandleForHeapStart());
+    ImGui_ImplDX12_Init(pDevice->m_pDevice, 1, DXGI_FORMAT_B8G8R8A8_UNORM, pD3D12DescriptorHeapImgui, pD3D12DescriptorHeapImgui->GetCPUDescriptorHandleForHeapStart(), pD3D12DescriptorHeapImgui->GetGPUDescriptorHandleForHeapStart());
 }
 
 Mixin_ImguiD3D12::~Mixin_ImguiD3D12()

@@ -49,7 +49,7 @@ public:
             descSwapChain.BufferCount = 2;
             descSwapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
             CComPtr<IDXGISwapChain1> pDXGISwapChain1;
-            TRYD3D(pDXGIFactory->CreateSwapChainForHwnd(pDevice->GetID3D12CommandQueue(), hWindow, &descSwapChain, nullptr, nullptr, &pDXGISwapChain1));
+            TRYD3D(pDXGIFactory->CreateSwapChainForHwnd(pDevice->m_pCommandQueue, hWindow, &descSwapChain, nullptr, nullptr, &pDXGISwapChain1));
             TRYD3D(pDXGISwapChain1->QueryInterface<IDXGISwapChain4>(&pDXGISwapChain));
         }
     }

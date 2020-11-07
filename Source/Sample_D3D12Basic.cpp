@@ -27,7 +27,7 @@ public:
             D3D12_RENDER_TARGET_VIEW_DESC descRTV = {};
             descRTV.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-            m_pDevice->GetID3D12Device()->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
+            m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
         }
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
@@ -38,7 +38,7 @@ public:
                 float color[4] = {r, 1, 0, 1};
                 r += 0.01f;
                 if (r > 1.0f) r -= 1.0f;
-                pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
+                pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
             }
             // Transition the render target into presentation state for display.
             pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));

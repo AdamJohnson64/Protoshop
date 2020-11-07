@@ -7,7 +7,7 @@
 #include <d3d12.h>
 
 Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-    Sample_D3D12Signature(pDevice->GetID3D12Device()),
+    Sample_D3D12Signature(pDevice->m_pDevice),
     m_pSwapChain(pSwapChain),
     m_pDevice(pDevice)
 {
@@ -53,7 +53,7 @@ Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::s
         CComPtr<ID3DBlob> m_blob;
         CComPtr<ID3DBlob> m_blobError;
         TRYD3D(D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1_0, &m_blob, &m_blobError));
-        TRYD3D(m_pDevice->GetID3D12Device()->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&m_pRootSignature));
+        TRYD3D(m_pDevice->m_pDevice->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&m_pRootSignature));
         m_pRootSignature->SetName(L"DXR Root Signature");
     }
     ////////////////////////////////////////////////////////////////////////////////
@@ -70,7 +70,7 @@ Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::s
         descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
         descResource.SampleDesc.Count = 1;
         descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        TRYD3D(m_pDevice->GetID3D12Device()->CreateCommittedResource(&descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource1), (void**)&m_pResourceTargetUAV));
+        TRYD3D(m_pDevice->m_pDevice->CreateCommittedResource(&descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource1), (void**)&m_pResourceTargetUAV));
         m_pResourceTargetUAV->SetName(L"DXR Output Texture2D UAV");
     }
 }
@@ -88,7 +88,7 @@ void Sample_DXRBase::Render()
         D3D12_RENDER_TARGET_VIEW_DESC descRTV = {};
         descRTV.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
         descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-        m_pDevice->GetID3D12Device()->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart());
+        m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
     }
     ////////////////////////////////////////////////////////////////////////////////
     // Copy the raytracer output from UAV to the back-buffer.
@@ -104,7 +104,7 @@ void Sample_DXRBase::Render()
         RaytraceCommandList->RSSetViewports(1, &D3D12MakeViewport(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
         RaytraceCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
         // Set up the Output Merger (OM) to define the target to render into.
-        RaytraceCommandList->OMSetRenderTargets(1, &m_pDevice->GetID3D12DescriptorHeapRTV()->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
+        RaytraceCommandList->OMSetRenderTargets(1, &m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
         RenderPost(RaytraceCommandList);
         // Note: Now we can transition back.
         RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON));

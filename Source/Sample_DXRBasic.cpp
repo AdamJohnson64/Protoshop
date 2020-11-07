@@ -78,7 +78,7 @@ public:
             descStateObject.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
             descStateObject.NumSubobjects = setupSubobject;
             descStateObject.pSubobjects = &descSubobject[0];
-            TRYD3D(m_pDevice->GetID3D12Device()->CreateStateObject(&descStateObject, __uuidof(ID3D12StateObject), (void**)&m_pPipelineStateObject));
+            TRYD3D(m_pDevice->m_pDevice->CreateStateObject(&descStateObject, __uuidof(ID3D12StateObject), (void**)&m_pPipelineStateObject));
             m_pPipelineStateObject->SetName(L"DXR Pipeline State");
         }
     }
@@ -125,7 +125,7 @@ public:
             descGeometry.Triangles.VertexBuffer.StartAddress = Vertices->GetGPUVirtualAddress();
             descGeometry.Triangles.VertexBuffer.StrideInBytes = sizeof(float[2]);
             descRaytracingInputs.pGeometryDescs = &descGeometry;
-            m_pDevice->GetID3D12Device()->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
+            m_pDevice->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
             // Create the output and scratch buffers.
             ResourceBLAS.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
             CComPtr<ID3D12Resource1> ResourceASScratch;
@@ -163,7 +163,7 @@ public:
             descRaytracingInputs.NumDescs = 1;
             descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
             descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
-            m_pDevice->GetID3D12Device()->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
+            m_pDevice->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
             // Create the output and scratch buffers.
             ResourceTLAS.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
             CComPtr<ID3D12Resource1> ResourceASScratch;
@@ -180,12 +180,12 @@ public:
         // Establish resource views.
         {
     	    D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase = m_pDescriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
-	        UINT descriptorElementSize = m_pDevice->GetID3D12Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	        UINT descriptorElementSize = m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             // Create the UAV for the raytracer output.
             {
                 D3D12_UNORDERED_ACCESS_VIEW_DESC descUAV = {};
                 descUAV.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-                m_pDevice->GetID3D12Device()->CreateUnorderedAccessView(m_pResourceTargetUAV, nullptr, &descUAV, descriptorBase);
+                m_pDevice->m_pDevice->CreateUnorderedAccessView(m_pResourceTargetUAV, nullptr, &descUAV, descriptorBase);
                 descriptorBase.ptr += descriptorElementSize;
             }
             // Create the SRV for the acceleration structure.
@@ -195,7 +195,7 @@ public:
     	        descSRV.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
     	        descSRV.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     	        descSRV.RaytracingAccelerationStructure.Location = ResourceTLAS->GetGPUVirtualAddress();
-    	        m_pDevice->GetID3D12Device()->CreateShaderResourceView(nullptr, &descSRV, descriptorBase);
+    	        m_pDevice->m_pDevice->CreateShaderResourceView(nullptr, &descSRV, descriptorBase);
                 descriptorBase.ptr += descriptorElementSize;
             }
         }
