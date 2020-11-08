@@ -41,7 +41,7 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"RayGenerationMVPClip", L"Miss", L"HitGroupCheckerboard", L"HitGroupRedPlastic", L"HitGroupGlass", L"IntersectPlane", L"IntersectSphere" };
+            const WCHAR* shaderExports[] = { L"RayGenerationMVPClip", L"Miss", L"HitGroupCheckerboard", L"HitGroupPlastic", L"HitGroupGlass", L"IntersectPlane", L"IntersectSphere" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
             descSubobjectExports.NumExports = _countof(shaderExports);
             descSubobjectExports.pExports = shaderExports;
@@ -78,9 +78,9 @@ public:
             ++setupSubobject;
 
             D3D12_HIT_GROUP_DESC descHitGroupRedPlastic = {};
-            descHitGroupRedPlastic.HitGroupExport = L"HitGroupRedPlastic";
+            descHitGroupRedPlastic.HitGroupExport = L"HitGroupPlastic";
             descHitGroupRedPlastic.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-            descHitGroupRedPlastic.ClosestHitShaderImport = L"MaterialRedPlastic";
+            descHitGroupRedPlastic.ClosestHitShaderImport = L"MaterialPlastic";
             descHitGroupRedPlastic.IntersectionShaderImport = L"IntersectSphere";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
             descSubobject[setupSubobject].pDesc = &descHitGroupRedPlastic;
@@ -156,7 +156,7 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         CComPtr<ID3D12Resource1> ResourceInstance;
         {
-            D3D12_RAYTRACING_INSTANCE_DESC DxrInstance[4] = {};
+            D3D12_RAYTRACING_INSTANCE_DESC DxrInstance[5] = {};
             DxrInstance[0].Transform[0][0] = 10;
             DxrInstance[0].Transform[1][1] = 1;
             DxrInstance[0].Transform[2][2] = 10;
@@ -176,7 +176,7 @@ public:
             DxrInstance[2].Transform[2][2] = 1;
             DxrInstance[2].Transform[1][3] = 1;
             DxrInstance[2].InstanceMask = 0xFF;
-            DxrInstance[2].InstanceContributionToHitGroupIndex = 1;
+            DxrInstance[2].InstanceContributionToHitGroupIndex = 2;
             DxrInstance[2].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
             DxrInstance[3].Transform[0][0] = 1;
             DxrInstance[3].Transform[1][1] = 1;
@@ -184,8 +184,16 @@ public:
             DxrInstance[3].Transform[0][3] = 2;
             DxrInstance[3].Transform[1][3] = 1;
             DxrInstance[3].InstanceMask = 0xFF;
-            DxrInstance[3].InstanceContributionToHitGroupIndex = 2;
+            DxrInstance[3].InstanceContributionToHitGroupIndex = 3;
             DxrInstance[3].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
+            DxrInstance[4].Transform[0][0] = 1;
+            DxrInstance[4].Transform[1][1] = 1;
+            DxrInstance[4].Transform[2][2] = 1;
+            DxrInstance[4].Transform[0][3] = 0;
+            DxrInstance[4].Transform[1][3] = 3;
+            DxrInstance[4].InstanceMask = 0xFF;
+            DxrInstance[4].InstanceContributionToHitGroupIndex = 4;
+            DxrInstance[4].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
             ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(DxrInstance), sizeof(DxrInstance), &DxrInstance);
         }
         ////////////////////////////////////////////////////////////////////////////////
@@ -196,7 +204,7 @@ public:
             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs = {};
             descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-            descRaytracingInputs.NumDescs = 4;
+            descRaytracingInputs.NumDescs = 5;
             descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
             descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
             m_pDevice->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
@@ -250,11 +258,17 @@ public:
         // SHADER TABLE - Create a table of all shaders for the raytracer.
         ////////////////////////////////////////////////////////////////////////////////
         CComPtr<ID3D12Resource1> ResourceShaderTable;
+        const uint32_t shaderEntrySize = 128;
         {
+            Vector4 albedoRed = { 1, 0, 0, 0 };
+            Vector4 albedoGreen = { 0, 1, 0, 0 };
+            Vector4 albedoBlue = { 0, 0, 1, 0 };
+	        UINT descriptorElementSize = m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            D3D12_GPU_DESCRIPTOR_HANDLE constantBuffer2 = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
+            constantBuffer2.ptr += descriptorElementSize * 3;
             CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
             TRYD3D(m_pPipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(&stateObjectProperties));
-            uint32_t shaderEntrySize = 64;
-            uint32_t shaderTableSize = shaderEntrySize * 5;
+            uint32_t shaderTableSize = shaderEntrySize * 7;
             std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
             memset(&shaderTableCPU[0], 0, shaderTableSize);
             // Shader Index 0 - Ray Generation Shader
@@ -267,11 +281,21 @@ public:
             memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroupCheckerboard"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 2] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 3 - Hit Shader 2
-            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroupRedPlastic"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 3] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
+            *reinterpret_cast<Vector4*>(&shaderTableCPU[shaderEntrySize * 3] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)) = albedoRed;
             // Shader Index 4 - Hit Shader 3
-            memcpy(&shaderTableCPU[shaderEntrySize * 4], stateObjectProperties->GetShaderIdentifier(L"HitGroupGlass"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[shaderEntrySize * 4], stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 4] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
+            *reinterpret_cast<Vector4*>(&shaderTableCPU[shaderEntrySize * 4] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)) = albedoGreen;
+            // Shader Index 5 - Hit Shader 4
+            memcpy(&shaderTableCPU[shaderEntrySize * 5], stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 5] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
+            *reinterpret_cast<Vector4*>(&shaderTableCPU[shaderEntrySize * 5] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)) = albedoBlue;
+            // Shader Index 6 - Hit Shader 5
+            memcpy(&shaderTableCPU[shaderEntrySize * 6], stateObjectProperties->GetShaderIdentifier(L"HitGroupGlass"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 6] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
+            *reinterpret_cast<Vector4*>(&shaderTableCPU[shaderEntrySize * 6] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)) = albedoRed;
             ResourceShaderTable.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
@@ -287,14 +311,13 @@ public:
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);
             {
                 D3D12_DISPATCH_RAYS_DESC descDispatchRays = {};
-                descDispatchRays.RayGenerationShaderRecord.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 0;
-                descDispatchRays.RayGenerationShaderRecord.SizeInBytes = 64;
-                descDispatchRays.MissShaderTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 1;
-                descDispatchRays.MissShaderTable.SizeInBytes = 64;
-                descDispatchRays.MissShaderTable.StrideInBytes = 0;
-                descDispatchRays.HitGroupTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 2;
-                descDispatchRays.HitGroupTable.SizeInBytes = 64;
-                descDispatchRays.HitGroupTable.StrideInBytes = 64;
+                descDispatchRays.RayGenerationShaderRecord.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 0;
+                descDispatchRays.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
+                descDispatchRays.MissShaderTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 1;
+                descDispatchRays.MissShaderTable.SizeInBytes = shaderEntrySize;
+                descDispatchRays.HitGroupTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 2;
+                descDispatchRays.HitGroupTable.SizeInBytes = shaderEntrySize;
+                descDispatchRays.HitGroupTable.StrideInBytes = shaderEntrySize;
                 descDispatchRays.Width = RENDERTARGET_WIDTH;
                 descDispatchRays.Height = RENDERTARGET_HEIGHT;
                 descDispatchRays.Depth = 1;

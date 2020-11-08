@@ -30,19 +30,13 @@ void MaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes inte
         recurseRayPayload.Flags = 1; // Do not spawn new rays.
         recurseRayPayload.RecursionLevel = rayPayload.RecursionLevel + 1;
         TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, newRayDesc, recurseRayPayload);
-        accumulatedIrradiance += recurseRayPayload.Color;
+        accumulatedIrradiance += Albedo * recurseRayPayload.Color;
     }
     rayPayload.Color = accumulatedIrradiance / 32;
 }
 
 [shader("closesthit")]
-void MaterialEmissiveRed(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+void MaterialEmissive(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayPayload.Color = float3(1, 0, 0);
-}
-
-[shader("closesthit")]
-void MaterialEmissiveGreen(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
-{
-    rayPayload.Color = float3(0, 1, 0);
+    rayPayload.Color = Albedo;
 }

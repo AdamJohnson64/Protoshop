@@ -239,10 +239,10 @@ public:
         // SHADER TABLE - Create a table of all shaders for the raytracer.
         ////////////////////////////////////////////////////////////////////////////////
         CComPtr<ID3D12Resource1> ResourceShaderTable;
+        const uint32_t shaderEntrySize = 64;
         {
             CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
             TRYD3D(m_pPipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(&stateObjectProperties));
-            uint32_t shaderEntrySize = 64;
             uint32_t shaderTableSize = shaderEntrySize * 4;
             std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
             memset(&shaderTableCPU[0], 0, shaderTableSize);
@@ -273,14 +273,13 @@ public:
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);
             {
                 D3D12_DISPATCH_RAYS_DESC descDispatchRays = {};
-                descDispatchRays.RayGenerationShaderRecord.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 0;
-                descDispatchRays.RayGenerationShaderRecord.SizeInBytes = 64;
-                descDispatchRays.MissShaderTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 1;
-                descDispatchRays.MissShaderTable.SizeInBytes = 64;
-                descDispatchRays.MissShaderTable.StrideInBytes = 0;
-                descDispatchRays.HitGroupTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + 64 * 2;
-                descDispatchRays.HitGroupTable.SizeInBytes = 64;
-                descDispatchRays.HitGroupTable.StrideInBytes = 64;
+                descDispatchRays.RayGenerationShaderRecord.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 0;
+                descDispatchRays.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
+                descDispatchRays.MissShaderTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 1;
+                descDispatchRays.MissShaderTable.SizeInBytes = shaderEntrySize;
+                descDispatchRays.HitGroupTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 2;
+                descDispatchRays.HitGroupTable.SizeInBytes = shaderEntrySize;
+                descDispatchRays.HitGroupTable.StrideInBytes = shaderEntrySize;
                 descDispatchRays.Width = RENDERTARGET_WIDTH;
                 descDispatchRays.Height = RENDERTARGET_HEIGHT;
                 descDispatchRays.Depth = 1;

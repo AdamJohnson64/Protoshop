@@ -34,6 +34,11 @@ cbuffer Constants : register(b0)
     float4x4 Transform;
 };
 
+cbuffer Material : register(b1)
+{
+    float3 Albedo;
+};
+
 struct RayPayload
 {
     float3 Color;
@@ -174,7 +179,7 @@ void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes
 }
 
 [shader("closesthit")]
-void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+void MaterialPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
     rayPayload.IntersectionT = RayTCurrent();
     const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
@@ -188,7 +193,7 @@ void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes i
         }
     }
     // Solid Red Albedo.
-    float3 colorAlbedo = float3(1, 0, 0);
+    float3 colorAlbedo = Albedo;
     // Basic Lambertian Diffuse.
     float3 colorDiffuse = colorAlbedo * lambert(intersectionAttributes.Normal);
     // Schlick Fresnel Reflection.

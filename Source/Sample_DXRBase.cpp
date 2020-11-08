@@ -38,15 +38,27 @@ Sample_DXRBase::Sample_DXRBase(std::shared_ptr<DXGISwapChain> pSwapChain, std::s
         descDescriptorRange[setupRange].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
         ++setupRange;
 
-        D3D12_ROOT_PARAMETER descRootParameter = {};
-        descRootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        descRootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-        descRootParameter.DescriptorTable.NumDescriptorRanges = setupRange;
-        descRootParameter.DescriptorTable.pDescriptorRanges = &descDescriptorRange[0];
+        D3D12_DESCRIPTOR_RANGE descDescriptorRange2 = {};
+        descDescriptorRange2.BaseShaderRegister = 1;
+        descDescriptorRange2.NumDescriptors = 1;
+        descDescriptorRange2.RegisterSpace = 0;
+        descDescriptorRange2.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+        descDescriptorRange2.OffsetInDescriptorsFromTableStart = 0;
+
+        std::array<D3D12_ROOT_PARAMETER, 2> descRootParameter = {};
+        descRootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        descRootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+        descRootParameter[0].DescriptorTable.NumDescriptorRanges = setupRange;
+        descRootParameter[0].DescriptorTable.pDescriptorRanges = &descDescriptorRange[0];
+
+        descRootParameter[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+        descRootParameter[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+        descRootParameter[1].Constants.ShaderRegister = 1;
+        descRootParameter[1].Constants.Num32BitValues = 4;
 
         D3D12_ROOT_SIGNATURE_DESC descSignature = {};
-        descSignature.NumParameters = 1;
-        descSignature.pParameters = &descRootParameter;
+        descSignature.NumParameters = 2;
+        descSignature.pParameters = &descRootParameter[0];
         descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
 
         CComPtr<ID3DBlob> m_blob;

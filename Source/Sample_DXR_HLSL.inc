@@ -147,6 +147,15 @@ cbuffer Constants : register(b0)
     float4x4 Transform;
 };
 
+// Just to show how materials might be set up we'll patch 4 32-bit embedded
+// values into a second material constant and upload that in the shader table.
+// This should at least mean we can attach a color to things.
+
+cbuffer Material : register(b1)
+{
+    float3 Albedo;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Common Raytracer Entrypoints
 ///////////////////////////////////////////////////////////////////////////////
