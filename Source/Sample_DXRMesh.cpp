@@ -179,22 +179,8 @@ public:
             instanceDescs.resize(scene->Instances.size());
             for (int i = 0; i < scene->Instances.size(); ++i)
             {
-                instanceDescs[i].Transform[0][0] = scene->Instances[i].Transform.M11;
-                instanceDescs[i].Transform[0][1] = scene->Instances[i].Transform.M21;
-                instanceDescs[i].Transform[0][2] = scene->Instances[i].Transform.M31;
-                instanceDescs[i].Transform[0][3] = scene->Instances[i].Transform.M41;
-                instanceDescs[i].Transform[1][0] = scene->Instances[i].Transform.M12;
-                instanceDescs[i].Transform[1][1] = scene->Instances[i].Transform.M22;
-                instanceDescs[i].Transform[1][2] = scene->Instances[i].Transform.M32;
-                instanceDescs[i].Transform[1][3] = scene->Instances[i].Transform.M42;
-                instanceDescs[i].Transform[2][0] = scene->Instances[i].Transform.M13;
-                instanceDescs[i].Transform[2][1] = scene->Instances[i].Transform.M23;
-                instanceDescs[i].Transform[2][2] = scene->Instances[i].Transform.M33;
-                instanceDescs[i].Transform[2][3] = scene->Instances[i].Transform.M43;
+                instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(scene->Instances[i].Transform, scene->Instances[i].MaterialIndex, BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress());
                 instanceDescs[i].InstanceID = i;
-                instanceDescs[i].InstanceMask = 0xFF;
-                instanceDescs[i].InstanceContributionToHitGroupIndex = scene->Instances[i].MaterialIndex;
-                instanceDescs[i].AccelerationStructure = BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress();
             }
             ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * scene->Instances.size(), sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * scene->Instances.size(), &instanceDescs[0]);
         }

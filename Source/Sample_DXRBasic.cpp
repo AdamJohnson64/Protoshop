@@ -3,6 +3,7 @@
 #include "Core_D3D12Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_Math.h"
 #include "Sample_DXRBase.h"
 #include "generated.Sample_DXRBasic.dxr.h"
 #include <atlbase.h>
@@ -144,12 +145,7 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         CComPtr<ID3D12Resource1> ResourceInstance;
         {
-            D3D12_RAYTRACING_INSTANCE_DESC DxrInstance = {};
-            DxrInstance.Transform[0][0] = 1;
-            DxrInstance.Transform[1][1] = 1;
-            DxrInstance.Transform[2][2] = 1;
-            DxrInstance.InstanceMask = 0xFF;
-            DxrInstance.AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
+            D3D12_RAYTRACING_INSTANCE_DESC DxrInstance = Make_D3D12_RAYTRACING_INSTANCE_DESC(Identity<float>, 0, ResourceBLAS->GetGPUVirtualAddress());
             ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(DxrInstance), sizeof(DxrInstance), &DxrInstance);
         }
         ////////////////////////////////////////////////////////////////////////////////

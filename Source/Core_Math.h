@@ -51,6 +51,9 @@ struct TMatrix44
         M41, M42, M43, M44;
 };
 
+template <class T>
+TMatrix44<T> Identity = { 1, 0, 0, 0,   0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 0, 1 };
+
 using Matrix44 = TMatrix44<float>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -206,6 +209,29 @@ TMatrix44<T> CreateMatrixRotation(const TQuaternion<T>& q)
     T m32 = 2 * (q.Y * q.Z - q.X * q.W);
     T m33 = 1 - 2 * q.X * q.X - 2 * q.Y * q.Y;
     return TMatrix44<T> { m11, m12, m13, 0, m21, m22, m23, 0, m31, m32, m33, 0, 0, 0, 0, 1 };
+}
+
+template <class T>
+TMatrix44<T> CreateMatrixScale(const TVector3<T> scale)
+{
+    TMatrix44<T> o = {};
+    o.M11 = scale.X;
+    o.M22 = scale.Y;
+    o.M33 = scale.Z;
+    o.M44 = 1;
+    return o;
+}
+
+template <class T>
+TMatrix44<T> CreateMatrixTranslate(const TVector3<T> translate)
+{
+    TMatrix44<T> o = {};
+    o.M44 = o.M33 = o.M22 = o.M11 = 1;
+    o.M34 = o.M32 = o.M31 = o.M24 = o.M23 = o.M21 = o.M14 = o.M13 = o.M12 = 0; 
+    o.M41 = translate.X;
+    o.M42 = translate.Y;
+    o.M43 = translate.Z;
+    return o;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

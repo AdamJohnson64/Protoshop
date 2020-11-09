@@ -156,44 +156,12 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         CComPtr<ID3D12Resource1> ResourceInstance;
         {
-            D3D12_RAYTRACING_INSTANCE_DESC DxrInstance[5] = {};
-            DxrInstance[0].Transform[0][0] = 10;
-            DxrInstance[0].Transform[1][1] = 1;
-            DxrInstance[0].Transform[2][2] = 10;
-            DxrInstance[0].InstanceMask = 0xFF;
-            DxrInstance[0].InstanceContributionToHitGroupIndex = 0;
-            DxrInstance[0].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
-            DxrInstance[1].Transform[0][0] = 1;
-            DxrInstance[1].Transform[1][1] = 1;
-            DxrInstance[1].Transform[2][2] = 1;
-            DxrInstance[1].Transform[0][3] = -2;
-            DxrInstance[1].Transform[1][3] = 1;
-            DxrInstance[1].InstanceMask = 0xFF;
-            DxrInstance[1].InstanceContributionToHitGroupIndex = 1;
-            DxrInstance[1].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
-            DxrInstance[2].Transform[0][0] = 1;
-            DxrInstance[2].Transform[1][1] = 1;
-            DxrInstance[2].Transform[2][2] = 1;
-            DxrInstance[2].Transform[1][3] = 1;
-            DxrInstance[2].InstanceMask = 0xFF;
-            DxrInstance[2].InstanceContributionToHitGroupIndex = 2;
-            DxrInstance[2].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
-            DxrInstance[3].Transform[0][0] = 1;
-            DxrInstance[3].Transform[1][1] = 1;
-            DxrInstance[3].Transform[2][2] = 1;
-            DxrInstance[3].Transform[0][3] = 2;
-            DxrInstance[3].Transform[1][3] = 1;
-            DxrInstance[3].InstanceMask = 0xFF;
-            DxrInstance[3].InstanceContributionToHitGroupIndex = 3;
-            DxrInstance[3].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
-            DxrInstance[4].Transform[0][0] = 1;
-            DxrInstance[4].Transform[1][1] = 1;
-            DxrInstance[4].Transform[2][2] = 1;
-            DxrInstance[4].Transform[0][3] = 0;
-            DxrInstance[4].Transform[1][3] = 3;
-            DxrInstance[4].InstanceMask = 0xFF;
-            DxrInstance[4].InstanceContributionToHitGroupIndex = 4;
-            DxrInstance[4].AccelerationStructure = ResourceBLAS->GetGPUVirtualAddress();
+            std::array<D3D12_RAYTRACING_INSTANCE_DESC, 5> DxrInstance = {};
+            DxrInstance[0] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixScale(Vector3 {10, 1, 10}), 0, ResourceBLAS->GetGPUVirtualAddress());
+            DxrInstance[1] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 {-2, 1, 0}), 1, ResourceBLAS->GetGPUVirtualAddress());
+            DxrInstance[2] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 0, 1, 0}), 2, ResourceBLAS->GetGPUVirtualAddress());
+            DxrInstance[3] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 2, 1, 0}), 3, ResourceBLAS->GetGPUVirtualAddress());
+            DxrInstance[4] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 0, 3, 0}), 4, ResourceBLAS->GetGPUVirtualAddress());
             ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(DxrInstance), sizeof(DxrInstance), &DxrInstance);
         }
         ////////////////////////////////////////////////////////////////////////////////
@@ -305,9 +273,6 @@ public:
         RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV };
             RaytraceCommandList->SetDescriptorHeaps(1, descriptorHeaps);
-            {
-                //RaytraceCommandList->SetComputeRootConstantBufferView(0, ResourceShaderTable->GetGPUVirtualAddress());
-            }
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);
             {
                 D3D12_DISPATCH_RAYS_DESC descDispatchRays = {};

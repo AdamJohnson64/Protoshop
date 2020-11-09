@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core_D3D12.h"
+#include "Core_Math.h"
 #include <functional>
 
 uint32_t D3D12Align(uint32_t size, uint32_t alignSize);
@@ -14,6 +15,8 @@ D3D12_RECT D3D12MakeRect(LONG width, LONG height);
 D3D12_RESOURCE_BARRIER D3D12MakeResourceTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);
 
 D3D12_VIEWPORT D3D12MakeViewport(FLOAT width, FLOAT height);
+
+D3D12_RAYTRACING_INSTANCE_DESC Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transform, int hitgroup, D3D12_GPU_VIRTUAL_ADDRESS tlas);
 
 void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device);
 
