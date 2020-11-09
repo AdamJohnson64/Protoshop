@@ -172,9 +172,9 @@ public:
                 });
         }
         ////////////////////////////////////////////////////////////////////////////////
-        // INSTANCE - Create the instancing table.
+        // TLAS - Build the top level acceleration structure.
         ////////////////////////////////////////////////////////////////////////////////
-        CComPtr<ID3D12Resource1> ResourceInstance;
+        CComPtr<ID3D12Resource1> ResourceTLAS;
         {
             std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDescs;
             instanceDescs.resize(scene->Instances.size());
@@ -183,32 +183,7 @@ public:
                 instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(scene->Instances[i].Transform, scene->Instances[i].MaterialIndex, BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress());
                 instanceDescs[i].InstanceID = i;
             }
-            ResourceInstance.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * scene->Instances.size(), sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * scene->Instances.size(), &instanceDescs[0]);
-        }
-        ////////////////////////////////////////////////////////////////////////////////
-        // TLAS - Build the top level acceleration structure.
-        ////////////////////////////////////////////////////////////////////////////////
-        CComPtr<ID3D12Resource1> ResourceTLAS;
-        {
-            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
-            D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs = {};
-            descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-            descRaytracingInputs.NumDescs = scene->Instances.size();
-            descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-            descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
-            m_pDevice->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
-            // Create the output and scratch buffers.
-            ResourceTLAS.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-            CComPtr<ID3D12Resource1> ResourceASScratch;
-            ResourceASScratch.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-            // Build the acceleration structure.
-            RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList4* UploadTLASCommandList) {
-                D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
-                descBuild.DestAccelerationStructureData = ResourceTLAS->GetGPUVirtualAddress();
-                descBuild.Inputs = descRaytracingInputs;
-                descBuild.ScratchAccelerationStructureData = ResourceASScratch->GetGPUVirtualAddress();
-                UploadTLASCommandList->BuildRaytracingAccelerationStructure(&descBuild, 0, nullptr);
-            });
+            ResourceTLAS = DXRCreateTLAS(m_pDevice, &instanceDescs[0], instanceDescs.size());
         }
         // Establish resource views.
         {
