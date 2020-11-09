@@ -13,6 +13,7 @@
     <ClInclude Include="Source\Core_D3D12Util.h" />
     <ClInclude Include="Source\Core_D3DCompiler.h" />
     <ClInclude Include="Source\Core_DXGI.h" />
+    <ClInclude Include="Source\Core_DXRUtil.h" />
     <ClInclude Include="Source\Core_Math.h" />
     <ClInclude Include="Source\Core_Object.h" />
     <ClInclude Include="Source\Core_OpenGL.h" />
@@ -42,6 +43,7 @@
     <ClCompile Include="Source\Core_D3D12Util.cpp" />
     <ClCompile Include="Source\Core_D3DCompiler.cpp" />
     <ClCompile Include="Source\Core_DXGI.cpp" />
+    <ClCompile Include="Source\Core_DXRUtil.cpp" />
     <ClCompile Include="Source\Core_OpenGL.cpp" />
     <ClCompile Include="Source\Core_VK.cpp" />
     <ClCompile Include="Source\Core_Window.cpp" />

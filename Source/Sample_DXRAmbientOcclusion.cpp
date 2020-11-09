@@ -2,6 +2,7 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "Core_DXRUtil.h"
 #include "Core_Math.h"
 #include "Sample_DXRBase.h"
 #include "Scene_Camera.h"
