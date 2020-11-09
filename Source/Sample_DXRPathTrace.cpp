@@ -162,7 +162,7 @@ public:
             DxrInstance[2] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 {cosf(rotate + Pi<float> * 0 / 3) * 2, 1, sinf(rotate + Pi<float> * 0 / 3) * 2}), 2, ResourceBLAS->GetGPUVirtualAddress());
             DxrInstance[3] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 {cosf(rotate + Pi<float> * 2 / 3) * 2, 1, sinf(rotate + Pi<float> * 2 / 3) * 2}), 3, ResourceBLAS->GetGPUVirtualAddress());
             DxrInstance[4] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 {cosf(rotate + Pi<float> * 4 / 3) * 2, 1, sinf(rotate + Pi<float> * 4 / 3) * 2}), 4, ResourceBLAS->GetGPUVirtualAddress());
-            ResourceTLAS = DXRCreateTLAS(m_pDevice, &DxrInstance[0], DxrInstance.size());
+            ResourceTLAS.p = DXRCreateTLAS(m_pDevice, &DxrInstance[0], DxrInstance.size());
             rotate += 0.01f;
         }
         // Create a constant buffer view for top level data.

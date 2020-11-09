@@ -163,7 +163,7 @@ public:
             DxrInstance[2] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 0, 1, 0}), 2, ResourceBLAS->GetGPUVirtualAddress());
             DxrInstance[3] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 2, 1, 0}), 3, ResourceBLAS->GetGPUVirtualAddress());
             DxrInstance[4] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 0, 3, 0}), 4, ResourceBLAS->GetGPUVirtualAddress());
-            ResourceTLAS = DXRCreateTLAS(m_pDevice, &DxrInstance[0], DxrInstance.size());
+            ResourceTLAS.p = DXRCreateTLAS(m_pDevice, &DxrInstance[0], DxrInstance.size());
         }
         // Create a constant buffer view for top level data.
         CComPtr<ID3D12Resource> ResourceConstants;

@@ -87,59 +87,14 @@ public:
     void RenderSample() override
     {
         ////////////////////////////////////////////////////////////////////////////////
-        // Create some simple geometry.
-        ////////////////////////////////////////////////////////////////////////////////
-        CComPtr<ID3D12Resource> Vertices;
-        CComPtr<ID3D12Resource> Indices;
-        {
-            float vertices[] =
-            {
-                0, 0,
-                0, RENDERTARGET_HEIGHT,
-                RENDERTARGET_WIDTH, 0,
-            };
-            Vertices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(vertices), sizeof(vertices), vertices);
-            uint32_t indices[] =
-            {
-                0, 1, 2
-            };
-            Indices.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(indices), sizeof(indices), indices);
-        }
-        ////////////////////////////////////////////////////////////////////////////////
         // BLAS - Build the bottom level acceleration structure.
         ////////////////////////////////////////////////////////////////////////////////
-        // Create and initialize the BLAS.
         CComPtr<ID3D12Resource1> ResourceBLAS;
         {
-            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
-            D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs = {};
-            descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-            descRaytracingInputs.NumDescs = 1;
-            descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-            D3D12_RAYTRACING_GEOMETRY_DESC descGeometry = {};
-            descGeometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-            descGeometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-            descGeometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-            descGeometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32_FLOAT;
-            descGeometry.Triangles.IndexCount = 3;
-            descGeometry.Triangles.VertexCount = 3;
-            descGeometry.Triangles.IndexBuffer = Indices->GetGPUVirtualAddress();
-            descGeometry.Triangles.VertexBuffer.StartAddress = Vertices->GetGPUVirtualAddress();
-            descGeometry.Triangles.VertexBuffer.StrideInBytes = sizeof(float[2]);
-            descRaytracingInputs.pGeometryDescs = &descGeometry;
-            m_pDevice->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
-            // Create the output and scratch buffers.
-            ResourceBLAS.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-            CComPtr<ID3D12Resource1> ResourceASScratch;
-            ResourceASScratch.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-            // Build the acceleration structure.
-            RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* UploadBLASCommandList) {
-                D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
-                descBuild.DestAccelerationStructureData = ResourceBLAS->GetGPUVirtualAddress();
-                descBuild.Inputs = descRaytracingInputs;
-                descBuild.ScratchAccelerationStructureData = ResourceASScratch->GetGPUVirtualAddress();
-                UploadBLASCommandList->BuildRaytracingAccelerationStructure(&descBuild, 0, nullptr);
-                });
+            // Create some simple geometry.
+            Vector2 vertices[] = { { 0, 0 }, { 0, RENDERTARGET_HEIGHT }, { RENDERTARGET_WIDTH, 0 } };
+            uint32_t indices[] = { 0, 1, 2 };
+            ResourceBLAS.p = DXRCreateBLAS(m_pDevice, vertices, 3, DXGI_FORMAT_R32G32_FLOAT, indices, 3, DXGI_FORMAT_R32_UINT);
         }
         ////////////////////////////////////////////////////////////////////////////////
         // TLAS - Build the top level acceleration structure.
@@ -147,7 +102,7 @@ public:
         CComPtr<ID3D12Resource1> ResourceTLAS;
         {
             D3D12_RAYTRACING_INSTANCE_DESC DxrInstance = Make_D3D12_RAYTRACING_INSTANCE_DESC(Identity<float>, 0, ResourceBLAS->GetGPUVirtualAddress());
-            ResourceTLAS = DXRCreateTLAS(m_pDevice, &DxrInstance, 1);
+            ResourceTLAS.p = DXRCreateTLAS(m_pDevice, &DxrInstance, 1);
         }
         // Establish resource views.
         {

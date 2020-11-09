@@ -127,49 +127,13 @@ public:
         BottomLevelAS.resize(scene->Meshes.size());
         for (int i = 0; i < scene->Meshes.size(); ++i)
         {
-            CComPtr<ID3D12Resource> vertexBuffer;
-            CComPtr<ID3D12Resource> indexBuffer;
-            {
-                int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
-                std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-                scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
-                vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
-            }
-            {
-                int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
-                std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-                scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
-                indexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
-            }
-            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO descRaytracingPrebuild = {};
-            D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs = {};
-            descRaytracingInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-            descRaytracingInputs.NumDescs = 1;
-            descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-            D3D12_RAYTRACING_GEOMETRY_DESC descGeometry = {};
-            descGeometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-            descGeometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-            descGeometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-            descGeometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-            descGeometry.Triangles.IndexCount = scene->Meshes[i]->getIndexCount();
-            descGeometry.Triangles.VertexCount = scene->Meshes[i]->getVertexCount();
-            descGeometry.Triangles.IndexBuffer = indexBuffer->GetGPUVirtualAddress();
-            descGeometry.Triangles.VertexBuffer.StartAddress = vertexBuffer->GetGPUVirtualAddress();
-            descGeometry.Triangles.VertexBuffer.StrideInBytes = sizeof(float[3]);
-            descRaytracingInputs.pGeometryDescs = &descGeometry;
-            m_pDevice->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
-            // Create the output and scratch buffers.
-            BottomLevelAS[i].p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-            CComPtr<ID3D12Resource1> ResourceASScratch;
-            ResourceASScratch.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-            // Build the acceleration structure.
-            RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* UploadBLASCommandList) {
-                D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
-                descBuild.DestAccelerationStructureData = BottomLevelAS[i]->GetGPUVirtualAddress();
-                descBuild.Inputs = descRaytracingInputs;
-                descBuild.ScratchAccelerationStructureData = ResourceASScratch->GetGPUVirtualAddress();
-                UploadBLASCommandList->BuildRaytracingAccelerationStructure(&descBuild, 0, nullptr);
-                });
+            int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+            std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
+            scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
+            int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+            std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
+            scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
+            BottomLevelAS[i].p = DXRCreateBLAS(m_pDevice, vertices.get(), scene->Meshes[i]->getVertexCount(), DXGI_FORMAT_R32G32B32_FLOAT, indices.get(), scene->Meshes[i]->getIndexCount(), DXGI_FORMAT_R32_UINT);
         }
         ////////////////////////////////////////////////////////////////////////////////
         // TLAS - Build the top level acceleration structure.
@@ -183,7 +147,7 @@ public:
                 instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(scene->Instances[i].Transform, scene->Instances[i].MaterialIndex, BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress());
                 instanceDescs[i].InstanceID = i;
             }
-            ResourceTLAS = DXRCreateTLAS(m_pDevice, &instanceDescs[0], instanceDescs.size());
+            ResourceTLAS.p = DXRCreateTLAS(m_pDevice, &instanceDescs[0], instanceDescs.size());
         }
         // Establish resource views.
         {
