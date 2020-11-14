@@ -65,7 +65,8 @@ VKDevice::VKDevice()
         {
             extensionNames.push_back(ext.extensionName);
         }
-        vk::DeviceCreateInfo dci({}, vk::DeviceQueueCreateInfo { {}, m_queueGraphics, std::vector<float> { 1.0f } }, {}, extensionNames);
+        std::array<float, 1> priorities = { 1.0f };
+        vk::DeviceCreateInfo dci({}, vk::DeviceQueueCreateInfo { {}, m_queueGraphics, priorities }, {}, extensionNames);
         m_vkDevice = physicalDevice.createDeviceUnique(dci);
     }
 
