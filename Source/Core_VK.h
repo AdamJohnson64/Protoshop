@@ -36,7 +36,7 @@ public:
     vk::UniqueSampler                       m_vkSampler;
 };
 
-void VKRunOnGPU(std::shared_ptr<VKDevice> device, std::function<void(VkCommandBuffer)> fn);
+void VKRunOnGPU(VKDevice* device, std::function<void(VkCommandBuffer)> fn);
 
 std::shared_ptr<VKDevice> CreateVKDevice();
 

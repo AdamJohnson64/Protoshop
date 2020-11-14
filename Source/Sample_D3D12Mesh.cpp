@@ -90,35 +90,27 @@ float4 main() : SV_Target
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
             m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
         }
-        std::vector<CComPtr<ID3D12Resource>> vertexBuffers;
-        std::vector<CComPtr<ID3D12Resource>> indexBuffers;
+        std::vector<CComPtr<ID3D12Resource1>> vertexBuffers;
+        std::vector<CComPtr<ID3D12Resource1>> indexBuffers;
         for (int i = 0; i < scene->Meshes.size(); ++i)
         {
             {
                 int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
                 std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
                 scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
-                CComPtr<ID3D12Resource> vertexBuffer;
-                vertexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get());
-                vertexBuffers.push_back(vertexBuffer);
+                vertexBuffers.push_back(D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeVertex, sizeVertex, vertices.get()));
             }
             {
                 int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
                 std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
                 scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
-                CComPtr<ID3D12Resource> indexBuffer;
-                indexBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get());
-                indexBuffers.push_back(indexBuffer);
+                indexBuffers.push_back(D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeIndices, sizeIndices, indices.get()));
             }
         }
-        std::vector<CComPtr<ID3D12Resource>> constantBuffers;
+        std::vector<CComPtr<ID3D12Resource1>> constantBuffers;
         for (int i = 0; i < scene->Instances.size(); ++i)
         {
-            {
-                CComPtr<ID3D12Resource> constantBuffer;
-                constantBuffer.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &Transpose(scene->Instances[i].Transform * GetCameraViewProjection()));
-                constantBuffers.push_back(constantBuffer);
-            }
+            constantBuffers.push_back(D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &Transpose(scene->Instances[i].Transform * GetCameraViewProjection())));
             {
                 D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
                 descConstantBuffer.BufferLocation = constantBuffers[i]->GetGPUVirtualAddress();
@@ -128,7 +120,7 @@ float4 main() : SV_Target
                 m_pDevice->m_pDevice->CreateConstantBufferView(&descConstantBuffer, handle);
             }
         }
-        RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
+        RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pRootSignature);
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV };

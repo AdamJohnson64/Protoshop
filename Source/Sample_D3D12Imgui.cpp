@@ -40,7 +40,7 @@ public:
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
             m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
         }
-        RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
+        RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pRootSignature);
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV, m_pDescriptorHeapSMP };

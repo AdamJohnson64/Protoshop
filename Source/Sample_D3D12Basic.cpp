@@ -39,7 +39,7 @@ public:
             descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
             m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
         }
-        RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
+        RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             // Put the RTV into render target state and clear it before use.
             pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));

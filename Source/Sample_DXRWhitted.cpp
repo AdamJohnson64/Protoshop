@@ -126,7 +126,7 @@ public:
             aabb.MaxX = 1;
             aabb.MaxY = 1;
             aabb.MaxZ = 1;
-            AABBs.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(aabb), sizeof(aabb), &aabb);
+            AABBs = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(aabb), sizeof(aabb), &aabb);
         }
         ////////////////////////////////////////////////////////////////////////////////
         // BLAS - Build the bottom level acceleration structure.
@@ -148,11 +148,11 @@ public:
             descRaytracingInputs.pGeometryDescs = &descGeometry[0];
             m_pDevice->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
             // Create the output and scratch buffers.
-            ResourceBLAS.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+            ResourceBLAS = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
             CComPtr<ID3D12Resource1> ResourceASScratch;
-            ResourceASScratch.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+            ResourceASScratch = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
             // Build the acceleration structure.
-            RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* UploadBLASCommandList) {
+            RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* UploadBLASCommandList) {
                 D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
                 descBuild.DestAccelerationStructureData = ResourceBLAS->GetGPUVirtualAddress();
                 descBuild.Inputs = descRaytracingInputs;
@@ -171,11 +171,10 @@ public:
             DxrInstance[2] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 0, 1, 0}), 2, ResourceBLAS->GetGPUVirtualAddress());
             DxrInstance[3] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 2, 1, 0}), 3, ResourceBLAS->GetGPUVirtualAddress());
             DxrInstance[4] = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 { 0, 3, 0}), 4, ResourceBLAS->GetGPUVirtualAddress());
-            ResourceTLAS.p = DXRCreateTLAS(m_pDevice, &DxrInstance[0], DxrInstance.size());
+            ResourceTLAS = DXRCreateTLAS(m_pDevice.get(), &DxrInstance[0], DxrInstance.size());
         }
         // Create a constant buffer view for top level data.
-        CComPtr<ID3D12Resource> ResourceConstants;
-        ResourceConstants.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Transpose(Invert(GetCameraViewProjection())));
+        CComPtr<ID3D12Resource> ResourceConstants = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Transpose(Invert(GetCameraViewProjection())));
         // Establish resource views.
         {
     	    D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase = m_pDescriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
@@ -248,13 +247,13 @@ public:
             memcpy(&shaderTableCPU[shaderEntrySize * 6], stateObjectProperties->GetShaderIdentifier(L"HitGroupGlass"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 6] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
             *reinterpret_cast<Vector4*>(&shaderTableCPU[shaderEntrySize * 6] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)) = albedoRed;
-            ResourceShaderTable.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
+            ResourceShaderTable = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
         ////////////////////////////////////////////////////////////////////////////////
         // RAYTRACE - Finally call the raytracer and generate the frame.
         ////////////////////////////////////////////////////////////////////////////////
-        RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
+        RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV };
             RaytraceCommandList->SetDescriptorHeaps(1, descriptorHeaps);
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);

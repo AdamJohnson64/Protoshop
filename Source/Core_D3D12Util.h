@@ -36,9 +36,9 @@ CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_1Sampler(ID3D12Device*
 
 uint32_t D3D12Align(uint32_t size, uint32_t alignSize);
 
-ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize);
+CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize);
 
-ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize, uint32_t dataSize, const void* data);
+CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize, uint32_t dataSize, const void* data);
 
 D3D12_RECT D3D12MakeRect(LONG width, LONG height);
 
@@ -46,6 +46,6 @@ D3D12_RESOURCE_BARRIER D3D12MakeResourceTransitionBarrier(ID3D12Resource* resour
 
 D3D12_VIEWPORT D3D12MakeViewport(FLOAT width, FLOAT height);
 
-void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device);
+void D3D12WaitForGPUIdle(Direct3D12Device* device);
 
-void RunOnGPU(std::shared_ptr<Direct3D12Device> device, std::function<void(ID3D12GraphicsCommandList5*)> fn);
+void RunOnGPU(Direct3D12Device* device, std::function<void(ID3D12GraphicsCommandList5*)> fn);

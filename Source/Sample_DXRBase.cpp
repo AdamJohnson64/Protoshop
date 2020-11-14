@@ -114,7 +114,7 @@ void Sample_DXRBase::Render()
     ////////////////////////////////////////////////////////////////////////////////
     // Copy the raytracer output from UAV to the back-buffer.
     ////////////////////////////////////////////////////////////////////////////////
-    RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList5* RaytraceCommandList) {
+    RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* RaytraceCommandList) {
         RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
         RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
         RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);

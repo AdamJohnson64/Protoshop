@@ -120,7 +120,7 @@ public:
         }
 
         // Perform a clear of the Vulkan image via a dispatched command buffer.
-        VKRunOnGPU(m_pDeviceVK, [&] (vk::CommandBuffer m_vkCommandBuffer) {
+        VKRunOnGPU(m_pDeviceVK.get(), [&] (vk::CommandBuffer m_vkCommandBuffer) {
             {
                 std::vector<vk::ImageMemoryBarrier> imb = { vk::ImageMemoryBarrier((vk::AccessFlagBits)0, (vk::AccessFlagBits)0, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, vkImage.get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)) };
                 m_vkCommandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, (vk::DependencyFlagBits)0, {}, {}, imb);
@@ -148,7 +148,7 @@ public:
             }
 
             // Perform a copy of our intermediate D3D12 image (written by Vulkan) to the DXGI buffer.
-            RunOnGPU(m_pDeviceD3D12, [&](ID3D12GraphicsCommandList5 *cmd)
+            RunOnGPU(m_pDeviceD3D12.get(), [&](ID3D12GraphicsCommandList5 *cmd)
                 {
                     cmd->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12SwapChainBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
                     cmd->CopyResource(pD3D12SwapChainBuffer, pD3D12Backbuffer);

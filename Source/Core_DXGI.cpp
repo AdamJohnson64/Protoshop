@@ -31,7 +31,7 @@ public:
     {
         if (pDevice12 != nullptr)
         {
-            D3D12WaitForGPUIdle(pDevice12);
+            D3D12WaitForGPUIdle(pDevice12.get());
         }
     }
     DXGISwapChainImpl(std::shared_ptr<Direct3D12Device> pDevice, HWND hWindow) :
@@ -55,7 +55,7 @@ public:
     }
     IDXGISwapChain4* GetIDXGISwapChain() override
     {
-        return pDXGISwapChain.p;
+        return pDXGISwapChain;
     }
 private:
     std::shared_ptr<Direct3D12Device> pDevice12;

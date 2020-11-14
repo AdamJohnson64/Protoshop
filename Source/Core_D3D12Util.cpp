@@ -83,7 +83,7 @@ uint32_t D3D12Align(uint32_t size, uint32_t alignSize)
     return size == 0 ? 0 : ((size - 1) / alignSize + 1) * alignSize;
 }
 
-ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize, const D3D12_HEAP_PROPERTIES* heap)
+CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize, const D3D12_HEAP_PROPERTIES* heap)
 {
     D3D12_RESOURCE_DESC descResource = {};
     descResource.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -97,26 +97,25 @@ ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D
     CComPtr<ID3D12Resource1> pD3D12Resource;
     TRYD3D(device->m_pDevice->CreateCommittedResource(heap, D3D12_HEAP_FLAG_NONE, &descResource, state, nullptr, __uuidof(ID3D12Resource1), (void**)&pD3D12Resource.p));
     TRYD3D(pD3D12Resource->SetName(L"D3D12CreateBuffer"));
-    return pD3D12Resource.Detach();
+    return pD3D12Resource;
 }
 
-ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize)
+CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize)
 {
     D3D12_HEAP_PROPERTIES descHeapDefault = {};
     descHeapDefault.Type = D3D12_HEAP_TYPE_DEFAULT;
     return D3D12CreateBuffer(device, flags, state, bufferSize, &descHeapDefault);
 }
 
-ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize, uint32_t dataSize, const void* data)
+CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize, uint32_t dataSize, const void* data)
 {
-    CComPtr<ID3D12Resource1> pD3D12Resource;
-    pD3D12Resource.p = D3D12CreateBuffer(device, flags, D3D12_RESOURCE_STATE_COPY_DEST, bufferSize);
+    CComPtr<ID3D12Resource1> pD3D12Resource = D3D12CreateBuffer(device, flags, D3D12_RESOURCE_STATE_COPY_DEST, bufferSize);
     {
         CComPtr<ID3D12Resource1> pD3D12ResourceUpload;
         {
             D3D12_HEAP_PROPERTIES descHeapUpload = {};
             descHeapUpload.Type = D3D12_HEAP_TYPE_UPLOAD;
-            pD3D12ResourceUpload.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, bufferSize, &descHeapUpload);
+            pD3D12ResourceUpload = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, bufferSize, &descHeapUpload);
         }
         void *pMapped = nullptr;
         TRYD3D(pD3D12ResourceUpload->Map(0, nullptr, &pMapped));
@@ -128,7 +127,7 @@ ID3D12Resource1* D3D12CreateBuffer(std::shared_ptr<Direct3D12Device> device, D3D
             uploadCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, state));
         });
     }
-    return pD3D12Resource.Detach();
+    return pD3D12Resource;
 }
 
 D3D12_RECT D3D12MakeRect(LONG width, LONG height)
@@ -159,7 +158,7 @@ D3D12_VIEWPORT D3D12MakeViewport(FLOAT width, FLOAT height)
     return desc;
 }
 
-void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device)
+void D3D12WaitForGPUIdle(Direct3D12Device* device)
 {
     CComPtr<ID3D12Fence> pD3D12Fence;
     TRYD3D(device->m_pDevice->CreateFence(1, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&pD3D12Fence));
@@ -172,7 +171,7 @@ void D3D12WaitForGPUIdle(std::shared_ptr<Direct3D12Device> device)
     CloseHandle(hWait);
 }
 
-void RunOnGPU(std::shared_ptr<Direct3D12Device> device, std::function<void(ID3D12GraphicsCommandList5*)> fn)
+void RunOnGPU(Direct3D12Device* device, std::function<void(ID3D12GraphicsCommandList5*)> fn)
 {
     CComPtr<ID3D12GraphicsCommandList5> pD3D12GraphicsCommandList;
     {

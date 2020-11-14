@@ -102,7 +102,7 @@ public:
             // Create some simple geometry.
             Vector2 vertices[] = { { 0, 0 }, { 0, RENDERTARGET_HEIGHT }, { RENDERTARGET_WIDTH, 0 } };
             uint32_t indices[] = { 0, 1, 2 };
-            ResourceBLAS.p = DXRCreateBLAS(m_pDevice, vertices, 3, DXGI_FORMAT_R32G32_FLOAT, indices, 3, DXGI_FORMAT_R32_UINT);
+            ResourceBLAS = DXRCreateBLAS(m_pDevice.get(), vertices, 3, DXGI_FORMAT_R32G32_FLOAT, indices, 3, DXGI_FORMAT_R32_UINT);
         }
         ////////////////////////////////////////////////////////////////////////////////
         // TLAS - Build the top level acceleration structure.
@@ -110,7 +110,7 @@ public:
         CComPtr<ID3D12Resource1> ResourceTLAS;
         {
             D3D12_RAYTRACING_INSTANCE_DESC DxrInstance = Make_D3D12_RAYTRACING_INSTANCE_DESC(Identity<float>, 0, ResourceBLAS->GetGPUVirtualAddress());
-            ResourceTLAS.p = DXRCreateTLAS(m_pDevice, &DxrInstance, 1);
+            ResourceTLAS = DXRCreateTLAS(m_pDevice.get(), &DxrInstance, 1);
         }
         // Establish resource views.
         {
@@ -154,13 +154,13 @@ public:
             // Shader Index 2 - Hit Shader
             memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 2] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
-            ResourceShaderTable.p = D3D12CreateBuffer(m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
+            ResourceShaderTable = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
         ////////////////////////////////////////////////////////////////////////////////
         // RAYTRACE - Finally call the raytracer and generate the frame.
         ////////////////////////////////////////////////////////////////////////////////
-        RunOnGPU(m_pDevice, [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
+        RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
             ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV };
             RaytraceCommandList->SetDescriptorHeaps(1, descriptorHeaps);
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);

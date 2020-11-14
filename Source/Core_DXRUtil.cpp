@@ -33,13 +33,11 @@ static int DXGIFormatSize(DXGI_FORMAT format)
     }
 }
 
-ID3D12Resource1* DXRCreateBLAS(std::shared_ptr<Direct3D12Device> device, const void* vertices, int vertexCount, DXGI_FORMAT vertexFormat, const void* indices, int indexCount, DXGI_FORMAT indexFormat)
+CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device* device, const void* vertices, int vertexCount, DXGI_FORMAT vertexFormat, const void* indices, int indexCount, DXGI_FORMAT indexFormat)
 {
     // The GPU is doing the actual acceleration structure building work so we need all the mesh data up on GPU first.
-    CComPtr<ID3D12Resource1> ResourceVertices;
-    ResourceVertices.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(vertexFormat) * vertexCount, DXGIFormatSize(vertexFormat) * vertexCount, vertices);
-    CComPtr<ID3D12Resource1> ResourceIndices;
-    ResourceIndices.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(indexFormat) * indexCount, DXGIFormatSize(indexFormat) * indexCount, indices);
+    CComPtr<ID3D12Resource1> ResourceVertices = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(vertexFormat) * vertexCount, DXGIFormatSize(vertexFormat) * vertexCount, vertices);
+    CComPtr<ID3D12Resource1> ResourceIndices = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(indexFormat) * indexCount, DXGIFormatSize(indexFormat) * indexCount, indices);
     // Now create and initialize the BLAS with this data.
     CComPtr<ID3D12Resource1> ResourceBLAS;
     {
@@ -61,9 +59,8 @@ ID3D12Resource1* DXRCreateBLAS(std::shared_ptr<Direct3D12Device> device, const v
         descRaytracingInputs.pGeometryDescs = &descGeometry;
         device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
         // Create the output and scratch buffers.
-        ResourceBLAS.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-        CComPtr<ID3D12Resource1> ResourceASScratch;
-        ResourceASScratch.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        ResourceBLAS = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        CComPtr<ID3D12Resource1> ResourceASScratch = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
         // Build the acceleration structure.
         RunOnGPU(device, [&](ID3D12GraphicsCommandList5* UploadBLASCommandList) {
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
@@ -73,16 +70,15 @@ ID3D12Resource1* DXRCreateBLAS(std::shared_ptr<Direct3D12Device> device, const v
             UploadBLASCommandList->BuildRaytracingAccelerationStructure(&descBuild, 0, nullptr);
             });
     }
-    return ResourceBLAS.Detach();
+    return ResourceBLAS;
 }
 
-ID3D12Resource1* DXRCreateTLAS(std::shared_ptr<Direct3D12Device> device, const D3D12_RAYTRACING_INSTANCE_DESC* instances, int instanceCount)
+CComPtr<ID3D12Resource1> DXRCreateTLAS(Direct3D12Device* device, const D3D12_RAYTRACING_INSTANCE_DESC* instances, int instanceCount)
 {
     ////////////////////////////////////////////////////////////////////////////////
     // INSTANCE - Create the instancing table.
     ////////////////////////////////////////////////////////////////////////////////
-    CComPtr<ID3D12Resource1> ResourceInstance;
-    ResourceInstance.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, instances);
+    CComPtr<ID3D12Resource1> ResourceInstance = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, instances);
     ////////////////////////////////////////////////////////////////////////////////
     // TLAS - Build the top level acceleration structure.
     ////////////////////////////////////////////////////////////////////////////////
@@ -96,9 +92,9 @@ ID3D12Resource1* DXRCreateTLAS(std::shared_ptr<Direct3D12Device> device, const D
         descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
         device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
         // Create the output and scratch buffers.
-        ResourceTLAS.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        ResourceTLAS = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
         CComPtr<ID3D12Resource1> ResourceASScratch;
-        ResourceASScratch.p = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        ResourceASScratch = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
         // Build the acceleration structure.
         RunOnGPU(device, [&](ID3D12GraphicsCommandList4* UploadTLASCommandList) {
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
@@ -108,5 +104,5 @@ ID3D12Resource1* DXRCreateTLAS(std::shared_ptr<Direct3D12Device> device, const D
             UploadTLASCommandList->BuildRaytracingAccelerationStructure(&descBuild, 0, nullptr);
         });
     }
-    return ResourceTLAS.Detach();
+    return ResourceTLAS;
 }

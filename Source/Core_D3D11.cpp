@@ -16,11 +16,11 @@ public:
     }
     ID3D11Device* GetID3D11Device()
     {
-        return pD3D11Device.p;
+        return pD3D11Device;
     }
     ID3D11DeviceContext* GetID3D11DeviceContext()
     {
-        return pD3D11DeviceContext.p;
+        return pD3D11DeviceContext;
     }
 private:
     CComPtr<ID3D11Device> pD3D11Device;
