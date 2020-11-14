@@ -1,9 +1,82 @@
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
+#include <array>
 #include <assert.h>
 #include <atlbase.h>
 #include <functional>
+
+CComPtr<ID3D12RootSignature> D3D12_Create_Signature_1CBV1SRV(ID3D12Device* pDevice)
+{
+    CComPtr<ID3DBlob> pD3D12BlobSignature;
+    CComPtr<ID3DBlob> pD3D12BlobError;
+    D3D12_ROOT_SIGNATURE_DESC descSignature = {};
+    std::array<D3D12_ROOT_PARAMETER, 3> parameters = {};
+    std::array<D3D12_DESCRIPTOR_RANGE, 3> range = {};
+    range[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+    range[0].NumDescriptors = 1;
+    parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    parameters[0].DescriptorTable.pDescriptorRanges = &range[0];
+    parameters[0].DescriptorTable.NumDescriptorRanges = 1;
+    parameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    range[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    range[1].NumDescriptors = 1;
+    parameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    parameters[1].DescriptorTable.pDescriptorRanges = &range[1];
+    parameters[1].DescriptorTable.NumDescriptorRanges = 1;
+    parameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    range[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+    range[2].NumDescriptors = 1;
+    parameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    parameters[2].DescriptorTable.pDescriptorRanges = &range[2];
+    parameters[2].DescriptorTable.NumDescriptorRanges = 1;
+    parameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    descSignature.pParameters = &parameters[0];
+    descSignature.NumParameters = 3;
+    descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1, &pD3D12BlobSignature, &pD3D12BlobError);
+    if (nullptr != pD3D12BlobError)
+    {
+        throw std::exception(reinterpret_cast<const char*>(pD3D12BlobError->GetBufferPointer()));
+    }
+    CComPtr<ID3D12RootSignature> pRootSignature;
+    TRYD3D(pDevice->CreateRootSignature(0, pD3D12BlobSignature->GetBufferPointer(), pD3D12BlobSignature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
+    return pRootSignature;
+}
+
+CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_1024CBVSRVUAV(ID3D12Device* pDevice)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC descDescriptorHeap = {};
+    descDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    descDescriptorHeap.NumDescriptors = 1024;
+    descDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    CComPtr<ID3D12DescriptorHeap> pDescriptorHeap;
+    TRYD3D(pDevice->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pDescriptorHeap.p));
+    pDescriptorHeap->SetName(L"D3D12DescriptorHeap (1024 CBV/SRV/UAV)");
+    return pDescriptorHeap;
+}
+
+CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_1Sampler(ID3D12Device* pDevice)
+{
+    CComPtr<ID3D12DescriptorHeap> pDescriptorHeap;
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC descDescriptorHeap = {};
+        descDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+        descDescriptorHeap.NumDescriptors = 1;
+        descDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        TRYD3D(pDevice->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pDescriptorHeap));
+        pDescriptorHeap->SetName(L"D3D12DescriptorHeap (1 Sampler)");
+    }
+    // Convenience: Initialize this single sampler with all default settings and wrapping mode in all dimensions.
+    {
+        D3D12_SAMPLER_DESC descSampler = {};
+        descSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        descSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        descSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        pDevice->CreateSampler(&descSampler, pDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    }
+    return pDescriptorHeap;
+}
 
 uint32_t D3D12Align(uint32_t size, uint32_t alignSize)
 {
