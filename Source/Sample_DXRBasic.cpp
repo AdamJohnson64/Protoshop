@@ -1,3 +1,11 @@
+///////////////////////////////////////////////////////////////////////////////
+// Sample - Direct3D 12 DXR Basic
+///////////////////////////////////////////////////////////////////////////////
+// This sample demonstrates how to render a triangle using raytracing and the
+// most basic shading (constant color). Be warned that raytracer setup can be a
+// bit complicated but we cover all of that here in a simplistic manner.
+///////////////////////////////////////////////////////////////////////////////
+
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"

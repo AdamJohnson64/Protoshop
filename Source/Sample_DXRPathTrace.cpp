@@ -1,3 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////
+// Sample - Direct3D 12 DXR Path Tracing
+///////////////////////////////////////////////////////////////////////////////
+// This sample demonstrates how to render an approximation of area lights. This
+// demonstration does not obey physical and optical priniciples and only
+// calculates rough RGB values. In reality you would want to express
+// illumination in physical units (Watts) and use compute shaders to reprocess
+// lighting with more appropriate color grading.
+///////////////////////////////////////////////////////////////////////////////
+
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"

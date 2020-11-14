@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// Sample - Direct3D 12 Scene
+///////////////////////////////////////////////////////////////////////////////
+// This sample demonstrates how to render a Direct3D 12 scene from an abstract
+// scene description. Nobody would actually implement rendering in this manner
+// without some sort of static buffer and resource management, and we would
+// expect to see some buffer recycling for pipelined frames.
+///////////////////////////////////////////////////////////////////////////////
+
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"

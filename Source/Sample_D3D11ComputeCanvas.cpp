@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// Sample - Direct3D 11 Compute Canvas
+///////////////////////////////////////////////////////////////////////////////
+// This sample renders to the display using only compute shaders and no
+// rasterization. For interest we create a transformable display that would
+// theoretically support a painting application. Texture access is handled via
+// direct memory access without samplers or texture objects.
+///////////////////////////////////////////////////////////////////////////////
+
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"

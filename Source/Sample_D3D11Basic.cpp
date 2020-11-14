@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// Sample - Direct3D 11 Basic
+///////////////////////////////////////////////////////////////////////////////
+// This sample is about as basic as you can get with a window and Direct3D 11.
+// We create a window and swap chain then clear a single render target to a
+// color. This shows the most basic swap chain and device operation required to
+// get something to display.
+///////////////////////////////////////////////////////////////////////////////
+
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"
