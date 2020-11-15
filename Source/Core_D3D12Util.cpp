@@ -44,11 +44,11 @@ CComPtr<ID3D12RootSignature> D3D12_Create_Signature_1CBV1SRV(ID3D12Device* pDevi
     return pRootSignature;
 }
 
-CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_1024CBVSRVUAV(ID3D12Device* pDevice)
+CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_CBVSRVUAV(ID3D12Device* pDevice, UINT numDescriptors)
 {
     D3D12_DESCRIPTOR_HEAP_DESC descDescriptorHeap = {};
     descDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    descDescriptorHeap.NumDescriptors = 1024;
+    descDescriptorHeap.NumDescriptors = numDescriptors;
     descDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     CComPtr<ID3D12DescriptorHeap> pDescriptorHeap;
     TRYD3D(pDevice->CreateDescriptorHeap(&descDescriptorHeap, __uuidof(ID3D12DescriptorHeap), (void**)&pDescriptorHeap.p));

@@ -18,7 +18,6 @@ public:
     Sample_D3D12Signature(ID3D12Device* pDevice);
     CComPtr<ID3D12RootSignature> m_pRootSignature;
     CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapCBVSRVUAV;
-    CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapSMP;
 };
 
 const uint32_t DESCRIPTOR_HEAP_CBV = 0;

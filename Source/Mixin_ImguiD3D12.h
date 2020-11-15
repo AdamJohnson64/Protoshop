@@ -13,5 +13,6 @@ public:
 protected:
     void RenderImgui(ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList);
     std::shared_ptr<Direct3D12Device> m_pDeviceImgui;
-    CComPtr<ID3D12DescriptorHeap> pD3D12DescriptorHeapImgui;
+    CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapCBVSRVUAVImGui;
+    CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapSMPImGui;
 };

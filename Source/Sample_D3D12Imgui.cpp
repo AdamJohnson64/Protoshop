@@ -38,10 +38,6 @@ public:
         RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pRootSignature);
-            ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV, m_pDescriptorHeapSMP };
-            pD3D12GraphicsCommandList->SetDescriptorHeaps(2, descriptorHeaps);
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SRV, m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_SAMPLER, m_pDescriptorHeapSMP->GetGPUDescriptorHandleForHeapStart());
             // Put the RTV into render target state and clear it before use.
             pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
             {

@@ -29,7 +29,7 @@ CComPtr<ID3D12RootSignature> D3D12_Create_Signature_1CBV1SRV(ID3D12Device* pDevi
 // Create a descriptor heap with 1024 entries for CBVs, SRVs, or UAVs. This
 // is a relatively straightforward and simplistic manner of handling
 // descriptors which has no management.
-CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_1024CBVSRVUAV(ID3D12Device* pDevice);
+CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_CBVSRVUAV(ID3D12Device* pDevice, UINT numDescriptors);
 
 // Create a single sampler heap with a pre-initialized UVW wrapped sampler.
 CComPtr<ID3D12DescriptorHeap> D3D12_Create_DescriptorHeap_1Sampler(ID3D12Device* pDevice);
