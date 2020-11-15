@@ -140,12 +140,7 @@ public:
             TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(m_pSwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(), __uuidof(ID3D12Resource), (void**)&pD3D12SwapChainBuffer));
             
             // Initialize a Render Target View (RTV) from this DXGI buffer.
-            {
-                D3D12_RENDER_TARGET_VIEW_DESC descRTV = {};
-                descRTV.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-                descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-                m_pDeviceD3D12->m_pDevice->CreateRenderTargetView(pD3D12SwapChainBuffer, &descRTV, m_pDeviceD3D12->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
-            }
+            m_pDeviceD3D12->m_pDevice->CreateRenderTargetView(pD3D12SwapChainBuffer, &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(), m_pDeviceD3D12->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
 
             // Perform a copy of our intermediate D3D12 image (written by Vulkan) to the DXGI buffer.
             RunOnGPU(m_pDeviceD3D12.get(), [&](ID3D12GraphicsCommandList5 *cmd)

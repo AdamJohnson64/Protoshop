@@ -186,3 +186,11 @@ void RunOnGPU(Direct3D12Device* device, std::function<void(ID3D12GraphicsCommand
     device->m_pCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**)&pD3D12GraphicsCommandList.p);
     D3D12WaitForGPUIdle(device);
 };
+
+D3D12_RENDER_TARGET_VIEW_DESC Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault()
+{
+    D3D12_RENDER_TARGET_VIEW_DESC desc = {};
+    desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+    return desc;
+}

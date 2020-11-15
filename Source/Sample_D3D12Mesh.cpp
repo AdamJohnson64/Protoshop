@@ -84,12 +84,7 @@ float4 main() : SV_Target
         CComPtr<ID3D12Resource> pD3D12Resource;
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(m_pSwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(), __uuidof(ID3D12Resource), (void**)&pD3D12Resource));
         pD3D12Resource->SetName(L"D3D12Resource (Backbuffer)");
-        {
-            D3D12_RENDER_TARGET_VIEW_DESC descRTV = {};
-            descRTV.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-            descRTV.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-            m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &descRTV, m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
-        }
+        m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(), m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
         std::vector<CComPtr<ID3D12Resource1>> vertexBuffers;
         std::vector<CComPtr<ID3D12Resource1>> indexBuffers;
         for (int i = 0; i < scene->Meshes.size(); ++i)

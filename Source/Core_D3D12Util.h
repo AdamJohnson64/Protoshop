@@ -49,3 +49,5 @@ D3D12_VIEWPORT D3D12MakeViewport(FLOAT width, FLOAT height);
 void D3D12WaitForGPUIdle(Direct3D12Device* device);
 
 void RunOnGPU(Direct3D12Device* device, std::function<void(ID3D12GraphicsCommandList5*)> fn);
+
+D3D12_RENDER_TARGET_VIEW_DESC Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault();
