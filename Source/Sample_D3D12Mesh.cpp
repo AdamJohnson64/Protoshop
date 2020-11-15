@@ -42,7 +42,7 @@ cbuffer Constants
 
 float4 main(float4 pos : SV_Position) : SV_Position
 {
-        return mul(pos, transform);
+        return mul(transform, pos);
 })SHADER");
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -105,7 +105,7 @@ float4 main() : SV_Target
         std::vector<CComPtr<ID3D12Resource1>> constantBuffers;
         for (int i = 0; i < scene->Instances.size(); ++i)
         {
-            constantBuffers.push_back(D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &Transpose(scene->Instances[i].Transform * GetCameraViewProjection())));
+            constantBuffers.push_back(D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &(scene->Instances[i].Transform * GetCameraViewProjection())));
             {
                 D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
                 descConstantBuffer.BufferLocation = constantBuffers[i]->GetGPUVirtualAddress();

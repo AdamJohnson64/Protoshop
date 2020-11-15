@@ -82,7 +82,7 @@ float4 UserImage(float2 pixel)
 float4 Sample(float2 pixel)
 {
     float4 checkerboard = Checkerboard((uint2)pixel);
-    float2 pos = mul(float4(pixel.x, pixel.y, 0, 1), transform).xy;
+    float2 pos = mul(transform, float4(pixel.x, pixel.y, 0, 1)).xy;
     if (pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height)
     {
         return UserImage((float2)pos);
@@ -176,10 +176,10 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         static float a = 0;
         Constants data = {};
         data.Transform.M11 = data.Transform.M22 = data.Transform.M33 = data.Transform.M44 = 1;
-        data.Transform.M11 = cosf(a); data.Transform.M21 = sinf(a);
-        data.Transform.M12 = -sinf(a); data.Transform.M22 = cosf(a);
-        data.Transform.M14 = (RENDERTARGET_WIDTH - IMAGE_WIDTH * cosf(a) + IMAGE_HEIGHT * sinf(a)) / 2.0f;
-        data.Transform.M24 = (RENDERTARGET_HEIGHT - IMAGE_WIDTH * sinf(a) - IMAGE_HEIGHT * cosf(a)) / 2.0f;
+        data.Transform.M11 = cosf(a); data.Transform.M12 = sinf(a);
+        data.Transform.M21 = -sinf(a); data.Transform.M22 = cosf(a);
+        data.Transform.M41 = (RENDERTARGET_WIDTH - IMAGE_WIDTH * cosf(a) + IMAGE_HEIGHT * sinf(a)) / 2.0f;
+        data.Transform.M42 = (RENDERTARGET_HEIGHT - IMAGE_WIDTH * sinf(a) - IMAGE_HEIGHT * cosf(a)) / 2.0f;
         data.Transform = Invert(data.Transform);
         data.Width = IMAGE_WIDTH;
         data.Height = IMAGE_HEIGHT;

@@ -173,9 +173,9 @@ void RayGenerationMVPClip()
     const float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
     const float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
     RayDesc rayDesc;
-    float4 front = mul(float4(NormalizedX, NormalizedY, 0, 1), Transform);
+    float4 front = mul(Transform, float4(NormalizedX, NormalizedY, 0, 1));
     front /= front.w;
-    float4 back = mul(float4(NormalizedX, NormalizedY, 1, 1), Transform);
+    float4 back = mul(Transform, float4(NormalizedX, NormalizedY, 1, 1));
     back /= back.w;
     rayDesc.Origin = front.xyz;
     rayDesc.Direction = normalize(back.xyz - front.xyz);
