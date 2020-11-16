@@ -98,17 +98,7 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         // Create AABBs.
         ////////////////////////////////////////////////////////////////////////////////
-        CComPtr<ID3D12Resource> AABBs;
-        {
-            D3D12_RAYTRACING_AABB aabb = {};
-            aabb.MinX = -1;
-            aabb.MinY = -1;
-            aabb.MinZ = -1;
-            aabb.MaxX = 1;
-            aabb.MaxY = 1;
-            aabb.MaxZ = 1;
-            AABBs = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(aabb), sizeof(aabb), &aabb);
-        }
+        CComPtr<ID3D12Resource> AABBs = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_AABB), sizeof(D3D12_RAYTRACING_AABB), &Make_D3D12_RAYTRACING_AABB(-1, -1, -1, 1, 1, 1));
         ////////////////////////////////////////////////////////////////////////////////
         // BLAS - Build the bottom level acceleration structure.
         ////////////////////////////////////////////////////////////////////////////////

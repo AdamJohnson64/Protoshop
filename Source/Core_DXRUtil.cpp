@@ -1,5 +1,74 @@
+#include "Core_D3D.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXRUtil.h"
+#include <array>
+
+CComPtr<ID3D12RootSignature> DXR_Create_Signature_1UAV1SRV(ID3D12Device* device)
+{
+    std::array<D3D12_DESCRIPTOR_RANGE, 3> descDescriptorRange;
+
+    descDescriptorRange[0].BaseShaderRegister = 0;
+    descDescriptorRange[0].NumDescriptors = 1;
+    descDescriptorRange[0].RegisterSpace = 0;
+    descDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    descDescriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    descDescriptorRange[1].BaseShaderRegister = 0;
+    descDescriptorRange[1].NumDescriptors = 1;
+    descDescriptorRange[1].RegisterSpace = 0;
+    descDescriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descDescriptorRange[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    descDescriptorRange[2].BaseShaderRegister = 0;
+    descDescriptorRange[2].NumDescriptors = 1;
+    descDescriptorRange[2].RegisterSpace = 0;
+    descDescriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+    descDescriptorRange[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    std::array<D3D12_ROOT_PARAMETER, 2> descRootParameter = {};
+    descRootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    descRootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    descRootParameter[0].DescriptorTable.NumDescriptorRanges = 3;
+    descRootParameter[0].DescriptorTable.pDescriptorRanges = &descDescriptorRange[0];
+
+    descRootParameter[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    descRootParameter[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    descRootParameter[1].Constants.ShaderRegister = 1;
+    descRootParameter[1].Constants.Num32BitValues = 4;
+
+    D3D12_ROOT_SIGNATURE_DESC descSignature = {};
+    descSignature.NumParameters = 2;
+    descSignature.pParameters = &descRootParameter[0];
+    descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+
+    CComPtr<ID3DBlob> m_blob;
+    CComPtr<ID3DBlob> m_blobError;
+    TRYD3D(D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1_0, &m_blob, &m_blobError));
+    CComPtr<ID3D12RootSignature> pRootSignature;
+    TRYD3D(device->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
+    pRootSignature->SetName(L"DXR Root Signature");
+    return pRootSignature;
+}
+
+// Create a standard output UAV of the correct pixel format and sized to our default resolution.
+CComPtr<ID3D12Resource1> DXR_Create_Output_UAV(ID3D12Device* device)
+{
+    D3D12_HEAP_PROPERTIES descHeapProperties = {};
+    descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+    D3D12_RESOURCE_DESC descResource = {};
+    descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    descResource.Width = RENDERTARGET_WIDTH;
+    descResource.Height = RENDERTARGET_HEIGHT;
+    descResource.DepthOrArraySize = 1;
+    descResource.MipLevels = 1;
+    descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    descResource.SampleDesc.Count = 1;
+    descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    CComPtr<ID3D12Resource1> pResource;
+    TRYD3D(device->CreateCommittedResource(&descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource1), (void**)&pResource));
+    pResource->SetName(L"DXR Output Texture2D UAV");
+    return pResource;
+}
 
 D3D12_RAYTRACING_INSTANCE_DESC Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transform, int hitgroup, D3D12_GPU_VIRTUAL_ADDRESS tlas)
 {
@@ -19,6 +88,18 @@ D3D12_RAYTRACING_INSTANCE_DESC Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix4
     o.InstanceMask = 0xFF;
     o.InstanceContributionToHitGroupIndex = hitgroup;
     o.AccelerationStructure = tlas;
+    return o;
+}
+
+D3D12_RAYTRACING_AABB Make_D3D12_RAYTRACING_AABB(FLOAT minX, FLOAT minY, FLOAT minZ, float maxX, float maxY, float maxZ)
+{
+    D3D12_RAYTRACING_AABB o = {};
+    o.MinX = minX;
+    o.MinY = minY;
+    o.MinZ = minZ;
+    o.MaxX = maxX;
+    o.MaxY = maxY;
+    o.MaxZ = maxZ;
     return o;
 }
 
