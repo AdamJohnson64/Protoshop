@@ -13,25 +13,27 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Sample.h"
-#include "Sample_D3D12Signature.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include <atlbase.h>
 #include <functional>
 #include <memory>
 
-class Sample_D3D12Mesh : public Sample, public Sample_D3D12Signature
+class Sample_D3D12Mesh : public Sample
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     std::shared_ptr<Direct3D12Device> m_pDevice;
+    CComPtr<ID3D12RootSignature> m_pRootSignature;
+    CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapCBVSRVUAV;
     CComPtr<ID3D12PipelineState> m_pPipelineState;
 public:
     Sample_D3D12Mesh(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-        Sample_D3D12Signature(pDevice->m_pDevice),
         m_pSwapChain(pSwapChain),
         m_pDevice(pDevice)
     {
+        m_pRootSignature = D3D12_Create_Signature_1CBV(pDevice->m_pDevice);
+        m_pDescriptorHeapCBVSRVUAV = D3D12_Create_DescriptorHeap_CBVSRVUAV(pDevice->m_pDevice, 256);
         ////////////////////////////////////////////////////////////////////////////////
         // Create a vertex shader.
         CComPtr<ID3DBlob> pD3DBlobCodeVS = CompileShader("vs_5_0", "main", R"SHADER(
@@ -135,7 +137,7 @@ float4 main() : SV_Target
             {
                 D3D12_GPU_DESCRIPTOR_HANDLE handle = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
                 handle.ptr = handle.ptr + m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * i;
-                pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(DESCRIPTOR_HEAP_CBV, handle);
+                pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(0, handle);
                 int32_t meshIndex = scene->Instances[i].GeometryIndex;
                 {
                     D3D12_VERTEX_BUFFER_VIEW descVertexBufferView = {};

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Sample.h"
-#include "Sample_D3D12Signature.h"
 #include "Core_DXGI.h"
 #include "Core_D3D12.h"
 #include <atlbase.h>

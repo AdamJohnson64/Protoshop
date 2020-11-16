@@ -6,6 +6,32 @@
 #include <atlbase.h>
 #include <functional>
 
+CComPtr<ID3D12RootSignature> D3D12_Create_Signature_1CBV(ID3D12Device* pDevice)
+{
+    CComPtr<ID3DBlob> pD3D12BlobSignature;
+    CComPtr<ID3DBlob> pD3D12BlobError;
+    D3D12_ROOT_SIGNATURE_DESC descSignature = {};
+    D3D12_ROOT_PARAMETER parameters = {};
+    D3D12_DESCRIPTOR_RANGE range = {};
+    range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+    range.NumDescriptors = 1;
+    parameters.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    parameters.DescriptorTable.pDescriptorRanges = &range;
+    parameters.DescriptorTable.NumDescriptorRanges = 1;
+    parameters.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    descSignature.pParameters = &parameters;
+    descSignature.NumParameters = 1;
+    descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1, &pD3D12BlobSignature, &pD3D12BlobError);
+    if (nullptr != pD3D12BlobError)
+    {
+        throw std::exception(reinterpret_cast<const char*>(pD3D12BlobError->GetBufferPointer()));
+    }
+    CComPtr<ID3D12RootSignature> pRootSignature;
+    TRYD3D(pDevice->CreateRootSignature(0, pD3D12BlobSignature->GetBufferPointer(), pD3D12BlobSignature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
+    return pRootSignature;
+}
+
 CComPtr<ID3D12RootSignature> D3D12_Create_Signature_1CBV1SRV(ID3D12Device* pDevice)
 {
     CComPtr<ID3DBlob> pD3D12BlobSignature;

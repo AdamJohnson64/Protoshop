@@ -22,6 +22,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // Create a root signature for rasterization that contains a constant buffer
+// resource only. If we don't intend to texture anything then we really don't
+// need any more than this.
+CComPtr<ID3D12RootSignature> D3D12_Create_Signature_1CBV(ID3D12Device* pDevice);
+
+// Create a root signature for rasterization that contains a constant buffer
 // resource and shader resource (for a texture?). This is a reasonably simple
 // root signature for some meaningful rendering.
 CComPtr<ID3D12RootSignature> D3D12_Create_Signature_1CBV1SRV(ID3D12Device* pDevice);
