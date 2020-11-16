@@ -7,9 +7,19 @@
 #include <memory>
 #include <vector>
 
-// Create a DXR compatible root signature that contains the required output UAV
-// and an SRV for the acceleration structure.
-CComPtr<ID3D12RootSignature> DXR_Create_Signature_1UAV1SRV(ID3D12Device* device);
+// Create a DXR GLOBAL root signature that contains the required output UAV,
+// an SRV for the acceleration structure, and a CBV for global constants.
+// This will be attached via the compute root signature and descriptor heap.
+CComPtr<ID3D12RootSignature> DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device* device);
+
+// Create a DXR LOCAL root signature that contains data to be applied per
+// material shader. This will be attached via the shader table.
+CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_4x32(ID3D12Device* device);
+
+// Create a DXR LOCAL root signature that combines all the register allocations
+// from above. Ideally you wouldn't use this but if you want to avoid dealing
+// with a GLOBAL root signature at all then this is viable.
+CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12Device* device);
 
 // Create a standard output UAV of the correct pixel format and sized to our default resolution.
 CComPtr<ID3D12Resource1> DXR_Create_Output_UAV(ID3D12Device* device);

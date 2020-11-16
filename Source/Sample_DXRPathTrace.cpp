@@ -14,21 +14,30 @@
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
 #include "Core_Math.h"
-#include "Sample_DXRBase.h"
+#include "Sample.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include "generated.Sample_DXRPathTrace.dxr.h"
 #include <array>
 #include <atlbase.h>
 
-class Sample_DXRPathTrace : public Sample_DXRBase
+class Sample_DXRPathTrace : public Sample
 {
 private:
+    std::shared_ptr<DXGISwapChain> m_pSwapChain;
+    std::shared_ptr<Direct3D12Device> m_pDevice;
+    CComPtr<ID3D12Resource1> m_pResourceTargetUAV;
+    CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapCBVSRVUAV;
+    CComPtr<ID3D12RootSignature> m_pRootSignatureLOCAL;
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
 public:
     Sample_DXRPathTrace(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-        Sample_DXRBase(pSwapChain, pDevice)
+        m_pSwapChain(pSwapChain),
+        m_pDevice(pDevice)
     {
+        m_pResourceTargetUAV = DXR_Create_Output_UAV(pDevice->m_pDevice);
+        m_pDescriptorHeapCBVSRVUAV = D3D12_Create_DescriptorHeap_CBVSRVUAV(pDevice->m_pDevice, 8);
+        m_pRootSignatureLOCAL = DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(pDevice->m_pDevice);
         ////////////////////////////////////////////////////////////////////////////////
         // PIPELINE - Build the pipeline with all ray shaders.
         {
@@ -60,7 +69,7 @@ public:
             ++setupSubobject;
 
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
-            descSubobject[setupSubobject].pDesc = &m_pRootSignature.p;
+            descSubobject[setupSubobject].pDesc = &m_pRootSignatureLOCAL.p;
             ++setupSubobject;
 
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descShaderRootSignature = {};
@@ -112,7 +121,7 @@ public:
             m_pPipelineStateObject->SetName(L"DXR Pipeline State");
         }
     }
-    void RenderSample() override
+    void Render() override
     {
         ////////////////////////////////////////////////////////////////////////////////
         // Create AABBs.
@@ -242,6 +251,13 @@ public:
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
         ////////////////////////////////////////////////////////////////////////////////
+        // Get the next available backbuffer.
+        ////////////////////////////////////////////////////////////////////////////////
+        CComPtr<ID3D12Resource> pD3D12Resource;
+        TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(m_pSwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(), __uuidof(ID3D12Resource), (void**)&pD3D12Resource));
+        pD3D12Resource->SetName(L"D3D12Resource (Backbuffer)");
+        m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(), m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
+        ////////////////////////////////////////////////////////////////////////////////
         // RAYTRACE - Finally call the raytracer and generate the frame.
         ////////////////////////////////////////////////////////////////////////////////
         RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
@@ -264,8 +280,15 @@ public:
                 descDispatchRays.Height = RENDERTARGET_HEIGHT;
                 descDispatchRays.Depth = 1;
                 RaytraceCommandList->DispatchRays(&descDispatchRays);
+                RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
+                RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
+                RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);
+                RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON));
+                RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON));
             }
         });
+        // Swap the backbuffer and send this to the desktop composer for display.
+        TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
     }
 };
 
