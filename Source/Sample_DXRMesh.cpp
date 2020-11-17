@@ -202,22 +202,31 @@ public:
         // Note that we don't have any local parameters to our shaders here so there are
         // no local descriptors following any shader identifier entry.
         ////////////////////////////////////////////////////////////////////////////////
+        // Our shader entry is a shader function entrypoint only; no other descriptors or data.
+        const uint32_t shaderEntrySize = D3D12Align(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+        // Ray Generation shader comes first, aligned as necessary.
+        const uint32_t descriptorOffsetRayGenerationShader = 0;
+        // Miss shader comes next.
+        const uint32_t descriptorOffsetMissShader = D3D12Align(descriptorOffsetRayGenerationShader + shaderEntrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        // Then all the HitGroup shaders.
+        const uint32_t descriptorOffsetHitGroup = D3D12Align(descriptorOffsetMissShader + shaderEntrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        // The total size of the table we expect.
+        const uint32_t shaderTableSize = descriptorOffsetHitGroup + shaderEntrySize * 2;
+        // Now build this table.
         CComPtr<ID3D12Resource1> ResourceShaderTable;
-        const uint32_t shaderEntrySize = 64;
         {
             CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
             TRYD3D(m_pPipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(&stateObjectProperties));
-            uint32_t shaderTableSize = shaderEntrySize * 4;
             std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
             memset(&shaderTableCPU[0], 0, shaderTableSize);
             // Shader Index 0 - Ray Generation Shader
-            memcpy(&shaderTableCPU[shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"RayGenerationMVPClip"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetRayGenerationShader], stateObjectProperties->GetShaderIdentifier(L"RayGenerationMVPClip"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 1 - Miss Shader
-            memcpy(&shaderTableCPU[shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetMissShader], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 2 - Hit Shader 1
-            memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroup0"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"HitGroup0"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 3 - Hit Shader 2
-            memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroup1"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"HitGroup1"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             ResourceShaderTable = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
@@ -240,11 +249,11 @@ public:
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);
             {
                 D3D12_DISPATCH_RAYS_DESC descDispatchRays = {};
-                descDispatchRays.RayGenerationShaderRecord.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 0;
+                descDispatchRays.RayGenerationShaderRecord.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + descriptorOffsetRayGenerationShader;
                 descDispatchRays.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
-                descDispatchRays.MissShaderTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 1;
+                descDispatchRays.MissShaderTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + descriptorOffsetMissShader;
                 descDispatchRays.MissShaderTable.SizeInBytes = shaderEntrySize;
-                descDispatchRays.HitGroupTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 2;
+                descDispatchRays.HitGroupTable.StartAddress = ResourceShaderTable->GetGPUVirtualAddress() + descriptorOffsetHitGroup;
                 descDispatchRays.HitGroupTable.SizeInBytes = shaderEntrySize;
                 descDispatchRays.HitGroupTable.StrideInBytes = shaderEntrySize;
                 descDispatchRays.Width = RENDERTARGET_WIDTH;
