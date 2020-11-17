@@ -1,7 +1,7 @@
 #include "Core_D3D.h"
 #include "Core_D3D12Util.h"
 #include "Mixin_ImguiD3D12.h"
-#include "examples/imgui_impl_dx12.h"
+#include "backends/imgui_impl_dx12.h"
 
 Mixin_ImguiD3D12::Mixin_ImguiD3D12(std::shared_ptr<Direct3D12Device> pDevice) :
     m_pDeviceImgui(pDevice)

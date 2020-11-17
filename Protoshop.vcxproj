@@ -71,8 +71,8 @@
     <ClCompile Include="Source\Scene_ParametricUVToMesh.cpp" />
     <ClCompile Include="Source\Scene_Plane.cpp" />
     <ClCompile Include="Source\Scene_Sphere.cpp" />
-    <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx11.cpp" />
-    <ClCompile Include="Submodules\imgui\examples\imgui_impl_dx12.cpp" />
+    <ClCompile Include="Submodules\imgui\backends\imgui_impl_dx11.cpp" />
+    <ClCompile Include="Submodules\imgui\backends\imgui_impl_dx12.cpp" />
     <ClCompile Include="Submodules\imgui\imgui.cpp" />
     <ClCompile Include="Submodules\imgui\imgui_draw.cpp" />
     <ClCompile Include="Submodules\imgui\imgui_widgets.cpp" />

@@ -1,6 +1,6 @@
 #include "Core_D3D.h"
 #include "Mixin_ImguiD3D11.h"
-#include <examples/imgui_impl_dx11.h>
+#include <backends/imgui_impl_dx11.h>
 
 Mixin_ImguiD3D11::Mixin_ImguiD3D11(std::shared_ptr<Direct3D11Device> pDevice) :
     Mixin_ImguiBase()
