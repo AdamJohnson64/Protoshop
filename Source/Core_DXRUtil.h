@@ -16,6 +16,9 @@ CComPtr<ID3D12RootSignature> DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Devi
 // material shader. This will be attached via the shader table.
 CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_4x32(ID3D12Device* device);
 
+// Create a DXR LOCAL root signature that contains only a texture reference.
+CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_1SRV(ID3D12Device* device);
+
 // Create a DXR LOCAL root signature that combines all the register allocations
 // from above. Ideally you wouldn't use this but if you want to avoid dealing
 // with a GLOBAL root signature at all then this is viable.

@@ -63,6 +63,7 @@
     <ClCompile Include="Source\Sample_DXRBasic.cpp" />
     <ClCompile Include="Source\Sample_D3D12Imgui.cpp" />
     <ClCompile Include="Source\Sample_DXRPathTrace.cpp" />
+    <ClCompile Include="Source\Sample_DXRTexture.cpp" />
     <ClCompile Include="Source\Sample_DXRWhitted.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
     <ClCompile Include="Source\Sample_VKBasic.cpp" />
@@ -85,6 +86,7 @@
     <FxCompile Include="Source\Sample_DXRMesh.hlsl" />
     <FxCompile Include="Source\Sample_DXRBasic.hlsl" />
     <FxCompile Include="Source\Sample_DXRPathTrace.hlsl" />
+    <FxCompile Include="Source\Sample_DXRTexture.hlsl" />
     <FxCompile Include="Source\Sample_DXRWhitted.hlsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
