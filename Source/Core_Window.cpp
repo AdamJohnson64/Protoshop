@@ -132,6 +132,7 @@ private:
                 transform.M42 = cameraPos.Y;
                 transform.M43 = cameraPos.Z;
                 SetCameraViewProjection(Invert(transform));
+                InvalidateRect(hWnd, nullptr, FALSE);
             }
             mouseX = LOWORD(lParam);
             mouseY = HIWORD(lParam);
