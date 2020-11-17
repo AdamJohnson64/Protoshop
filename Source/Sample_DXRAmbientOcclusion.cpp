@@ -18,7 +18,7 @@ private:
     std::shared_ptr<Direct3D12Device> m_pDevice;
     CComPtr<ID3D12Resource1> m_pResourceTargetUAV;
     CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapCBVSRVUAV;
-    CComPtr<ID3D12RootSignature> m_pRootSignature;
+    CComPtr<ID3D12RootSignature> m_pRootSignatureGLOBAL;
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
 public:
     Sample_DXRAmbientOcclusion(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
@@ -27,7 +27,7 @@ public:
     {
         m_pResourceTargetUAV = DXR_Create_Output_UAV(pDevice->m_pDevice);
         m_pDescriptorHeapCBVSRVUAV = D3D12_Create_DescriptorHeap_CBVSRVUAV(pDevice->m_pDevice, 8);
-        m_pRootSignature = DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(pDevice->m_pDevice);
+        m_pRootSignatureGLOBAL = DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(pDevice->m_pDevice);
         ////////////////////////////////////////////////////////////////////////////////
         // PIPELINE - Build the pipeline with all ray shaders.
         {
@@ -58,16 +58,8 @@ public:
             descSubobject[setupSubobject].pDesc = &descSubobjectExports;
             ++setupSubobject;
 
-            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
-            descSubobject[setupSubobject].pDesc = &m_pRootSignature.p;
-            ++setupSubobject;
-
-            D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descShaderRootSignature = {};
-            descShaderRootSignature.NumExports = _countof(shaderExports);
-            descShaderRootSignature.pExports = shaderExports;
-            descShaderRootSignature.pSubobjectToAssociate = &descSubobject[setupSubobject - 1];
-            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-            descSubobject[setupSubobject].pDesc = &descShaderRootSignature;
+            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
+            descSubobject[setupSubobject].pDesc = &m_pRootSignatureGLOBAL.p;
             ++setupSubobject;
 
             D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
@@ -223,16 +215,12 @@ public:
             memset(&shaderTableCPU[0], 0, shaderTableSize);
             // Shader Index 0 - Ray Generation Shader
             memcpy(&shaderTableCPU[shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"RayGenerationMVPClip"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 0] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 1 - Miss Shader
             memcpy(&shaderTableCPU[shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 1] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 2 - Hit Shader 1
             memcpy(&shaderTableCPU[shaderEntrySize * 2], stateObjectProperties->GetShaderIdentifier(L"HitGroupPlane"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 2] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
             // Shader Index 3 - Hit Shader 2
             memcpy(&shaderTableCPU[shaderEntrySize * 3], stateObjectProperties->GetShaderIdentifier(L"HitGroupSphere"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(&shaderTableCPU[shaderEntrySize * 3] + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
             ResourceShaderTable = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
@@ -247,11 +235,11 @@ public:
         // RAYTRACE - Finally call the raytracer and generate the frame.
         ////////////////////////////////////////////////////////////////////////////////
         RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
-            ID3D12DescriptorHeap* descriptorHeaps[] = { m_pDescriptorHeapCBVSRVUAV };
-            RaytraceCommandList->SetDescriptorHeaps(1, descriptorHeaps);
-            {
-                //RaytraceCommandList->SetComputeRootConstantBufferView(0, ResourceShaderTable->GetGPUVirtualAddress());
-            }
+            // Attach the GLOBAL signature and descriptors to the compute root.
+            RaytraceCommandList->SetComputeRootSignature(m_pRootSignatureGLOBAL);
+            RaytraceCommandList->SetDescriptorHeaps(1, &m_pDescriptorHeapCBVSRVUAV.p);
+            RaytraceCommandList->SetComputeRootDescriptorTable(0, m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
+            // Prepare the pipeline for raytracing.
             RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);
             {
                 D3D12_DISPATCH_RAYS_DESC descDispatchRays = {};

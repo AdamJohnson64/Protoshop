@@ -111,16 +111,6 @@ public:
             descSubobject[setupSubobject].pDesc = &m_pRootSignatureGLOBAL.p;
             ++setupSubobject;
 
-            /*
-            D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descShaderRootSignature = {};
-            descShaderRootSignature.NumExports = shaderExports.size();
-            descShaderRootSignature.pExports = &shaderExports[0];
-            descShaderRootSignature.pSubobjectToAssociate = &descSubobject[setupSubobject - 1];
-            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-            descSubobject[setupSubobject].pDesc = &descShaderRootSignature;
-            ++setupSubobject;
-            */
-
             D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
             descPipelineConfig.MaxTraceRecursionDepth = 1;
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
