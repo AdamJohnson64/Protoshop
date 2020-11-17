@@ -12,7 +12,6 @@
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
 #include "Core_Math.h"
-#include "Mixin_ImguiD3D12.h"
 #include "Sample.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
@@ -20,7 +19,7 @@
 #include <array>
 #include <atlbase.h>
 
-class Sample_DXRWhitted : public Sample, public Mixin_ImguiD3D12
+class Sample_DXRWhitted : public Sample
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
@@ -33,8 +32,7 @@ private:
 public:
     Sample_DXRWhitted(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
         m_pSwapChain(pSwapChain),
-        m_pDevice(pDevice),
-        Mixin_ImguiD3D12(pDevice)
+        m_pDevice(pDevice)
     {
         m_pResourceTargetUAV = DXR_Create_Output_UAV(pDevice->m_pDevice);
         m_pDescriptorHeapCBVSRVUAV = D3D12_Create_DescriptorHeap_CBVSRVUAV(pDevice->m_pDevice, 8);
@@ -284,28 +282,15 @@ public:
                 descDispatchRays.Height = RENDERTARGET_HEIGHT;
                 descDispatchRays.Depth = 1;
                 RaytraceCommandList->DispatchRays(&descDispatchRays);
-                // Note: We're going to detour through RenderTarget state since we're scribbling some ImGui UI over the top.
                 RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
                 RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
                 RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);
                 RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON));
-                RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET));
-                // Set up Rasterizer Stage (RS) for the viewport and scissor.
-                RaytraceCommandList->RSSetViewports(1, &D3D12MakeViewport(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-                RaytraceCommandList->RSSetScissorRects(1, &D3D12MakeRect(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-                // Set up the Output Merger (OM) to define the target to render into.
-                RaytraceCommandList->OMSetRenderTargets(1, &m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), FALSE, nullptr);
-                RenderImgui(RaytraceCommandList);
-                // Note: Now we can transition back.
-                RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON));
+                RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON));
             }
         });
         // Swap the backbuffer and send this to the desktop composer for display.
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
-    }
-    void BuildImguiUI() override
-    {
-        ImGui::Text("Dear ImGui running on Direct3D DXR.");
     }
 };
 

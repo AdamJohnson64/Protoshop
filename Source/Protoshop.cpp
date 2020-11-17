@@ -28,9 +28,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> pWindowD3D11DrawingContext(CreateNewWindow());
         pWindowD3D11DrawingContext->SetSample(CreateSample_D3D11DrawingContext(CreateDXGISwapChain(pDevice11, pWindowD3D11DrawingContext->GetWindowHandle()), pDevice11));
         
-        std::shared_ptr<Window> pWindowD3D11Imgui(CreateNewWindow());
-        pWindowD3D11Imgui->SetSample(CreateSample_D3D11Imgui(CreateDXGISwapChain(pDevice11, pWindowD3D11Imgui->GetWindowHandle()), pDevice11));
-        
         std::shared_ptr<Window> pWindowD3D11Scene(CreateNewWindow());
         pWindowD3D11Scene->SetSample(CreateSample_D3D11Scene(CreateDXGISwapChain(pDevice11, pWindowD3D11Scene->GetWindowHandle()), pDevice11));
         
@@ -43,10 +40,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         std::shared_ptr<Window> pWindowD3D12Basic(CreateNewWindow());
         pWindowD3D12Basic->SetSample(CreateSample_D3D12Basic(CreateDXGISwapChain(pDevice12, pWindowD3D12Basic->GetWindowHandle()), pDevice12));
-
-        // BUG: The stock ImGui DX12 adaptor doesn't support multiple simultaneous contexts (yet).
-        //std::shared_ptr<Window> pWindowD3D12Imgui(CreateNewWindow());
-        //pWindowD3D12Imgui->SetSample(CreateSample_D3D12Imgui(CreateDXGISwapChain(pDevice12, pWindowD3D12Imgui->GetWindowHandle()), pDevice12));
 
         std::shared_ptr<Window> pWindowD3D12Mesh(CreateNewWindow());
         pWindowD3D12Mesh->SetSample(CreateSample_D3D12Mesh(CreateDXGISwapChain(pDevice12, pWindowD3D12Mesh->GetWindowHandle()), pDevice12));

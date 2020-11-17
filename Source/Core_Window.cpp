@@ -135,24 +135,18 @@ private:
             }
             mouseX = LOWORD(lParam);
             mouseY = HIWORD(lParam);
-            MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
-            if (mouse != nullptr) mouse->MouseMove(LOWORD(lParam), HIWORD(lParam));
             return 0;
         }
         if (uMsg == WM_LBUTTONDOWN)
         {
             SetCapture(hWnd);
             mouseDown = true;
-            MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
-            if (mouse != nullptr) mouse->MouseDown(LOWORD(lParam), HIWORD(lParam));
             return 0;
         }
         if (uMsg == WM_LBUTTONUP)
         {
             ReleaseCapture();
             mouseDown = false;
-            MouseListener* mouse = dynamic_cast<MouseListener*>(window->m_pSample.get());
-            if (mouse != nullptr) mouse->MouseUp(LOWORD(lParam), HIWORD(lParam));
             return 0;
         }
         return DefWindowProc(hWnd, uMsg, wParam, lParam);

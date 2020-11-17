@@ -12,7 +12,6 @@
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
 #include "Core_Math.h"
-#include "Mixin_ImguiD3D12.h"
 #include "Sample.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
@@ -331,7 +330,6 @@ public:
                 descDispatchRays.Height = RENDERTARGET_HEIGHT;
                 descDispatchRays.Depth = 1;
                 RaytraceCommandList->DispatchRays(&descDispatchRays);
-                // Note: We're going to detour through RenderTarget state since we're scribbling some ImGui UI over the top.
                 RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
                 RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
                 RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);
