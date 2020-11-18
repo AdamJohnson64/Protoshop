@@ -46,22 +46,43 @@ void Miss(inout RayPayload rayPayload)
     rayPayload.Color = float3(0.25f, 0.25f, 0.25f);
 }
 
+float4 SampleTextureBilinear(Texture2D tex, float2 uv)
+{
+    uint Width, Height, NumberOfLevels;
+    tex.GetDimensions(0, Width, Height, NumberOfLevels);
+    float fx = uv.x * Width;
+    float fy = uv.y * Height;
+    uint ux = fx;
+    uint uy = fy;
+    float4 pix[4] = {
+        tex.Load(uint3(ux + 0, uy + 0, 0)),
+        tex.Load(uint3(ux + 1, uy + 0, 0)),
+        tex.Load(uint3(ux + 0, uy + 1, 0)),
+        tex.Load(uint3(ux + 1, uy + 1, 0)),
+    };
+    float ix = fx - ux;
+    float iy = fy - uy;
+    return (pix[0] * (1 - ix) + pix[1] * ix) * (1 - iy) + (pix[2] * (1 - ix) + pix[3] * ix) * iy;
+}
+
+float4 SampleTextureNearest(Texture2D tex, float2 uv)
+{
+    uint Width, Height, NumberOfLevels;
+    tex.GetDimensions(0, Width, Height, NumberOfLevels);
+    return tex.Load(uint3(uv.x * Width, uv.y * Height, 0));
+}
+
 [shader("closesthit")]
 void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    const float3 worldHit = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
-    // Basic Checkerboard Albedo.
-    float x = (worldHit.x - floor(worldHit.x)) * 2;
-    float z = (worldHit.z - floor(worldHit.z)) * 2;
-    float blackOrWhite = ((int)x + (int)z) % 2;
-    rayPayload.Color = float3(blackOrWhite, blackOrWhite, blackOrWhite);
+    const float3 objectHit = ObjectRayOrigin() + ObjectRayDirection() * RayTCurrent();
+    rayPayload.Color = SampleTextureBilinear(myTexture, float2((objectHit.x + 1) / 2, (objectHit.z + 1) / 2)).rgb;
 }
 
 [shader("closesthit")]
 void MaterialPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    // Load final color from texture.
-    rayPayload.Color = myTexture.Load(uint3(0, 0, 0)).rgb;
+    rayPayload.Color = float3(1, 0, 0);
 }
 
 [shader("intersection")]

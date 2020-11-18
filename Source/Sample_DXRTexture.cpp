@@ -128,25 +128,30 @@ public:
             TRYD3D(m_pDevice->m_pDevice->CreateStateObject(&descStateObject, __uuidof(ID3D12StateObject), (void**)&m_pPipelineStateObject));
             m_pPipelineStateObject->SetName(L"DXR Pipeline State");
         }
+        const uint32_t imageWidth = 256;
+        const uint32_t imageHeight = 256;
         {
             D3D12_HEAP_PROPERTIES descHeap = {};
             descHeap.Type = D3D12_HEAP_TYPE_DEFAULT;
             D3D12_RESOURCE_DESC descResource = {};
             descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-            descResource.Width = 1;
-            descResource.Height = 1;
+            descResource.Width = imageWidth;
+            descResource.Height = imageHeight;
             descResource.DepthOrArraySize = 1;
             descResource.MipLevels = 1;
             descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             descResource.SampleDesc.Count = 1;
             TRYD3D(m_pDevice->m_pDevice->CreateCommittedResource(&descHeap, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, __uuidof(ID3D12Resource), (void**)&m_pTexture.p));
         }
+        struct PixelBGRA { uint8_t B, G, R, A; };
+        const uint32_t pixelWidth = sizeof(PixelBGRA);
+        const uint32_t imageStride = D3D12Align(pixelWidth * imageWidth, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
         {
             D3D12_HEAP_PROPERTIES descHeap = {};
             descHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
             D3D12_RESOURCE_DESC descResource = {};
             descResource.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-            descResource.Width = 4;
+            descResource.Width = imageStride * imageHeight;
             descResource.Height = 1;
             descResource.DepthOrArraySize = 1;
             descResource.MipLevels = 1;
@@ -157,8 +162,17 @@ public:
             TRYD3D(m_pDevice->m_pDevice->CreateCommittedResource(&descHeap, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(ID3D12Resource), (void**)&pResourceUpload.p));
             void* pData = {};
             TRYD3D(pResourceUpload->Map(0, nullptr, &pData));
-            uint32_t data = 0xFF2000FF;
-            memcpy(pData, &data, sizeof(data));
+            for (int y = 0; y < imageHeight; ++y)
+            {
+                for (int x = 0; x < imageWidth; ++x)
+                {
+                    PixelBGRA* pixel = reinterpret_cast<PixelBGRA*>(reinterpret_cast<uint8_t*>(pData) + pixelWidth * x + imageStride * y);
+                    pixel->B = rand();
+                    pixel->G = y;
+                    pixel->R = x;
+                    pixel->A = 0xFF;
+                }
+            }
             pResourceUpload->Unmap(0, nullptr);
             // Copy this staging buffer to the GPU-only buffer.
             RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* uploadCommandList) {
@@ -166,10 +180,10 @@ public:
                 srcLocation.pResource = pResourceUpload;
                 srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
                 srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-                srcLocation.PlacedFootprint.Footprint.Width = 1;
-                srcLocation.PlacedFootprint.Footprint.Height = 1;
+                srcLocation.PlacedFootprint.Footprint.Width = imageWidth;
+                srcLocation.PlacedFootprint.Footprint.Height = imageHeight;
                 srcLocation.PlacedFootprint.Footprint.Depth = 1;
-                srcLocation.PlacedFootprint.Footprint.RowPitch = D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+                srcLocation.PlacedFootprint.Footprint.RowPitch = imageStride;
                 D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
                 dstLocation.pResource = m_pTexture;
                 dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
@@ -294,9 +308,9 @@ public:
             memcpy(&shaderTableCPU[descriptorOffsetMissShader], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 2 - Hit Shader 1
             memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"HitGroupCheckerboard"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES], &(m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart() + descriptorOffsetLocals), sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             // Shader Index 3 - Hit Shader 2
             memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1 + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES], &(m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart() + descriptorOffsetLocals), sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             ResourceShaderTable = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
