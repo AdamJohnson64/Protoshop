@@ -59,7 +59,7 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"raygeneration", L"miss", L"HitGroup" };
+            const WCHAR* shaderExports[] = { L"RayGeneration", L"Miss", L"HitGroup" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
             descSubobjectExports.NumExports = _countof(shaderExports);
             descSubobjectExports.pExports = shaderExports;
@@ -80,7 +80,7 @@ public:
 
             D3D12_HIT_GROUP_DESC descHitGroup = {};
             descHitGroup.HitGroupExport = L"HitGroup";
-            descHitGroup.ClosestHitShaderImport = L"closesthit";
+            descHitGroup.ClosestHitShaderImport = L"ClosestHit";
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
             descSubobject[setupSubobject].pDesc = &descHitGroup;
             ++setupSubobject;
@@ -156,9 +156,9 @@ public:
             std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
             memset(&shaderTableCPU[0], 0, shaderTableSize);
             // Shader Index 0 - Ray Generation Shader
-            memcpy(&shaderTableCPU[descriptorOffsetRayGenerationShader], stateObjectProperties->GetShaderIdentifier(L"raygeneration"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetRayGenerationShader], stateObjectProperties->GetShaderIdentifier(L"RayGeneration"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 1 - Miss Shader
-            memcpy(&shaderTableCPU[descriptorOffsetMissShader], stateObjectProperties->GetShaderIdentifier(L"miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetMissShader], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 2 - Hit Shader
             memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             ResourceShaderTable = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);

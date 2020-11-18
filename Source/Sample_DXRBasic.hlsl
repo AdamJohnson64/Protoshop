@@ -15,7 +15,7 @@ RWTexture2D<float4> renderTargetOutput                          : register(u0);
 RaytracingAccelerationStructure raytracingAccelerationStructure : register(t0);
 
 [shader("raygeneration")]
-void raygeneration()
+void RayGeneration()
 {
     uint2 LaunchIndex = DispatchRaysIndex().xy;
     uint2 LaunchDimensions = DispatchRaysDimensions().xy;
@@ -27,13 +27,13 @@ void raygeneration()
 }
 
 [shader("closesthit")]
-void closesthit(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+void ClosestHit(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
     rayPayload.Color = float3(0, 1, 0);
 }
 
 [shader("miss")]
-void miss(inout RayPayload rayPayload)
+void Miss(inout RayPayload rayPayload)
 {
     rayPayload.Color = float3(1, 0, 0);
 }
