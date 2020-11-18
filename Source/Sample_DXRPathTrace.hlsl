@@ -1,9 +1,12 @@
-#include "Sample_DXR_HLSL.inc"
+#include "Sample_DXR_Common.inc"
+#include "Sample_DXR_Implicit.inc"
+#include "Sample_DXR_RayRecurse.inc"
+#include "Sample_DXR_Shaders.inc"
 
 [shader("closesthit")]
 void MaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    if (rayPayload.RecursionLevel >= 1)
+    if (rayPayload.RecursionLevel > 1)
     {
         rayPayload.Color = float3(0, 0, 0);
         return;

@@ -1,15 +1,7 @@
-#include "Sample_DXR_HLSL.inc"
-
-bool Illuminated(float3 origin, float3 direction)
-{
-    RayDesc rayDesc = { origin, DEFAULT_TMIN, direction, DEFAULT_TMAX };
-    RayPayload rayPayload;
-    rayPayload.Color = float3(0, 0, 0);
-    rayPayload.IntersectionT = DEFAULT_TMAX;
-    rayPayload.Flags = 1; // Do not spawn new rays.
-    TraceRay(raytracingAccelerationStructure, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 0, 0, 0, rayDesc, rayPayload);
-    return rayPayload.IntersectionT == DEFAULT_TMAX;
-}
+#include "Sample_DXR_Common.inc"
+#include "Sample_DXR_Implicit.inc"
+#include "Sample_DXR_RayRecurse.inc"
+#include "Sample_DXR_Shaders.inc"
 
 [shader("closesthit")]
 void MaterialAmbientOcclusion(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
@@ -28,7 +20,7 @@ void MaterialAmbientOcclusion(inout RayPayload rayPayload, in IntersectionAttrib
         // Moire interference pattern that looks like old-school dithering; nice.
         float3 hemisphere = HaltonSample(i + DispatchRaysIndex().x * DispatchRaysIndex().y * 16);
         float3 hemisphereInTangentFrame = hemisphere.x * localX + hemisphere.z * localY + hemisphere.y * localZ;
-        if (Illuminated(rayOrigin, hemisphereInTangentFrame))
+        if (!ShadowRay(rayOrigin, hemisphereInTangentFrame))
         {
             ++illuminated;
         }
