@@ -45,6 +45,8 @@ CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOU
 
 CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, uint32_t bufferSize, uint32_t dataSize, const void* data);
 
+CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device* device);
+
 D3D12_RECT D3D12MakeRect(LONG width, LONG height);
 
 D3D12_RESOURCE_BARRIER D3D12MakeResourceTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES from, D3D12_RESOURCE_STATES to);

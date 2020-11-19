@@ -156,6 +156,77 @@ CComPtr<ID3D12Resource1> D3D12CreateBuffer(Direct3D12Device* device, D3D12_RESOU
     return pD3D12Resource;
 }
 
+CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device* device)
+{
+    CComPtr<ID3D12Resource> resource;
+    const uint32_t imageWidth = 256;
+    const uint32_t imageHeight = 256;
+    {
+        D3D12_HEAP_PROPERTIES descHeap = {};
+        descHeap.Type = D3D12_HEAP_TYPE_DEFAULT;
+        D3D12_RESOURCE_DESC descResource = {};
+        descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        descResource.Width = imageWidth;
+        descResource.Height = imageHeight;
+        descResource.DepthOrArraySize = 1;
+        descResource.MipLevels = 1;
+        descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        descResource.SampleDesc.Count = 1;
+        TRYD3D(device->m_pDevice->CreateCommittedResource(&descHeap, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, __uuidof(ID3D12Resource), (void**)&resource.p));
+    }
+    struct PixelBGRA { uint8_t B, G, R, A; };
+    const uint32_t pixelWidth = sizeof(PixelBGRA);
+    const uint32_t imageStride = D3D12Align(pixelWidth * imageWidth, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+    {
+        D3D12_HEAP_PROPERTIES descHeap = {};
+        descHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
+        D3D12_RESOURCE_DESC descResource = {};
+        descResource.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        descResource.Width = imageStride * imageHeight;
+        descResource.Height = 1;
+        descResource.DepthOrArraySize = 1;
+        descResource.MipLevels = 1;
+        descResource.Format = DXGI_FORMAT_UNKNOWN;
+        descResource.SampleDesc.Count = 1;
+        descResource.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        CComPtr<ID3D12Resource> pResourceUpload;
+        TRYD3D(device->m_pDevice->CreateCommittedResource(&descHeap, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(ID3D12Resource), (void**)&pResourceUpload.p));
+        void* pData = {};
+        TRYD3D(pResourceUpload->Map(0, nullptr, &pData));
+        for (int y = 0; y < imageHeight; ++y)
+        {
+            for (int x = 0; x < imageWidth; ++x)
+            {
+                PixelBGRA* pixel = reinterpret_cast<PixelBGRA*>(reinterpret_cast<uint8_t*>(pData) + pixelWidth * x + imageStride * y);
+                pixel->B = rand();
+                pixel->G = y;
+                pixel->R = x;
+                pixel->A = 0xFF;
+            }
+        }
+        pResourceUpload->Unmap(0, nullptr);
+        // Copy this staging buffer to the GPU-only buffer.
+        RunOnGPU(device, [&](ID3D12GraphicsCommandList5* uploadCommandList) {
+            D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
+            srcLocation.pResource = pResourceUpload;
+            srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+            srcLocation.PlacedFootprint.Footprint.Width = imageWidth;
+            srcLocation.PlacedFootprint.Footprint.Height = imageHeight;
+            srcLocation.PlacedFootprint.Footprint.Depth = 1;
+            srcLocation.PlacedFootprint.Footprint.RowPitch = imageStride;
+            D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
+            dstLocation.pResource = resource;
+            dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            dstLocation.SubresourceIndex = 0;
+            uploadCommandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, nullptr);
+            //uploadCommandList->CopyResource(m_pTexture, pResourceUpload);
+            uploadCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON));
+        });
+    }
+    return resource;
+}
+
 D3D12_RECT D3D12MakeRect(LONG width, LONG height)
 {
     D3D12_RECT desc = {};
