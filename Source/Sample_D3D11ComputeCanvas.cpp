@@ -12,13 +12,14 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
+#include "ImageUtil.h"
 #include "Sample.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <memory>
 
-#define IMAGE_WIDTH 320
-#define IMAGE_HEIGHT 240
+const int IMAGE_WIDTH = 320;
+const int IMAGE_HEIGHT = 200;
 
 class Sample_D3D11ComputeCanvas : public Sample
 {
@@ -54,7 +55,7 @@ float4 Sample(float2 pixel)
 {
     float4 checkerboard = Checkerboard((uint2)pixel);
     float2 pos = mul(transform, float4(pixel.x, pixel.y, 0, 1)).xy;
-    uint Width = 16, Height = 16, NumberOfLevels;
+    uint Width, Height, NumberOfLevels;
     userImage.GetDimensions(0, Width, Height, NumberOfLevels);
     if (pos.x >= 0 && pos.x < (int)Width && pos.y >= 0 && pos.y < (int)Height)
     {
@@ -104,40 +105,9 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         }
         {
             struct Pixel { uint8_t B, G, R, A; };
+            const uint32_t imageStride = 4 * IMAGE_WIDTH;
             Pixel imageRaw[IMAGE_WIDTH * IMAGE_HEIGHT];
-            char imageStamp[] =
-            {
-                0, 0, 0, 1, 1, 0, 0, 0,
-                0, 0, 1, 0, 0, 1, 0, 0,
-                0, 1, 0, 0, 0, 0, 1, 0,
-                0, 1, 0, 0, 0, 0, 1, 0,
-                0, 1, 1, 1, 1, 1, 1, 0,
-                0, 1, 0, 0, 0, 0, 1, 0,
-                0, 1, 0, 0, 0, 0, 1, 0,
-                0, 1, 0, 0, 0, 0, 1, 0,
-            };
-            for (int i = 0; i < IMAGE_WIDTH * IMAGE_HEIGHT; ++i)
-            {
-                Pixel& pixel = imageRaw[i];
-                pixel.B = 0x00;
-                pixel.G = 0x00;
-                pixel.R = i >> 4;
-                pixel.A = 0xFF;
-            }
-            for (int y = 0; y < 8; ++y)
-            {
-                for (int x = 0; x < 8; ++x)
-                {
-                    if (imageStamp[x + y * 8])
-                    {
-                        Pixel& pixel = imageRaw[(16 + x) + (16 + y) * IMAGE_WIDTH];
-                        pixel.B = 0x00;
-                        pixel.G = 0xFF;
-                        pixel.R = 0xFF;
-                        pixel.A = 0xFF;
-                    }
-                }
-            }
+            Image_Fill_Commodore64(imageRaw, IMAGE_WIDTH, IMAGE_HEIGHT, imageStride);
             {
                 D3D11_TEXTURE2D_DESC desc = {};
                 desc.Width = IMAGE_WIDTH;
@@ -178,12 +148,16 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         }
         // Upload the constant buffer.
         static float angle = 0;
-        Matrix44 transform = {};
-        transform.M11 = transform.M22 = transform.M33 = transform.M44 = 1;
-        transform.M11 = cosf(angle); transform.M12 = sinf(angle);
-        transform.M21 = -sinf(angle); transform.M22 = cosf(angle);
-        transform.M41 = (RENDERTARGET_WIDTH - IMAGE_WIDTH * cosf(angle) + IMAGE_HEIGHT * sinf(angle)) / 2.0f;
-        transform.M42 = (RENDERTARGET_HEIGHT - IMAGE_WIDTH * sinf(angle) - IMAGE_HEIGHT * cosf(angle)) / 2.0f;
+        const float zoom = 2 + cosf(angle);
+        Matrix44 rotate = {};
+        rotate.M11 = rotate.M22 = rotate.M33 = rotate.M44 = 1;
+        rotate.M11 = cosf(angle); rotate.M12 = sinf(angle);
+        rotate.M21 = -sinf(angle); rotate.M22 = cosf(angle);
+        Matrix44 transform =
+            CreateMatrixTranslate(Vector3 { -IMAGE_WIDTH / 2, -IMAGE_HEIGHT / 2, 0 })
+            * CreateMatrixScale(Vector3 { zoom, zoom, 1 })
+            * rotate
+            * CreateMatrixTranslate(Vector3 { RENDERTARGET_WIDTH / 2, RENDERTARGET_HEIGHT / 2, 0 });
         transform = Invert(transform);
         angle += 0.01f;
         m_pDevice->GetID3D11DeviceContext()->ClearState();

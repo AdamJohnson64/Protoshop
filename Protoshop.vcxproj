@@ -19,6 +19,7 @@
     <ClInclude Include="Source\Core_OpenGL.h" />
     <ClInclude Include="Source\Core_VK.h" />
     <ClInclude Include="Source\Core_Window.h" />
+    <ClInclude Include="Source\ImageUtil.h" />
     <ClInclude Include="Source\Material.h" />
     <ClInclude Include="Source\Sample.h" />
     <ClInclude Include="Source\Sample_D3D11Base.h" />
@@ -42,6 +43,7 @@
     <ClCompile Include="Source\Core_OpenGL.cpp" />
     <ClCompile Include="Source\Core_VK.cpp" />
     <ClCompile Include="Source\Core_Window.cpp" />
+    <ClCompile Include="Source\ImageUtil.cpp" />
     <ClCompile Include="Source\Protoshop.cpp" />
     <ClCompile Include="Source\Sample_D3D11Base.cpp" />
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />

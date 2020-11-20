@@ -1,6 +1,7 @@
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
+#include "ImageUtil.h"
 #include <array>
 #include <assert.h>
 #include <atlbase.h>
@@ -193,17 +194,7 @@ CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device* device)
         TRYD3D(device->m_pDevice->CreateCommittedResource(&descHeap, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(ID3D12Resource), (void**)&pResourceUpload.p));
         void* pData = {};
         TRYD3D(pResourceUpload->Map(0, nullptr, &pData));
-        for (int y = 0; y < imageHeight; ++y)
-        {
-            for (int x = 0; x < imageWidth; ++x)
-            {
-                PixelBGRA* pixel = reinterpret_cast<PixelBGRA*>(reinterpret_cast<uint8_t*>(pData) + pixelWidth * x + imageStride * y);
-                pixel->B = rand();
-                pixel->G = y;
-                pixel->R = x;
-                pixel->A = 0xFF;
-            }
-        }
+        Image_Fill_Sample(pData, imageWidth, imageHeight, imageStride);
         pResourceUpload->Unmap(0, nullptr);
         // Copy this staging buffer to the GPU-only buffer.
         RunOnGPU(device, [&](ID3D12GraphicsCommandList5* uploadCommandList) {
