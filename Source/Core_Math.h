@@ -98,6 +98,12 @@ TVector2<T> Perpendicular(const TVector2<T>& lhs) { return { -lhs.Y, lhs.X }; }
 // 3D Vectors (XYZ)
 
 template <class T>
+TVector3<T> operator+(const TVector3<T>& lhs, const TVector3<T>& rhs) { return { lhs.X + rhs.X, lhs.Y + rhs.Y, lhs.Z + rhs.Z }; };
+
+template <class T>
+TVector3<T> operator-(const TVector3<T>& lhs, const TVector3<T>& rhs) { return { lhs.X - rhs.X, lhs.Y - rhs.Y, lhs.Z - rhs.Z }; };
+
+template <class T>
 TVector3<T> operator*(const TVector3<T>& lhs, const T& rhs) { return { lhs.X * rhs, lhs.Y * rhs, lhs.Z * rhs }; }
 
 template <class T>
