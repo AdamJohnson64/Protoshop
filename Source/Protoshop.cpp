@@ -37,6 +37,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> pWindowD3D11Scene = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Scene(CreateDXGISwapChain(pDevice11, hwnd), pDevice11); });
         std::shared_ptr<Window> pWindowD3D11Tessellation = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Tessellation(CreateDXGISwapChain(pDevice11, hwnd), pDevice11); });
         //std::shared_ptr<Window> pWindowD3D11Voxel = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Voxel(CreateDXGISwapChain(pDevice11, hwnd), pDevice11); });
+        //std::shared_ptr<Object> pWindowD3DShaderToy = CreateSample_D3D11ShaderToy(pDevice11);
         ////////////////////////////////////////////////////////////////////////////////
         // Direct3D 12 Samples
         std::shared_ptr<Direct3D12Device> pDevice12 = CreateDirect3D12Device();
