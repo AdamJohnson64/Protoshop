@@ -1,10 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Sample - Direct3D 11 Compute Canvas
+// Sample - Direct3D 11 Ray March
 ///////////////////////////////////////////////////////////////////////////////
-// This sample renders to the display using only compute shaders and no
-// rasterization. For interest we create a transformable display that would
-// theoretically support a painting application. Texture access is handled via
-// direct memory access without samplers or texture objects.
+// This sample shows how to perform a ray march to render a "meta-ball" type
+// implicit shape.
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "Core_D3D.h"
