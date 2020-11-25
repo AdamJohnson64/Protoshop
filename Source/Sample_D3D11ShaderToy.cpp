@@ -13,6 +13,7 @@
 #include "Core_D3D11.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_Util.h"
 #include "Scene_Camera.h"
 
 #include <memory>
@@ -34,8 +35,8 @@ private:
     CComPtr<ID3D11Buffer> m_pBufferConstants;
     CComPtr<ID3D11ComputeShader> m_pComputeShader;
 public:
-    Sample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> pDevice)
-        : m_pDevice(pDevice)
+    Sample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device)
+        : m_pDevice(device)
     {
         ////////////////////////////////////////////////////////////////////////////////
         // Create all window classes.
@@ -301,7 +302,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
 };
 
-std::shared_ptr<Object> CreateSample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Object> CreateSample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device)
 {
-    return std::shared_ptr<Object>(new Sample_D3D11ShaderToy(pDevice));
+    return std::shared_ptr<Object>(new Sample_D3D11ShaderToy(device));
 }

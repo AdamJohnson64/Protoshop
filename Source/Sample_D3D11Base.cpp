@@ -1,11 +1,12 @@
 #include "Sample_D3D11Base.h"
 #include "Core_D3D.h"
+#include "Core_Util.h"
 
 #include <atlbase.h>
 
-Sample_D3D11Base::Sample_D3D11Base(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
-    m_pSwapChain(pSwapChain),
-    m_pDevice(pDevice)
+Sample_D3D11Base::Sample_D3D11Base(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
+    m_pSwapChain(swapchain),
+    m_pDevice(device)
 {
 }
 

@@ -12,5 +12,5 @@ public:
     virtual IDXGISwapChain4* GetIDXGISwapChain() = 0;
 };
 
-std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D11Device> pDevice, HWND hWindow);
-std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D12Device> pDevice, HWND hWindow);
+std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D11Device> device, HWND hWnd);
+std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D12Device> device, HWND hWnd);

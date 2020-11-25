@@ -1,6 +1,7 @@
 #include "Core_D3D.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "Core_Util.h"
 #include <atlbase.h>
 #include <memory>
 
@@ -9,7 +10,7 @@
 class DXGISwapChainImpl : public DXGISwapChain
 {
 public:
-    DXGISwapChainImpl(std::shared_ptr<Direct3D11Device> pDevice, HWND hWindow)
+    DXGISwapChainImpl(std::shared_ptr<Direct3D11Device> device, HWND hWnd)
     {
         CComPtr<IDXGIFactory7> pDXGIFactory;
         TRYD3D(CreateDXGIFactory(__uuidof(IDXGIFactory7), (void**)&pDXGIFactory));
@@ -23,7 +24,7 @@ public:
             descSwapChain.BufferCount = 2;
             descSwapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
             CComPtr<IDXGISwapChain1> pDXGISwapChain1;
-            TRYD3D(pDXGIFactory->CreateSwapChainForHwnd(pDevice->GetID3D11Device(), hWindow, &descSwapChain, nullptr, nullptr, &pDXGISwapChain1));
+            TRYD3D(pDXGIFactory->CreateSwapChainForHwnd(device->GetID3D11Device(), hWnd, &descSwapChain, nullptr, nullptr, &pDXGISwapChain1));
             TRYD3D(pDXGISwapChain1->QueryInterface<IDXGISwapChain4>(&pDXGISwapChain));
         }
     }
@@ -31,11 +32,11 @@ public:
     {
         if (pDevice12 != nullptr)
         {
-            D3D12WaitForGPUIdle(pDevice12.get());
+            D3D12_Wait_For_GPU_Idle(pDevice12.get());
         }
     }
-    DXGISwapChainImpl(std::shared_ptr<Direct3D12Device> pDevice, HWND hWindow) :
-        pDevice12(pDevice)
+    DXGISwapChainImpl(std::shared_ptr<Direct3D12Device> device, HWND hWnd) :
+        pDevice12(device)
     {
         CComPtr<IDXGIFactory7> pDXGIFactory;
         TRYD3D(CreateDXGIFactory(__uuidof(IDXGIFactory7), (void**)&pDXGIFactory));
@@ -49,7 +50,7 @@ public:
             descSwapChain.BufferCount = 2;
             descSwapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
             CComPtr<IDXGISwapChain1> pDXGISwapChain1;
-            TRYD3D(pDXGIFactory->CreateSwapChainForHwnd(pDevice->m_pCommandQueue, hWindow, &descSwapChain, nullptr, nullptr, &pDXGISwapChain1));
+            TRYD3D(pDXGIFactory->CreateSwapChainForHwnd(device->m_pCommandQueue, hWnd, &descSwapChain, nullptr, nullptr, &pDXGISwapChain1));
             TRYD3D(pDXGISwapChain1->QueryInterface<IDXGISwapChain4>(&pDXGISwapChain));
         }
     }
@@ -62,12 +63,12 @@ private:
     CComPtr<IDXGISwapChain4> pDXGISwapChain;
 };
 
-std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D11Device> pDevice, HWND hWindow)
+std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D11Device> device, HWND hWnd)
 {
-    return std::shared_ptr<DXGISwapChain>(new DXGISwapChainImpl(pDevice, hWindow));
+    return std::shared_ptr<DXGISwapChain>(new DXGISwapChainImpl(device, hWnd));
 }
 
-std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D12Device> pDevice, HWND hWindow)
+std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D12Device> device, HWND hWnd)
 {
-    return std::shared_ptr<DXGISwapChain>(new DXGISwapChainImpl(pDevice, hWindow));
+    return std::shared_ptr<DXGISwapChain>(new DXGISwapChainImpl(device, hWnd));
 }

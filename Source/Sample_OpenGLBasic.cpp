@@ -10,8 +10,8 @@ private:
     std::shared_ptr<OpenGLDevice> m_pDevice;
     std::shared_ptr<Window> m_pWindow;
 public:
-    Sample_OpenGLBasic(std::shared_ptr<OpenGLDevice> pDevice, std::shared_ptr<Window> pWindow) :
-        m_pDevice(pDevice),
+    Sample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device, std::shared_ptr<Window> pWindow) :
+        m_pDevice(device),
         m_pWindow(pWindow)
     {
     }
@@ -53,7 +53,7 @@ public:
     }
 };
 
-std::shared_ptr<Sample> CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> pDevice, std::shared_ptr<Window> pWindow)
+std::shared_ptr<Sample> CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device, std::shared_ptr<Window> pWindow)
 {
-    return std::shared_ptr<Sample>(new Sample_OpenGLBasic(pDevice, pWindow));
+    return std::shared_ptr<Sample>(new Sample_OpenGLBasic(device, pWindow));
 }

@@ -103,7 +103,7 @@ VKDevice::VKDevice()
     m_vkSampler = m_vkDevice->createSamplerUnique(vk::SamplerCreateInfo { {}, vk::Filter::eLinear, vk::Filter::eLinear, vk::SamplerMipmapMode::eNearest, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat });
 }
 
-void VKRunOnGPU(VKDevice* device, std::function<void(VkCommandBuffer)> fn)
+void VK_Run_Synchronously(VKDevice* device, std::function<void(VkCommandBuffer)> fn)
 {
     std::vector<vk::UniqueCommandBuffer> m_vkCommandBuffer = device->m_vkDevice->allocateCommandBuffersUnique(vk::CommandBufferAllocateInfo { device->m_vkCommandPoolGraphics.get(), vk::CommandBufferLevel::ePrimary, 1 });
     // Create a command buffer and start filling it.

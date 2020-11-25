@@ -23,9 +23,9 @@ private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     std::shared_ptr<Direct3D12Device> m_pDevice;
 public:
-    Sample_D3D12Basic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-        m_pSwapChain(pSwapChain),
-        m_pDevice(pDevice)
+    Sample_D3D12Basic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device) :
+        m_pSwapChain(swapchain),
+        m_pDevice(device)
     {
     }
     void Render() override
@@ -34,10 +34,10 @@ public:
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(m_pSwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(), __uuidof(ID3D12Resource), (void**)&pD3D12Resource));
         pD3D12Resource->SetName(L"D3D12Resource (Backbuffer)");
         m_pDevice->m_pDevice->CreateRenderTargetView(pD3D12Resource, &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(), m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
-        RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
+        D3D12_Run_Synchronously(m_pDevice.get(), [&](ID3D12GraphicsCommandList5* pD3D12GraphicsCommandList)
         {
             // Put the RTV into render target state and clear it before use.
-            pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
+            pD3D12GraphicsCommandList->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET));
             {
                 static float r = 0;
                 float color[4] = {r, 1, 0, 1};
@@ -46,14 +46,14 @@ public:
                 pD3D12GraphicsCommandList->ClearRenderTargetView(m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(), color, 0, nullptr);
             }
             // Transition the render target into presentation state for display.
-            pD3D12GraphicsCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+            pD3D12GraphicsCommandList->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
         });
         // Swap the backbuffer and send this to the desktop composer for display.
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
     }
 };
 
-std::shared_ptr<Sample> CreateSample_D3D12Basic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
+std::shared_ptr<Sample> CreateSample_D3D12Basic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device)
 {
-    return std::shared_ptr<Sample>(new Sample_D3D12Basic(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_D3D12Basic(swapchain, device));
 }

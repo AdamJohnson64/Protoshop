@@ -8,7 +8,7 @@
 class Sample_D3D11Base : public Sample
 {
 public:
-    Sample_D3D11Base(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice);
+    Sample_D3D11Base(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device);
     void Render() override;
     virtual void RenderSample() = 0;
 protected:

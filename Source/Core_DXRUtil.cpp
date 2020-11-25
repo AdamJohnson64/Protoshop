@@ -1,7 +1,19 @@
 #include "Core_D3D.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXRUtil.h"
+#include "Core_Util.h"
 #include <array>
+
+CComPtr<ID3D12RootSignature> DXR_Create_Signature(ID3D12Device* device, const D3D12_ROOT_SIGNATURE_DESC& desc)
+{
+    CComPtr<ID3DBlob> m_blob;
+    CComPtr<ID3DBlob> m_blobError;
+    TRYD3D(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1_0, &m_blob, &m_blobError));
+    CComPtr<ID3D12RootSignature> pRootSignature;
+    TRYD3D(device->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
+    pRootSignature->SetName(L"DXR Root Signature");
+    return pRootSignature;
+}
 
 CComPtr<ID3D12RootSignature> DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device* device)
 {
@@ -30,13 +42,7 @@ CComPtr<ID3D12RootSignature> DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Devi
     descSignature.NumParameters = 1;
     descSignature.pParameters = &descRootParameter;
     //descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-    CComPtr<ID3DBlob> m_blob;
-    CComPtr<ID3DBlob> m_blobError;
-    TRYD3D(D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1_0, &m_blob, &m_blobError));
-    CComPtr<ID3D12RootSignature> pRootSignature;
-    TRYD3D(device->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
-    pRootSignature->SetName(L"DXR Root Signature");
-    return pRootSignature;
+    return DXR_Create_Signature(device, descSignature);
 }
 
 CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_1SRV(ID3D12Device* device)
@@ -56,13 +62,7 @@ CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_1SRV(ID3D12Device* devic
     descSignature.NumParameters = 1;
     descSignature.pParameters = &descRootParameter;
     descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-    CComPtr<ID3DBlob> m_blob;
-    CComPtr<ID3DBlob> m_blobError;
-    TRYD3D(D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1_0, &m_blob, &m_blobError));
-    CComPtr<ID3D12RootSignature> pRootSignature;
-    TRYD3D(device->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
-    pRootSignature->SetName(L"DXR Root Signature");
-    return pRootSignature;
+    return DXR_Create_Signature(device, descSignature);
 }
 
 CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_4x32(ID3D12Device* device)
@@ -76,13 +76,7 @@ CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_4x32(ID3D12Device* devic
     descSignature.NumParameters = 1;
     descSignature.pParameters = &descRootParameter;
     descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-    CComPtr<ID3DBlob> m_blob;
-    CComPtr<ID3DBlob> m_blobError;
-    TRYD3D(D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1_0, &m_blob, &m_blobError));
-    CComPtr<ID3D12RootSignature> pRootSignature;
-    TRYD3D(device->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
-    pRootSignature->SetName(L"DXR Root Signature");
-    return pRootSignature;
+    return DXR_Create_Signature(device, descSignature);
 }
 
 CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12Device* device)
@@ -116,13 +110,7 @@ CComPtr<ID3D12RootSignature> DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12D
     descSignature.NumParameters = 2;
     descSignature.pParameters = &descRootParameter[0];
     descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-    CComPtr<ID3DBlob> m_blob;
-    CComPtr<ID3DBlob> m_blobError;
-    TRYD3D(D3D12SerializeRootSignature(&descSignature, D3D_ROOT_SIGNATURE_VERSION_1_0, &m_blob, &m_blobError));
-    CComPtr<ID3D12RootSignature> pRootSignature;
-    TRYD3D(device->CreateRootSignature(0, m_blob->GetBufferPointer(), m_blob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pRootSignature.p));
-    pRootSignature->SetName(L"DXR Root Signature");
-    return pRootSignature;
+    return DXR_Create_Signature(device, descSignature);
 }
 
 // Create a standard output UAV of the correct pixel format and sized to our default resolution.
@@ -192,8 +180,8 @@ static int DXGIFormatSize(DXGI_FORMAT format)
 CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device* device, const void* vertices, int vertexCount, DXGI_FORMAT vertexFormat, const void* indices, int indexCount, DXGI_FORMAT indexFormat)
 {
     // The GPU is doing the actual acceleration structure building work so we need all the mesh data up on GPU first.
-    CComPtr<ID3D12Resource1> ResourceVertices = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(vertexFormat) * vertexCount, DXGIFormatSize(vertexFormat) * vertexCount, vertices);
-    CComPtr<ID3D12Resource1> ResourceIndices = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(indexFormat) * indexCount, DXGIFormatSize(indexFormat) * indexCount, indices);
+    CComPtr<ID3D12Resource1> ResourceVertices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(vertexFormat) * vertexCount, DXGIFormatSize(vertexFormat) * vertexCount, vertices);
+    CComPtr<ID3D12Resource1> ResourceIndices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(indexFormat) * indexCount, DXGIFormatSize(indexFormat) * indexCount, indices);
     // Now create and initialize the BLAS with this data.
     CComPtr<ID3D12Resource1> ResourceBLAS;
     {
@@ -215,10 +203,10 @@ CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device* device, const void* ver
         descRaytracingInputs.pGeometryDescs = &descGeometry;
         device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
         // Create the output and scratch buffers.
-        ResourceBLAS = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-        CComPtr<ID3D12Resource1> ResourceASScratch = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        ResourceBLAS = D3D12_Create_Buffer(device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        CComPtr<ID3D12Resource1> ResourceASScratch = D3D12_Create_Buffer(device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
         // Build the acceleration structure.
-        RunOnGPU(device, [&](ID3D12GraphicsCommandList5* UploadBLASCommandList) {
+        D3D12_Run_Synchronously(device, [&](ID3D12GraphicsCommandList5* UploadBLASCommandList) {
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
             descBuild.DestAccelerationStructureData = ResourceBLAS->GetGPUVirtualAddress();
             descBuild.Inputs = descRaytracingInputs;
@@ -234,7 +222,7 @@ CComPtr<ID3D12Resource1> DXRCreateTLAS(Direct3D12Device* device, const D3D12_RAY
     ////////////////////////////////////////////////////////////////////////////////
     // INSTANCE - Create the instancing table.
     ////////////////////////////////////////////////////////////////////////////////
-    CComPtr<ID3D12Resource1> ResourceInstance = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, instances);
+    CComPtr<ID3D12Resource1> ResourceInstance = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount, instances);
     ////////////////////////////////////////////////////////////////////////////////
     // TLAS - Build the top level acceleration structure.
     ////////////////////////////////////////////////////////////////////////////////
@@ -248,11 +236,11 @@ CComPtr<ID3D12Resource1> DXRCreateTLAS(Direct3D12Device* device, const D3D12_RAY
         descRaytracingInputs.InstanceDescs = ResourceInstance->GetGPUVirtualAddress();
         device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
         // Create the output and scratch buffers.
-        ResourceTLAS = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        ResourceTLAS = D3D12_Create_Buffer(device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
         CComPtr<ID3D12Resource1> ResourceASScratch;
-        ResourceASScratch = D3D12CreateBuffer(device, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+        ResourceASScratch = D3D12_Create_Buffer(device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, descRaytracingPrebuild.ResultDataMaxSizeInBytes);
         // Build the acceleration structure.
-        RunOnGPU(device, [&](ID3D12GraphicsCommandList4* UploadTLASCommandList) {
+        D3D12_Run_Synchronously(device, [&](ID3D12GraphicsCommandList4* UploadTLASCommandList) {
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
             descBuild.DestAccelerationStructureData = ResourceTLAS->GetGPUVirtualAddress();
             descBuild.Inputs = descRaytracingInputs;

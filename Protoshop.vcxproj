@@ -17,6 +17,7 @@
     <ClInclude Include="Source\Core_Math.h" />
     <ClInclude Include="Source\Core_Object.h" />
     <ClInclude Include="Source\Core_OpenGL.h" />
+    <ClInclude Include="Source\Core_Util.h" />
     <ClInclude Include="Source\Core_VK.h" />
     <ClInclude Include="Source\Core_Window.h" />
     <ClInclude Include="Source\ImageUtil.h" />
@@ -41,6 +42,7 @@
     <ClCompile Include="Source\Core_DXGI.cpp" />
     <ClCompile Include="Source\Core_DXRUtil.cpp" />
     <ClCompile Include="Source\Core_OpenGL.cpp" />
+    <ClCompile Include="Source\Core_Util.cpp" />
     <ClCompile Include="Source\Core_VK.cpp" />
     <ClCompile Include="Source\Core_Window.cpp" />
     <ClCompile Include="Source\ImageUtil.cpp" />

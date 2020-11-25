@@ -2,6 +2,7 @@
 #include "Core_D3D11.h"
 #include "Core_Math.h"
 #include "Core_Object.h"
+#include "Core_Util.h"
 #include "Core_Window.h"
 #include "Sample.h"
 #include "Scene_Camera.h"

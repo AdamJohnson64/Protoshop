@@ -6,6 +6,7 @@
 #include "Core_VK.h"
 #include "Sample.h"
 #include "Core_DXGI.h"
+#include "Core_Util.h"
 #include "Core_Window.h"
 
 #include <d3d12.h>
@@ -34,8 +35,8 @@ class Sample_VKBasic : public Sample
     std::shared_ptr<VKDevice> m_pDeviceVK;
     std::shared_ptr<Direct3D12Device> m_pDeviceD3D12;
 public:
-    Sample_VKBasic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<VKDevice> pDeviceVK, std::shared_ptr<Direct3D12Device> pDeviceD3D12) :
-        m_pSwapChain(pSwapChain),
+    Sample_VKBasic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<VKDevice> pDeviceVK, std::shared_ptr<Direct3D12Device> pDeviceD3D12) :
+        m_pSwapChain(swapchain),
         m_pDeviceVK(pDeviceVK),
         m_pDeviceD3D12(pDeviceD3D12)
     {
@@ -120,7 +121,7 @@ public:
         }
 
         // Perform a clear of the Vulkan image via a dispatched command buffer.
-        VKRunOnGPU(m_pDeviceVK.get(), [&] (vk::CommandBuffer m_vkCommandBuffer) {
+        VK_Run_Synchronously(m_pDeviceVK.get(), [&] (vk::CommandBuffer m_vkCommandBuffer) {
             {
                 std::vector<vk::ImageMemoryBarrier> imb = { vk::ImageMemoryBarrier((vk::AccessFlagBits)0, (vk::AccessFlagBits)0, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, vkImage.get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)) };
                 m_vkCommandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, (vk::DependencyFlagBits)0, {}, {}, imb);
@@ -143,11 +144,11 @@ public:
             m_pDeviceD3D12->m_pDevice->CreateRenderTargetView(pD3D12SwapChainBuffer, &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(), m_pDeviceD3D12->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
 
             // Perform a copy of our intermediate D3D12 image (written by Vulkan) to the DXGI buffer.
-            RunOnGPU(m_pDeviceD3D12.get(), [&](ID3D12GraphicsCommandList5 *cmd)
+            D3D12_Run_Synchronously(m_pDeviceD3D12.get(), [&](ID3D12GraphicsCommandList5 *cmd)
                 {
-                    cmd->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12SwapChainBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
+                    cmd->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(pD3D12SwapChainBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
                     cmd->CopyResource(pD3D12SwapChainBuffer, pD3D12Backbuffer);
-                    cmd->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12SwapChainBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT));
+                    cmd->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(pD3D12SwapChainBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT));
                });            
         }
 
@@ -156,9 +157,9 @@ public:
     }
 };
 
-std::shared_ptr<Sample> CreateSample_VKBasic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<VKDevice> pDevice, std::shared_ptr<Direct3D12Device> pDevice12)
+std::shared_ptr<Sample> CreateSample_VKBasic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<VKDevice> device, std::shared_ptr<Direct3D12Device> pDevice12)
 {
-    return std::shared_ptr<Sample>(new Sample_VKBasic(pSwapChain, pDevice, pDevice12));
+    return std::shared_ptr<Sample>(new Sample_VKBasic(swapchain, device, pDevice12));
 }
 
 #endif // VULKAN_INSTALLED

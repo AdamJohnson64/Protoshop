@@ -23,7 +23,7 @@ private:
     CComPtr<ID3D11PixelShader> m_pD3D11PixelShader;
     CComPtr<ID3D11InputLayout> m_pD3D11InputLayout;
 public:
-    Sample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) : Sample_D3D11Base(pSwapChain, pDevice)
+    Sample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) : Sample_D3D11Base(swapchain, device)
     {
         {
             D3D11_RASTERIZER_DESC rasterizerdesc = {};
@@ -140,7 +140,7 @@ float4 mainPS() : SV_Target
     }
 };
 
-std::shared_ptr<Sample> CreateSample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Sample> CreateSample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device)
 {
-    return std::shared_ptr<Sample>(new Sample_D3D11Tessellation(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_D3D11Tessellation(swapchain, device));
 }

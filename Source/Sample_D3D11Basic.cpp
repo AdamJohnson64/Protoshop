@@ -21,9 +21,9 @@ private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     std::shared_ptr<Direct3D11Device> m_pDevice;
 public:
-    Sample_D3D11Basic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
-        m_pSwapChain(pSwapChain),
-        m_pDevice(pDevice)
+    Sample_D3D11Basic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
+        m_pSwapChain(swapchain),
+        m_pDevice(device)
     {
     }
     void Render()
@@ -48,7 +48,7 @@ public:
     }
 };
 
-std::shared_ptr<Sample> CreateSample_D3D11Basic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Sample> CreateSample_D3D11Basic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device)
 {
-    return std::shared_ptr<Sample>(new Sample_D3D11Basic(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_D3D11Basic(swapchain, device));
 }

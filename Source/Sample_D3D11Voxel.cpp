@@ -10,6 +10,7 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
+#include "Core_Util.h"
 #include "ImageUtil.h"
 #include "Sample.h"
 #include <atlbase.h>
@@ -28,9 +29,9 @@ private:
     CComPtr<ID3D11Texture3D> m_pTex3DImage;
     CComPtr<ID3D11ShaderResourceView> m_pSRVImage;
 public:
-    Sample_D3D11Voxel(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice) :
-        m_pSwapChain(pSwapChain),
-        m_pDevice(pDevice)
+    Sample_D3D11Voxel(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
+        m_pSwapChain(swapchain),
+        m_pDevice(device)
     {
         // Create a compute shader.
         CComPtr<ID3DBlob> pD3DBlobCodeCS = CompileShader("cs_5_0", "main", R"SHADER(
@@ -215,7 +216,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
 };
 
-std::shared_ptr<Sample> CreateSample_D3D11Voxel(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D11Device> pDevice)
+std::shared_ptr<Sample> CreateSample_D3D11Voxel(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device)
 {
-    return std::shared_ptr<Sample>(new Sample_D3D11Voxel(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_D3D11Voxel(swapchain, device));
 }

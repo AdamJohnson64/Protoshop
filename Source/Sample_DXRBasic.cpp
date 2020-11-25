@@ -13,6 +13,7 @@
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
 #include "Core_Math.h"
+#include "Core_Util.h"
 #include "Sample.h"
 #include "generated.Sample_DXRBasic.dxr.h"
 #include <atlbase.h>
@@ -31,13 +32,13 @@ private:
     CComPtr<ID3D12RootSignature> m_pRootSignatureGLOBAL;
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
 public:
-    Sample_DXRBasic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice) :
-        m_pSwapChain(pSwapChain),
-        m_pDevice(pDevice)
+    Sample_DXRBasic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device) :
+        m_pSwapChain(swapchain),
+        m_pDevice(device)
     {
-        m_pResourceTargetUAV = DXR_Create_Output_UAV(pDevice->m_pDevice);
-        m_pDescriptorHeapCBVSRVUAV = D3D12_Create_DescriptorHeap_CBVSRVUAV(pDevice->m_pDevice, 8);
-        m_pRootSignatureGLOBAL = DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(pDevice->m_pDevice);
+        m_pResourceTargetUAV = DXR_Create_Output_UAV(device->m_pDevice);
+        m_pDescriptorHeapCBVSRVUAV = D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
+        m_pRootSignatureGLOBAL = DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(device->m_pDevice);
         ////////////////////////////////////////////////////////////////////////////////
         // PIPELINE - Build the pipeline with all ray shaders.
         {
@@ -139,13 +140,13 @@ public:
         // SHADER TABLE - Create a table of all shaders for the raytracer.
         ////////////////////////////////////////////////////////////////////////////////
         // Our shader entry is a shader function entrypoint only; no other descriptors or data.
-        const uint32_t shaderEntrySize = D3D12Align(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+        const uint32_t shaderEntrySize = AlignUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
         // Ray Generation shader comes first, aligned as necessary.
         const uint32_t descriptorOffsetRayGenerationShader = 0;
         // Miss shader comes next.
-        const uint32_t descriptorOffsetMissShader = D3D12Align(descriptorOffsetRayGenerationShader + shaderEntrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        const uint32_t descriptorOffsetMissShader = AlignUp(descriptorOffsetRayGenerationShader + shaderEntrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
         // Then all the HitGroup shaders.
-        const uint32_t descriptorOffsetHitGroup = D3D12Align(descriptorOffsetMissShader + shaderEntrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        const uint32_t descriptorOffsetHitGroup = AlignUp(descriptorOffsetMissShader + shaderEntrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
         // The total size of the table we expect.
         const uint32_t shaderTableSize = descriptorOffsetHitGroup + shaderEntrySize * 1;
         // Now build this table.
@@ -161,7 +162,7 @@ public:
             memcpy(&shaderTableCPU[descriptorOffsetMissShader], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 2 - Hit Shader
             memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-            ResourceShaderTable = D3D12CreateBuffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
+            ResourceShaderTable = D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
         ////////////////////////////////////////////////////////////////////////////////
@@ -174,7 +175,7 @@ public:
         ////////////////////////////////////////////////////////////////////////////////
         // RAYTRACE - Finally call the raytracer and generate the frame.
         ////////////////////////////////////////////////////////////////////////////////
-        RunOnGPU(m_pDevice.get(), [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
+        D3D12_Run_Synchronously(m_pDevice.get(), [&](ID3D12GraphicsCommandList4* RaytraceCommandList) {
             // Attach the GLOBAL signature and descriptors to the compute root.
             RaytraceCommandList->SetComputeRootSignature(m_pRootSignatureGLOBAL);
             RaytraceCommandList->SetDescriptorHeaps(1, &m_pDescriptorHeapCBVSRVUAV.p);
@@ -195,18 +196,18 @@ public:
                 descDispatchRays.Depth = 1;
                 RaytraceCommandList->DispatchRays(&descDispatchRays);
             }
-            RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
-            RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
+            RaytraceCommandList->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_SOURCE));
+            RaytraceCommandList->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(pD3D12Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
             RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);
-            RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON));
-            RaytraceCommandList->ResourceBarrier(1, &D3D12MakeResourceTransitionBarrier(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON));
+            RaytraceCommandList->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(m_pResourceTargetUAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON));
+            RaytraceCommandList->ResourceBarrier(1, &Make_D3D12_RESOURCE_BARRIER(pD3D12Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON));
         });
         // Swap the backbuffer and send this to the desktop composer for display.
         TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
     }
 };
 
-std::shared_ptr<Sample> CreateSample_DXRBasic(std::shared_ptr<DXGISwapChain> pSwapChain, std::shared_ptr<Direct3D12Device> pDevice)
+std::shared_ptr<Sample> CreateSample_DXRBasic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device)
 {
-    return std::shared_ptr<Sample>(new Sample_DXRBasic(pSwapChain, pDevice));
+    return std::shared_ptr<Sample>(new Sample_DXRBasic(swapchain, device));
 }
