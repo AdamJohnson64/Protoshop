@@ -29,6 +29,7 @@
     <ClInclude Include="Source\Scene_Camera.h" />
     <ClInclude Include="Source\Scene_InstanceTable.h" />
     <ClInclude Include="Source\Scene_Mesh.h" />
+    <ClInclude Include="Source\Scene_MeshPLY.h" />
     <ClInclude Include="Source\Scene_ParametricUV.h" />
     <ClInclude Include="Source\Scene_ParametricUVToMesh.h" />
     <ClInclude Include="Source\Scene_Plane.h" />
@@ -68,6 +69,7 @@
     <ClCompile Include="Source\Sample_VKBasic.cpp" />
     <ClCompile Include="Source\Scene_Camera.cpp" />
     <ClCompile Include="Source\Scene_InstanceTable.cpp" />
+    <ClCompile Include="Source\Scene_MeshPLY.cpp" />
     <ClCompile Include="Source\Scene_ParametricUVToMesh.cpp" />
     <ClCompile Include="Source\Scene_Plane.cpp" />
     <ClCompile Include="Source\Scene_Sphere.cpp" />
