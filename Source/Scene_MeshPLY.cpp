@@ -14,16 +14,42 @@ MeshPLY::MeshPLY(const std::string& filename)
     std::string line;
     consumelineandexpect(readit, "ply");
     consumelineandexpect(readit, "format ascii 1.0");
-    consumelineandexpect(readit, "comment zipper output");
     std::getline(readit, line);
+    if (line.substr(0, 7) != "comment") throw std::string("Expected 'comment ...'.");
+    std::getline(readit, line);
+    // Get vertex count.
     if (line.substr(0, 15) != "element vertex ") throw std::exception("Expected 'element vertex <nnn>'.");
     int vertexcount = std::stoi(line.substr(15));
-    consumelineandexpect(readit, "property float x");
-    consumelineandexpect(readit, "property float y");
-    consumelineandexpect(readit, "property float z");
-    consumelineandexpect(readit, "property float confidence");
-    consumelineandexpect(readit, "property float intensity");
+    // Read vertex component schema.
+    int componentcount = 0;
+    int componentindexofx = -1;
+    int componentindexofy = -1;
+    int componentindexofz = -1;
+    ANOTHERPROPERTY:
     std::getline(readit, line);
+    if (line.substr(0, 8) == "property")
+    {
+        if (line.substr(9, 5) != "float") throw std::string("Expected 'float' vertex data.");
+        std::string component = line.substr(15);
+        if (component == "x")
+        {
+            componentindexofx = componentcount;
+        }
+        if (component == "y")
+        {
+            componentindexofy = componentcount;
+        }
+        if (component == "z")
+        {
+            componentindexofz = componentcount;
+        }
+        ++componentcount;
+        goto ANOTHERPROPERTY;
+    }
+    if (componentindexofx == -1) throw std::exception("Expected an 'x' vertex component.");
+    if (componentindexofy == -1) throw std::exception("Expected an 'x' vertex component.");
+    if (componentindexofz == -1) throw std::exception("Expected an 'x' vertex component.");
+    // Get face count.
     if (line.substr(0, 13) != "element face ") throw std::exception("Expected 'element face <nnn>'.");
     int facecount = std::stoi(line.substr(13));
     consumelineandexpect(readit, "property list uchar int vertex_indices");
@@ -31,16 +57,21 @@ MeshPLY::MeshPLY(const std::string& filename)
     m_vertices.reserve(vertexcount);
     for (int i = 0; i < vertexcount; ++i)
     {
-        std::getline(readit, line, ' ');
-        float x = std::stof(line);
-        std::getline(readit, line, ' ');
-        float y = std::stof(line);
-        std::getline(readit, line, ' ');
-        float z = std::stof(line);
-        std::getline(readit, line, ' ');
-        float confidence = std::stof(line);
-        std::getline(readit, line);
-        float intensity = std::stof(line);
+        float x, y, z;
+        for (int c = 0; c < componentcount; ++c)
+        {
+            if (c != componentcount - 1)
+            {
+                std::getline(readit, line, ' ');
+            }
+            else
+            {
+                std::getline(readit, line);
+            }
+            if (c == componentindexofx) x = std::stof(line);
+            if (c == componentindexofy) y = std::stof(line);
+            if (c == componentindexofz) z = std::stof(line);
+        }
         m_vertices.push_back({x, y, z});
     }
     m_faces.reserve(facecount);
