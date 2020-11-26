@@ -40,7 +40,7 @@ public:
         CComPtr<ID3DBlob> pD3DBlobCodeCS = CompileShader("cs_5_0", "main", R"SHADER(
 cbuffer Constants
 {
-    float4x4 transform;
+    float4x4 TransformPixelToImage;
 };
 
 RWTexture2D<float4> renderTarget;
@@ -55,7 +55,7 @@ float4 Checkerboard(uint2 pixel)
 float4 Sample(float2 pixel)
 {
     float4 checkerboard = Checkerboard((uint2)pixel);
-    float2 pos = mul(transform, float4(pixel.x, pixel.y, 0, 1)).xy;
+    float2 pos = mul(TransformPixelToImage, float4(pixel.x, pixel.y, 0, 1)).xy;
     uint Width, Height, NumberOfLevels;
     userImage.GetDimensions(0, Width, Height, NumberOfLevels);
     if (pos.x >= 0 && pos.x < (int)Width && pos.y >= 0 && pos.y < (int)Height)
@@ -154,15 +154,14 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         rotate.M11 = rotate.M22 = rotate.M33 = rotate.M44 = 1;
         rotate.M11 = cosf(angle); rotate.M12 = sinf(angle);
         rotate.M21 = -sinf(angle); rotate.M22 = cosf(angle);
-        Matrix44 transform =
+        Matrix44 transformImageToPixel =
             CreateMatrixTranslate(Vector3 { -IMAGE_WIDTH / 2, -IMAGE_HEIGHT / 2, 0 })
             * CreateMatrixScale(Vector3 { zoom, zoom, 1 })
             * rotate
             * CreateMatrixTranslate(Vector3 { RENDERTARGET_WIDTH / 2, RENDERTARGET_HEIGHT / 2, 0 });
-        transform = Invert(transform);
         angle += 0.01f;
         m_pDevice->GetID3D11DeviceContext()->ClearState();
-        m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(m_pBufferConstants, 0, nullptr, &transform, 0, 0);
+        m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(m_pBufferConstants, 0, nullptr, &Invert(transformImageToPixel), 0, 0);
         // Beginning of rendering.
         m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &pUAVTarget.p, nullptr);
         m_pDevice->GetID3D11DeviceContext()->CSSetShader(m_pComputeShader, nullptr, 0);

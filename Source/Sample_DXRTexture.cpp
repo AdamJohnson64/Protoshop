@@ -180,7 +180,7 @@ public:
             ResourceTLAS = DXRCreateTLAS(m_pDevice.get(), &DxrInstance[0], DxrInstance.size());
         }
         // Create a constant buffer view for top level data.
-        CComPtr<ID3D12Resource> ResourceConstants = D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Invert(GetCameraViewProjection()));
+        CComPtr<ID3D12Resource> ResourceConstants = D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Invert(GetCameraWorldToClip()));
 	    const uint32_t descriptorElementSize = m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         const uint32_t descriptorOffsetGlobals = 0;
         const uint32_t descriptorOffsetLocals = descriptorOffsetGlobals + descriptorElementSize * 3;

@@ -2,5 +2,5 @@
 
 #include "Core_Math.h"
 
-Matrix44 GetCameraViewProjection();
-void SetCameraViewProjection(const Matrix44& viewProjection);
+Matrix44 GetCameraWorldToClip();
+void SetCameraWorldToView(const Matrix44& viewProjection);

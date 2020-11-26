@@ -40,12 +40,12 @@ public:
         CComPtr<ID3DBlob> pD3DBlobCodeVS = CompileShader("vs_5_0", "main", R"SHADER(
 cbuffer Constants
 {
-    float4x4 transform;
+    float4x4 TransformWorldToClip;
 };
 
 float4 main(float4 pos : SV_Position) : SV_Position
 {
-        return mul(transform, pos);
+        return mul(TransformWorldToClip, pos);
 })SHADER");
 
         ////////////////////////////////////////////////////////////////////////////////
@@ -108,7 +108,7 @@ float4 main() : SV_Target
         std::vector<CComPtr<ID3D12Resource1>> constantBuffers;
         for (int i = 0; i < scene->Instances.size(); ++i)
         {
-            constantBuffers.push_back(D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &(scene->Instances[i].Transform * GetCameraViewProjection())));
+            constantBuffers.push_back(D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, 256, 256, &(scene->Instances[i].TransformObjectToWorld * GetCameraWorldToClip())));
             {
                 D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
                 descConstantBuffer.BufferLocation = constantBuffers[i]->GetGPUVirtualAddress();

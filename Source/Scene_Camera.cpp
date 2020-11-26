@@ -2,20 +2,20 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-static Matrix44 cameraVP = {
+static Matrix44 TransformWorldToView = {
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, -1, 5, 1
 };
 
-Matrix44 GetCameraViewProjection()
+Matrix44 GetCameraWorldToClip()
 {
-    Matrix44 project = CreateProjection<float>(0.01f, 100.0f, 45 * (M_PI / 180), 45 * (M_PI / 180));
-    return cameraVP * project;
+    Matrix44 transformViewToClip = CreateProjection<float>(0.01f, 100.0f, 45 * (M_PI / 180), 45 * (M_PI / 180));
+    return TransformWorldToView * transformViewToClip;
 }
 
-void SetCameraViewProjection(const Matrix44& viewProjection)
+void SetCameraWorldToView(const Matrix44& transformWorldToView)
 {
-    cameraVP = viewProjection;
+    TransformWorldToView = transformWorldToView;
 }

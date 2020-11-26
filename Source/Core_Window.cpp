@@ -105,16 +105,16 @@ private:
                 int mouseYNow = HIWORD(lParam);
                 int mouseDeltaX = mouseXNow - mouseX;
                 int mouseDeltaY = mouseYNow - mouseY;
-                Matrix44 transform = CreateMatrixRotation(cameraRot);
+                Matrix44 transformWorldToView = CreateMatrixRotation(cameraRot);
                 // Camera Truck
                 if (!modifierShift && !modifierCtrl)
                 {
-                    cameraPos.X += transform.M11 * -mouseDeltaX * 0.01f;
-                    cameraPos.Y += transform.M12 * -mouseDeltaX * 0.01f;
-                    cameraPos.Z += transform.M13 * -mouseDeltaX * 0.01f;
-                    cameraPos.X += transform.M21 * mouseDeltaY * 0.01f;
-                    cameraPos.Y += transform.M22 * mouseDeltaY * 0.01f;
-                    cameraPos.Z += transform.M23 * mouseDeltaY * 0.01f;
+                    cameraPos.X += transformWorldToView.M11 * -mouseDeltaX * 0.01f;
+                    cameraPos.Y += transformWorldToView.M12 * -mouseDeltaX * 0.01f;
+                    cameraPos.Z += transformWorldToView.M13 * -mouseDeltaX * 0.01f;
+                    cameraPos.X += transformWorldToView.M21 * mouseDeltaY * 0.01f;
+                    cameraPos.Y += transformWorldToView.M22 * mouseDeltaY * 0.01f;
+                    cameraPos.Z += transformWorldToView.M23 * mouseDeltaY * 0.01f;
                 }
                 // Camera Pan/Tilt
                 if (!modifierShift && modifierCtrl)
@@ -125,14 +125,14 @@ private:
                 // Camera Dolly
                 if (modifierShift && modifierCtrl)
                 {
-                    cameraPos.X += transform.M31 * -mouseDeltaY * 0.01f;
-                    cameraPos.Y += transform.M32 * -mouseDeltaY * 0.01f;
-                    cameraPos.Z += transform.M33 * -mouseDeltaY * 0.01f;
+                    cameraPos.X += transformWorldToView.M31 * -mouseDeltaY * 0.01f;
+                    cameraPos.Y += transformWorldToView.M32 * -mouseDeltaY * 0.01f;
+                    cameraPos.Z += transformWorldToView.M33 * -mouseDeltaY * 0.01f;
                 }
-                transform.M41 = cameraPos.X;
-                transform.M42 = cameraPos.Y;
-                transform.M43 = cameraPos.Z;
-                SetCameraViewProjection(Invert(transform));
+                transformWorldToView.M41 = cameraPos.X;
+                transformWorldToView.M42 = cameraPos.Y;
+                transformWorldToView.M43 = cameraPos.Z;
+                SetCameraWorldToView(Invert(transformWorldToView));
                 InvalidateRect(hWnd, nullptr, FALSE);
             }
             mouseX = LOWORD(lParam);

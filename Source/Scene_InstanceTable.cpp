@@ -23,23 +23,23 @@ std::shared_ptr<InstanceTable> InstanceTable::Default()
         std::shared_ptr<Mesh> _mesh2(new ParametricUVToMesh(_sphere, 100, 100));
         uint32_t hSphere = scene->addMesh(_mesh2);
         // Create Instances.
-        Matrix44 transform = {};
-        transform.M11 = 10;
-        transform.M22 = 0.25f;
-        transform.M33 = 10;
-        transform.M44 = 1;
-        scene->addInstance(transform, hPlane, hCheckerboard);
-        transform.M11 = 1;
-        transform.M22 = 1;
-        transform.M33 = 1;
-        transform.M44 = 1;
-        transform.M42 = 1;
-        transform.M41 = -2;
-        scene->addInstance(transform, hSphere, hPlastic);
-        transform.M41 = 0;
-        scene->addInstance(transform, hSphere, hPlastic);
-        transform.M41 = 2;
-        scene->addInstance(transform, hSphere, hPlastic);
+        Matrix44 transformObjectToWorld = {};
+        transformObjectToWorld.M11 = 10;
+        transformObjectToWorld.M22 = 0.25f;
+        transformObjectToWorld.M33 = 10;
+        transformObjectToWorld.M44 = 1;
+        scene->addInstance(transformObjectToWorld, hPlane, hCheckerboard);
+        transformObjectToWorld.M11 = 1;
+        transformObjectToWorld.M22 = 1;
+        transformObjectToWorld.M33 = 1;
+        transformObjectToWorld.M44 = 1;
+        transformObjectToWorld.M42 = 1;
+        transformObjectToWorld.M41 = -2;
+        scene->addInstance(transformObjectToWorld, hSphere, hPlastic);
+        transformObjectToWorld.M41 = 0;
+        scene->addInstance(transformObjectToWorld, hSphere, hPlastic);
+        transformObjectToWorld.M41 = 2;
+        scene->addInstance(transformObjectToWorld, hSphere, hPlastic);
         initialized = true;
     }
     return scene;
@@ -59,9 +59,9 @@ uint32_t InstanceTable::addMesh(std::shared_ptr<Mesh> mesh)
     return index;
 }
 
-uint32_t InstanceTable::addInstance(const Matrix44& transform, uint32_t geometryIndex, uint32_t materialIndex)
+uint32_t InstanceTable::addInstance(const Matrix44& transformObjectToWorld, uint32_t geometryIndex, uint32_t materialIndex)
 {
     uint32_t index = Instances.size();
-    Instances.push_back({ transform, geometryIndex, materialIndex });
+    Instances.push_back({ transformObjectToWorld, geometryIndex, materialIndex });
     return index;
 }

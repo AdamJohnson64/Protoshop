@@ -39,12 +39,12 @@ public:
         const char* szShaderCode = R"SHADER(
 cbuffer Constants
 {
-    float4x4 transform;
+    float4x4 TransformWorldToClip;
 };
 
 float4 mainVS(float4 pos : SV_Position) : SV_Position
 {
-    return mul(transform, pos);
+    return mul(TransformWorldToClip, pos);
 }
 
 float4 mainPS() : SV_Target
@@ -68,7 +68,7 @@ float4 mainPS() : SV_Target
         // Update constant buffer.
         {
             char constants[1024];
-            memcpy(constants, &GetCameraViewProjection(), sizeof(Matrix44));
+            memcpy(constants, &GetCameraWorldToClip(), sizeof(Matrix44));
             m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(m_pD3D11BufferConstants, 0, nullptr, constants, 0, 0);
         }
         // Create a vertex buffer.

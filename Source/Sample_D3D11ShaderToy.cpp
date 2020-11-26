@@ -71,7 +71,7 @@ public:
         std::string strShaderCode =
 R"SHADER(cbuffer Constants
 {
-    float4x4 Transform;
+    float4x4 TransformClipToWorld;
     float Time;
 };
 
@@ -143,9 +143,9 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     const float2 Normalized = mad(float2(2, -2) / float2(640, 480), float2(dispatchThreadId.xy), float2(-1, 1));
     ////////////////////////////////////////////////////////////////////////////////
     // Form the world ray.
-    float4 front = mul(Transform, float4(Normalized.xy, 0, 1));
+    float4 front = mul(TransformClipToWorld, float4(Normalized.xy, 0, 1));
     front /= front.w;
-    float4 back = mul(Transform, float4(Normalized.xy, 1, 1));
+    float4 back = mul(TransformClipToWorld, float4(Normalized.xy, 1, 1));
     back /= back.w;
     float3 origin = front.xyz;
     float3 direction = normalize(back.xyz - front.xyz);
@@ -274,11 +274,11 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
                 static float t = 0;
                 struct Constants
                 {
-                    Matrix44 Transform;
+                    Matrix44 TransformClipToWorld;
                     float Time;
                 };
                 Constants constants;
-                constants.Transform = Invert(GetCameraViewProjection());
+                constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
                 constants.Time = t;
                 window->m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(window->m_pBufferConstants, 0, nullptr, &constants, 0, 0);
                 t += 0.01;

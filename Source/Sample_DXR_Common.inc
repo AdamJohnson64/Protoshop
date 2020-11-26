@@ -46,7 +46,7 @@ RaytracingAccelerationStructure raytracingAccelerationStructure : register(t0);
 
 cbuffer Constants : register(b0)
 {
-    float4x4 Transform;
+    float4x4 TransformClipToWorld;
 };
 
 // Just to show how materials might be set up we'll patch 4 32-bit embedded

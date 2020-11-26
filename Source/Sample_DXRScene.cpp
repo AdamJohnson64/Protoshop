@@ -154,13 +154,13 @@ public:
             instanceDescs.resize(scene->Instances.size());
             for (int i = 0; i < scene->Instances.size(); ++i)
             {
-                instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(scene->Instances[i].Transform, scene->Instances[i].MaterialIndex, BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress());
+                instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(scene->Instances[i].TransformObjectToWorld, scene->Instances[i].MaterialIndex, BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress());
                 instanceDescs[i].InstanceID = i;
             }
             ResourceTLAS = DXRCreateTLAS(m_pDevice.get(), &instanceDescs[0], instanceDescs.size());
         }
         // Create a constant buffer view for top level data.
-        CComPtr<ID3D12Resource> ResourceConstants = D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Invert(GetCameraViewProjection()));
+        CComPtr<ID3D12Resource> ResourceConstants = D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Invert(GetCameraWorldToClip()));
         ////////////////////////////////////////////////////////////////////////////////
         // Build the descriptor table to establish resource views.
         //
