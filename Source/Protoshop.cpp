@@ -36,8 +36,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> D3D11Mesh = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Mesh(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
         std::shared_ptr<Window> D3D11RayMarch = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11RayMarch(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
         std::shared_ptr<Window> D3D11Tessellation = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Tessellation(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-        //std::shared_ptr<Window> D3D11Voxel = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Voxel(CreateDXGISwapChain(pDevice11, hwnd), pDevice11); });
-        //std::shared_ptr<Object> D3DShaderToy = CreateSample_D3D11ShaderToy(pDevice11);
+        //std::shared_ptr<Window> D3D11Voxel = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Voxel(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
+        //std::shared_ptr<Object> D3DShaderToy = CreateSample_D3D11ShaderToy(deviceD3D11);
         ////////////////////////////////////////////////////////////////////////////////
         // Direct3D 12 Samples
         std::shared_ptr<Direct3D12Device> deviceD3D12 = CreateDirect3D12Device();
