@@ -47,6 +47,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::shared_ptr<Window> DXRBasic = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRBasic(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
         std::shared_ptr<Window> DXRMesh = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRMesh(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
         std::shared_ptr<Window> DXRPathTrace = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRPathTrace(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
+        std::shared_ptr<Window> DXRScene = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRMesh(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
         std::shared_ptr<Window> DXRTexture = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRTexture(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
         std::shared_ptr<Window> DXRWhitted = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRWhitted(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
         ////////////////////////////////////////////////////////////////////////////////

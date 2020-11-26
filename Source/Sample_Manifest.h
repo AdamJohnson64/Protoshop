@@ -24,6 +24,7 @@ std::shared_ptr<Sample> CreateSample_DXRAmbientOcclusion(std::shared_ptr<DXGISwa
 std::shared_ptr<Sample> CreateSample_DXRBasic(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device);
 std::shared_ptr<Sample> CreateSample_DXRMesh(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device);
 std::shared_ptr<Sample> CreateSample_DXRPathTrace(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device);
+std::shared_ptr<Sample> CreateSample_DXRScene(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device);
 std::shared_ptr<Sample> CreateSample_DXRTexture(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device);
 std::shared_ptr<Sample> CreateSample_DXRWhitted(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device);
 

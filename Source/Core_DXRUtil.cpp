@@ -181,7 +181,11 @@ CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device* device, const void* ver
 {
     // The GPU is doing the actual acceleration structure building work so we need all the mesh data up on GPU first.
     CComPtr<ID3D12Resource1> ResourceVertices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(vertexFormat) * vertexCount, DXGIFormatSize(vertexFormat) * vertexCount, vertices);
-    CComPtr<ID3D12Resource1> ResourceIndices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(indexFormat) * indexCount, DXGIFormatSize(indexFormat) * indexCount, indices);
+    CComPtr<ID3D12Resource1> ResourceIndices;
+    if (indices != nullptr)
+    {
+        ResourceIndices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(indexFormat) * indexCount, DXGIFormatSize(indexFormat) * indexCount, indices);
+    }
     // Now create and initialize the BLAS with this data.
     CComPtr<ID3D12Resource1> ResourceBLAS;
     {
@@ -197,7 +201,7 @@ CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device* device, const void* ver
         descGeometry.Triangles.VertexFormat = vertexFormat;
         descGeometry.Triangles.IndexCount = indexCount;
         descGeometry.Triangles.VertexCount = vertexCount;
-        descGeometry.Triangles.IndexBuffer = ResourceIndices->GetGPUVirtualAddress();
+        descGeometry.Triangles.IndexBuffer = ResourceIndices != nullptr ? ResourceIndices->GetGPUVirtualAddress() : 0;
         descGeometry.Triangles.VertexBuffer.StartAddress = ResourceVertices->GetGPUVirtualAddress();
         descGeometry.Triangles.VertexBuffer.StrideInBytes = DXGIFormatSize(vertexFormat);
         descRaytracingInputs.pGeometryDescs = &descGeometry;

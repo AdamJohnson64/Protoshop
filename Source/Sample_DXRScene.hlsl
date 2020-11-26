@@ -3,7 +3,7 @@
 #include "Sample_DXR_Shaders.inc"
 
 [shader("closesthit")]
-void ClosestHit(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
     float3 worldRayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
     float x = worldRayOrigin.x * 4;
@@ -14,4 +14,10 @@ void ClosestHit(inout RayPayload rayPayload, in IntersectionAttributes intersect
     z *= 2;
     float checker = ((int)x + (int)z) % 2;
     rayPayload.Color = float3(checker, checker, checker);
+}
+
+[shader("closesthit")]
+void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+{
+    rayPayload.Color = float3(1, 0, 0);
 }

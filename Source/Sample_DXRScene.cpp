@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Sample - Direct3D 12 DXR Mesh
+// Sample - Direct3D 12 DXR Scene
 ///////////////////////////////////////////////////////////////////////////////
 // This sample demonstrates how to render a Direct3D 12 scene from an abstract
 // scene description using DXR raytracing.
@@ -22,14 +22,14 @@
 #include "Scene_ParametricUVToMesh.h"
 #include "Scene_Plane.h"
 #include "Scene_Sphere.h"
-#include "generated.Sample_DXRMesh.dxr.h"
+#include "generated.Sample_DXRScene.dxr.h"
 #include <atlbase.h>
 #include <array>
 #include <memory>
 #include <string>
 #include <vector>
 
-class Sample_DXRMesh : public Sample
+class Sample_DXRScene : public Sample
 {
 private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
@@ -39,7 +39,7 @@ private:
     CComPtr<ID3D12RootSignature> m_pRootSignatureGLOBAL;
     CComPtr<ID3D12StateObject> m_pPipelineStateObject;
 public:
-    Sample_DXRMesh(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device) :
+    Sample_DXRScene(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device) :
         m_pSwapChain(swapchain),
         m_pDevice(device)
     {
@@ -61,6 +61,38 @@ public:
             descSubobject[setupSubobject].pDesc = &descLibrary;
             ++setupSubobject;
 
+            std::vector<std::shared_ptr<std::wstring>> hitGroupNames;
+            std::vector<std::shared_ptr<D3D12_HIT_GROUP_DESC>> hitGroups;
+            std::vector<const WCHAR*> shaderExports;
+            shaderExports.push_back(L"RayGenerationMVPClip");
+            shaderExports.push_back(L"Miss");
+            for (int i = 0; i < scene->Materials.size(); ++i)
+            {
+                const Material* pMaterial = scene->Materials[i].get();
+                std::shared_ptr<std::wstring> descHitGroupName(new std::wstring(std::wstring(L"HitGroup") + std::to_wstring(i)));
+                hitGroupNames.push_back(descHitGroupName);
+                std::shared_ptr<D3D12_HIT_GROUP_DESC> descHitGroup(new D3D12_HIT_GROUP_DESC());
+                hitGroups.push_back(descHitGroup);
+                shaderExports.push_back(descHitGroupName->c_str());
+                descHitGroup->HitGroupExport = descHitGroupName->c_str();
+                descHitGroup->Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+                if (dynamic_cast<const Checkerboard*>(pMaterial))
+                {
+                    descHitGroup->ClosestHitShaderImport = L"MaterialCheckerboard";
+                }
+                else if (dynamic_cast<const RedPlastic*>(pMaterial))
+                {
+                    descHitGroup->ClosestHitShaderImport = L"MaterialRedPlastic";
+                }
+                else
+                {
+                    throw std::exception("Unable to construct material.");
+                }
+                descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+                descSubobject[setupSubobject].pDesc = descHitGroup.get();
+                ++setupSubobject;
+            }
+
             D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig = {};
             descShaderConfig.MaxPayloadSizeInBytes = sizeof(float[3]); // Size of RayPayload
             descShaderConfig.MaxAttributeSizeInBytes = D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
@@ -68,9 +100,8 @@ public:
             descSubobject[setupSubobject].pDesc = &descShaderConfig;
             ++setupSubobject;
 
-            const WCHAR* shaderExports[] = { L"RayGenerationMVPClip", L"Miss", L"HitGroup" };
             D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
-            descSubobjectExports.NumExports = _countof(shaderExports);
+            descSubobjectExports.NumExports = shaderExports.size();
             descSubobjectExports.pExports = &shaderExports[0];
             descSubobjectExports.pSubobjectToAssociate = &descSubobject[setupSubobject - 1];
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
@@ -85,13 +116,6 @@ public:
             descPipelineConfig.MaxTraceRecursionDepth = 1;
             descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
             descSubobject[setupSubobject].pDesc = &descPipelineConfig;
-            ++setupSubobject;
-
-            D3D12_HIT_GROUP_DESC descHitGroup = {};
-            descHitGroup.HitGroupExport = L"HitGroup";
-            descHitGroup.ClosestHitShaderImport = L"ClosestHit";
-            descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-            descSubobject[setupSubobject].pDesc = &descHitGroup;
             ++setupSubobject;
 
             D3D12_STATE_OBJECT_DESC descStateObject = {};
@@ -109,20 +133,32 @@ public:
         // BLAS - Build the bottom level acceleration structures.
         ////////////////////////////////////////////////////////////////////////////////
         // Create and initialize the BLAS.
-        Vector3 vertices[] = {
-            {-10, 0,  10},
-            { 10, 0,  10},
-            { 10, 0, -10},
-            { 10, 0, -10},
-            {-10, 0, -10},
-            {-10, 0,  10}
-        };
-        CComPtr<ID3D12Resource1> BottomLevelAS = DXRCreateBLAS(m_pDevice.get(), vertices, _countof(vertices), DXGI_FORMAT_R32G32B32_FLOAT, nullptr, 0, DXGI_FORMAT_UNKNOWN);
+        std::vector<CComPtr<ID3D12Resource1>> BottomLevelAS;
+        BottomLevelAS.resize(scene->Meshes.size());
+        for (int i = 0; i < scene->Meshes.size(); ++i)
+        {
+            int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+            std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
+            scene->Meshes[i]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(Vector3));
+            int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+            std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
+            scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
+            BottomLevelAS[i] = DXRCreateBLAS(m_pDevice.get(), vertices.get(), scene->Meshes[i]->getVertexCount(), DXGI_FORMAT_R32G32B32_FLOAT, indices.get(), scene->Meshes[i]->getIndexCount(), DXGI_FORMAT_R32_UINT);
+        }
         ////////////////////////////////////////////////////////////////////////////////
         // TLAS - Build the top level acceleration structure.
         ////////////////////////////////////////////////////////////////////////////////
-        D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = Make_D3D12_RAYTRACING_INSTANCE_DESC(CreateMatrixTranslate(Vector3 {0, 0, 0}), 0, BottomLevelAS->GetGPUVirtualAddress());
-        CComPtr<ID3D12Resource1> ResourceTLAS = DXRCreateTLAS(m_pDevice.get(), &instanceDesc, 1);
+        CComPtr<ID3D12Resource1> ResourceTLAS;
+        {
+            std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDescs;
+            instanceDescs.resize(scene->Instances.size());
+            for (int i = 0; i < scene->Instances.size(); ++i)
+            {
+                instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(scene->Instances[i].Transform, scene->Instances[i].MaterialIndex, BottomLevelAS[scene->Instances[i].GeometryIndex]->GetGPUVirtualAddress());
+                instanceDescs[i].InstanceID = i;
+            }
+            ResourceTLAS = DXRCreateTLAS(m_pDevice.get(), &instanceDescs[0], instanceDescs.size());
+        }
         // Create a constant buffer view for top level data.
         CComPtr<ID3D12Resource> ResourceConstants = D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44), &Invert(GetCameraViewProjection()));
         ////////////////////////////////////////////////////////////////////////////////
@@ -176,7 +212,7 @@ public:
         // Then all the HitGroup shaders.
         const uint32_t descriptorOffsetHitGroup = AlignUp(descriptorOffsetMissShader + shaderEntrySize, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
         // The total size of the table we expect.
-        const uint32_t shaderTableSize = descriptorOffsetHitGroup + shaderEntrySize * 1;
+        const uint32_t shaderTableSize = descriptorOffsetHitGroup + shaderEntrySize * 2;
         // Now build this table.
         CComPtr<ID3D12Resource1> ResourceShaderTable;
         {
@@ -189,7 +225,9 @@ public:
             // Shader Index 1 - Miss Shader
             memcpy(&shaderTableCPU[descriptorOffsetMissShader], stateObjectProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             // Shader Index 2 - Hit Shader 1
-            memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0], stateObjectProperties->GetShaderIdentifier(L"HitGroup0"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+            // Shader Index 3 - Hit Shader 2
+            memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1], stateObjectProperties->GetShaderIdentifier(L"HitGroup1"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
             ResourceShaderTable = D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize, &shaderTableCPU[0]);
             ResourceShaderTable->SetName(L"DXR Shader Table");
         }
@@ -235,7 +273,7 @@ public:
     }
 };
 
-std::shared_ptr<Sample> CreateSample_DXRMesh(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device)
+std::shared_ptr<Sample> CreateSample_DXRScene(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D12Device> device)
 {
-    return std::shared_ptr<Sample>(new Sample_DXRMesh(swapchain, device));
+    return std::shared_ptr<Sample>(new Sample_DXRScene(swapchain, device));
 }
