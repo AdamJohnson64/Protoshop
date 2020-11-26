@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Sample - Direct3D 11 Scene
+// Sample - Direct3D 11 Mesh
 ///////////////////////////////////////////////////////////////////////////////
 // This sample demonstrates how to render a triangle using the simplest shader
 // setups and a common camera.
@@ -11,7 +11,7 @@
 #include "Scene_Camera.h"
 #include <atlbase.h>
 
-class Sample_D3D11Scene : public Sample_D3D11Base
+class Sample_D3D11Mesh : public Sample_D3D11Base
 {
 private:
     CComPtr<ID3D11RasterizerState> m_pD3D11RasterizerState;
@@ -20,7 +20,7 @@ private:
     CComPtr<ID3D11PixelShader> m_pD3D11PixelShader;
     CComPtr<ID3D11InputLayout> m_pD3D11InputLayout;
 public:
-    Sample_D3D11Scene(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
+    Sample_D3D11Mesh(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
         Sample_D3D11Base(swapchain, device)
     {
         {
@@ -106,7 +106,7 @@ float4 mainPS() : SV_Target
     }
 };
 
-std::shared_ptr<Sample> CreateSample_D3D11Scene(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device)
+std::shared_ptr<Sample> CreateSample_D3D11Mesh(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device)
 {
-    return std::shared_ptr<Sample>(new Sample_D3D11Scene(swapchain, device));
+    return std::shared_ptr<Sample>(new Sample_D3D11Mesh(swapchain, device));
 }
