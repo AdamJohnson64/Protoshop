@@ -17,7 +17,7 @@ std::shared_ptr<InstanceTable> InstanceTable::Default()
         uint32_t hPlastic = scene->addMaterial(_plastic);
         // Create Geometry.
         std::shared_ptr<ParametricUV> _plane(new Plane());
-        std::shared_ptr<Mesh> _mesh(new ParametricUVToMesh(_plane, 100, 100));
+        std::shared_ptr<Mesh> _mesh(new ParametricUVToMesh(_plane, 1, 1));
         uint32_t hPlane = scene->addMesh(_mesh);
         std::shared_ptr<ParametricUV> _sphere(new Sphere());
         std::shared_ptr<Mesh> _mesh2(new ParametricUVToMesh(_sphere, 100, 100));
