@@ -8,6 +8,7 @@
 // You'll find this 4096 byte ROM mapped at 0xD000. The more you know...
 ////////////////////////////////////////////////////////////////////////////////
 uint8_t Commodore64CharacterGeneratorROM[] = {
+    // clang-format off
     0x3c,0x66,0x6e,0x6e,0x60,0x62,0x3c,0x00,0x18,0x3c,0x66,0x7e,0x66,0x66,0x66,0x00, // @A
     0x7c,0x66,0x66,0x7c,0x66,0x66,0x7c,0x00,0x3c,0x66,0x60,0x60,0x60,0x66,0x3c,0x00, // BC
     0x78,0x6c,0x66,0x66,0x66,0x6c,0x78,0x00,0x7e,0x60,0x60,0x78,0x60,0x60,0x7e,0x00, // DE
@@ -264,6 +265,7 @@ uint8_t Commodore64CharacterGeneratorROM[] = {
     0xfe,0xfc,0xf9,0x93,0x87,0x8f,0x9f,0xff,0xff,0xff,0xff,0xff,0x0f,0x0f,0x0f,0x0f,
     0xf0,0xf0,0xf0,0xf0,0xff,0xff,0xff,0xff,0xe7,0xe7,0xe7,0x07,0x07,0xff,0xff,0xff,
     0x0f,0x0f,0x0f,0x0f,0xff,0xff,0xff,0xff,0x0f,0x0f,0x0f,0x0f,0xf0,0xf0,0xf0,0xf0,
+    // clang-format on
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -273,6 +275,7 @@ uint8_t Commodore64CharacterGeneratorROM[] = {
 // The great thing about standards is that there's so many to choose from!
 ////////////////////////////////////////////////////////////////////////////////
 uint8_t Commodore64ASCIIRemap[256] = {
+    // clang-format off
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // 0
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // 16
     0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A,0x2B,0x2C,0x2D,0x2E,0x2F, // 32
@@ -289,6 +292,7 @@ uint8_t Commodore64ASCIIRemap[256] = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // 208
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // 224
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // 240
+    // clang-format on
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -296,159 +300,157 @@ uint8_t Commodore64ASCIIRemap[256] = {
 // I include this here because reasons.
 ////////////////////////////////////////////////////////////////////////////////
 uint8_t Commodore64BalloonSprite[] = {
-    0,127,0,1,255,192,3,255,224,3,231,224,
-    7,217,240,7,223,240,7,217,240,3,231,224,
-    3,255,224,3,255,224,2,255,160,1,127,64,
-    1,62,64,0,156,128,0,156,128,0,73,0,0,73,0,
-    0,62,0,0,62,0,0,62,0,0,28,0
+    0,   127, 0,   1,   255, 192, 3,   255, 224, 3,   231, 224, 7,
+    217, 240, 7,   223, 240, 7,   217, 240, 3,   231, 224, 3,   255,
+    224, 3,   255, 224, 2,   255, 160, 1,   127, 64,  1,   62,  64,
+    0,   156, 128, 0,   156, 128, 0,   73,  0,   0,   73,  0,   0,
+    62,  0,   0,   62,  0,   0,   62,  0,   0,   28,  0};
+
+struct PixelBGRA {
+  uint8_t B, G, R, A;
+};
+struct ImageBGRA {
+  void *data;
+  uint32_t width, height, stride;
 };
 
-struct PixelBGRA { uint8_t B, G, R, A; };
-struct ImageBGRA { void* data; uint32_t width, height, stride; };
-
-void Image_Plot_Pixel(const ImageBGRA& image, int x, int y, PixelBGRA& color)
-{
-    if (x >= 0 && x < image.width && y >= 0 && y < image.height)
-    {
-        *reinterpret_cast<PixelBGRA*>(reinterpret_cast<uint8_t*>(image.data) + sizeof(PixelBGRA) * x + image.stride * y) = color;
-    }
+void Image_Plot_Pixel(const ImageBGRA &image, int x, int y, PixelBGRA &color) {
+  if (x >= 0 && x < image.width && y >= 0 && y < image.height) {
+    *reinterpret_cast<PixelBGRA *>(reinterpret_cast<uint8_t *>(image.data) +
+                                   sizeof(PixelBGRA) * x + image.stride * y) =
+        color;
+  }
 }
 
-void Image_Plot_C64_Sprite(const ImageBGRA& image, int x, int y, PixelBGRA color)
-{
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(image.data);
-    for (int j = 0; j < 21; ++j)
-    {
-        for (int c = 0; c < 3; ++c)
-        {
-            uint8_t bitmap = Commodore64BalloonSprite[c + 3 * j];
-            for (int i = 0; i < 8; ++i)
-            {
-                if (bitmap & 0x80)
-                {
-                    Image_Plot_Pixel(image, x + 8 * c + i, y + j, color);
-                }
-                bitmap = bitmap << 1;
-            }
+void Image_Plot_C64_Sprite(const ImageBGRA &image, int x, int y,
+                           PixelBGRA color) {
+  uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
+  for (int j = 0; j < 21; ++j) {
+    for (int c = 0; c < 3; ++c) {
+      uint8_t bitmap = Commodore64BalloonSprite[c + 3 * j];
+      for (int i = 0; i < 8; ++i) {
+        if (bitmap & 0x80) {
+          Image_Plot_Pixel(image, x + 8 * c + i, y + j, color);
         }
+        bitmap = bitmap << 1;
+      }
     }
+  }
 }
 
-void Image_Plot_Char_PETSCII(const ImageBGRA& image, int x, int y, PixelBGRA color, uint8_t character)
-{
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(image.data);
-    for (int j = 0; j < 8; ++j)
-    {
-        uint8_t bitmap = Commodore64CharacterGeneratorROM[8 * character + j];
-        for (int i = 0; i < 8; ++i)
-        {
-            if (bitmap & 0x80)
-            {
-                Image_Plot_Pixel(image, x + i, y + j, color);
-            }
-            bitmap = bitmap << 1;
-        }
+void Image_Plot_Char_PETSCII(const ImageBGRA &image, int x, int y,
+                             PixelBGRA color, uint8_t character) {
+  uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
+  for (int j = 0; j < 8; ++j) {
+    uint8_t bitmap = Commodore64CharacterGeneratorROM[8 * character + j];
+    for (int i = 0; i < 8; ++i) {
+      if (bitmap & 0x80) {
+        Image_Plot_Pixel(image, x + i, y + j, color);
+      }
+      bitmap = bitmap << 1;
     }
+  }
 }
 
-void Image_Plot_Char_ASCII(const ImageBGRA& image, int x, int y, PixelBGRA color, uint8_t character)
-{
-    Image_Plot_Char_PETSCII(image, x, y, color, Commodore64ASCIIRemap[character]);
+void Image_Plot_Char_ASCII(const ImageBGRA &image, int x, int y,
+                           PixelBGRA color, uint8_t character) {
+  Image_Plot_Char_PETSCII(image, x, y, color, Commodore64ASCIIRemap[character]);
 }
 
-void Image_Plot_String(const ImageBGRA& image, int x, int y, PixelBGRA color, const char* string)
-{
-    while (*string != 0)
-    {
-        Image_Plot_Char_ASCII(image, x, y, color, static_cast<uint8_t>(*string));
-        x += 8;
-        ++string;
+void Image_Plot_String(const ImageBGRA &image, int x, int y, PixelBGRA color,
+                       const char *string) {
+  while (*string != 0) {
+    Image_Plot_Char_ASCII(image, x, y, color, static_cast<uint8_t>(*string));
+    x += 8;
+    ++string;
+  }
+}
+
+void Image_Fill_Color(ImageBGRA &image, PixelBGRA color) {
+  uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
+  for (int y = 0; y < image.height; ++y) {
+    for (int x = 0; x < image.width; ++x) {
+      *reinterpret_cast<PixelBGRA *>(bytes + sizeof(PixelBGRA) * x +
+                                     image.stride * y) = color;
     }
+  }
 }
 
-void Image_Fill_Color(ImageBGRA& image, PixelBGRA color)
-{
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(image.data);
-    for (int y = 0; y < image.height; ++y)
-    {
-        for (int x = 0; x < image.width; ++x)
-        {
-            *reinterpret_cast<PixelBGRA*>(bytes + sizeof(PixelBGRA) * x + image.stride * y) = color;
-        }
+void Image_Fill_Fun(ImageBGRA &image) {
+  uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
+  for (int y = 0; y < image.height; ++y) {
+    for (int x = 0; x < image.width; ++x) {
+      PixelBGRA &pixel = *reinterpret_cast<PixelBGRA *>(
+          bytes + sizeof(PixelBGRA) * x + image.stride * y);
+      pixel.B = (x * 2 + y * 4);
+      pixel.G = (x * 4 + y * 2);
+      pixel.R = (x * 4 + y * 4);
+      pixel.A = 0xFF;
     }
+  }
 }
 
-void Image_Fill_Fun(ImageBGRA& image)
-{
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(image.data);
-    for (int y = 0; y < image.height; ++y)
-    {
-        for (int x = 0; x < image.width; ++x)
-        {
-            PixelBGRA& pixel = *reinterpret_cast<PixelBGRA*>(bytes + sizeof(PixelBGRA) * x + image.stride * y);
-            pixel.B = (x * 2 + y * 4);
-            pixel.G = (x * 4 + y * 2);
-            pixel.R = (x * 4 + y * 4);
-            pixel.A = 0xFF;
-        }
+void Image_Fill_Commodore64(ImageBGRA &image) {
+  PixelBGRA db{0xFF, 0x00, 0x00, 0xFF}; // Dark Blue
+  PixelBGRA lb{0xFF, 0x80, 0x80, 0xFF}; // Light Blue
+  Image_Fill_Color(image, db);
+  Image_Plot_String(image, 8 * 4, 8 * 1, lb, "**** COMMODORE 64 BASIC V2 ****");
+  Image_Plot_String(image, 8 * 1, 8 * 3, lb,
+                    "64K RAM SYSTEM  38911 BASIC BYTES FREE");
+  Image_Plot_String(image, 8 * 0, 8 * 5, lb, "READY.");
+  Image_Plot_String(image, 8 * 0, 8 * 6, lb, "1 REM UP, UP, AND AWAY!");
+  Image_Plot_String(image, 8 * 0, 8 * 7, lb, "5 PRINT \"(CLR/HOME)\"");
+  Image_Plot_String(image, 8 * 0, 8 * 8, lb,
+                    "10 V=53248 : REM START OF  DISPLAY CHIP");
+  Image_Plot_String(image, 8 * 0, 8 * 9, lb,
+                    "11 POKE V+21,4 : REM ENABLE SPRITE 2");
+  Image_Plot_String(image, 8 * 0, 8 * 10, lb,
+                    "12 POKE 2042,13 : REM SPRITE 2 DATA FROM");
+  Image_Plot_String(image, 8 * 0, 8 * 11, lb, "13TH BLK");
+  Image_Plot_String(image, 8 * 0, 8 * 12, lb,
+                    "20 FOR N = 0 TO 62: READ Q : POKE 932+N,");
+  Image_Plot_String(image, 8 * 0, 8 * 13, lb, "Q: NEXT");
+  Image_Plot_String(image, 8 * 0, 8 * 14, lb, "30 FOR X = 0 TO 200");
+  Image_Plot_String(image, 8 * 0, 8 * 15, lb,
+                    "40 POKE V+4,X: REM UPDATE X COORDINATES");
+  Image_Plot_String(image, 8 * 0, 8 * 16, lb,
+                    "50 POKE V+5,X: REM UPDATE Y COORDINATES");
+  Image_Plot_String(image, 8 * 0, 8 * 17, lb, "60 NEXT X");
+  Image_Plot_String(image, 8 * 0, 8 * 18, lb, "70 GOTO 30");
+  Image_Plot_String(image, 8 * 0, 8 * 19, lb,
+                    "200 DATA 0,127,0,1,255,192,3,255,224,3,2");
+  Image_Plot_String(image, 8 * 0, 8 * 20, lb, "31,224");
+  Image_Plot_String(image, 8 * 0, 8 * 21, lb,
+                    "210 DATA 7,217,240,7,223,240,7,217,240,3");
+  Image_Plot_String(image, 8 * 0, 8 * 22, lb, ",231,224");
+  Image_Plot_String(image, 8 * 0, 8 * 23, lb,
+                    "220 DATA 3,255,224,3,255,224,2,255,160,1");
+  Image_Plot_String(image, 8 * 0, 8 * 24, lb, ",127,64");
+  Image_Plot_C64_Sprite(image, 128, 128, PixelBGRA{0xFF, 0xFF, 0xFF, 0xFF});
+}
+
+void Image_Fill_Sample(ImageBGRA &image) {
+  Image_Fill_Fun(image);
+  for (int y = 0; y < 16; ++y) {
+    for (int x = 0; x < 32; ++x) {
+      Image_Plot_Char_PETSCII(image, 8 + 9 * x + 1, 8 + 9 * y + 1,
+                              PixelBGRA{0x00, 0x00, 0x00, 0xFF}, x + 32 * y);
     }
-}
-
-void Image_Fill_Commodore64(ImageBGRA& image)
-{
-    PixelBGRA db { 0xFF, 0x00, 0x00, 0xFF }; // Dark Blue
-    PixelBGRA lb { 0xFF, 0x80, 0x80, 0xFF }; // Light Blue
-    Image_Fill_Color(image, db);
-    Image_Plot_String(image, 8 * 4, 8 *  1, lb, "**** COMMODORE 64 BASIC V2 ****");
-    Image_Plot_String(image, 8 * 1, 8 *  3, lb, "64K RAM SYSTEM  38911 BASIC BYTES FREE");
-    Image_Plot_String(image, 8 * 0, 8 *  5, lb, "READY.");
-    Image_Plot_String(image, 8 * 0, 8 *  6, lb, "1 REM UP, UP, AND AWAY!");
-    Image_Plot_String(image, 8 * 0, 8 *  7, lb, "5 PRINT \"(CLR/HOME)\"");
-    Image_Plot_String(image, 8 * 0, 8 *  8, lb, "10 V=53248 : REM START OF  DISPLAY CHIP");
-    Image_Plot_String(image, 8 * 0, 8 *  9, lb, "11 POKE V+21,4 : REM ENABLE SPRITE 2");
-    Image_Plot_String(image, 8 * 0, 8 * 10, lb, "12 POKE 2042,13 : REM SPRITE 2 DATA FROM");
-    Image_Plot_String(image, 8 * 0, 8 * 11, lb, "13TH BLK");
-    Image_Plot_String(image, 8 * 0, 8 * 12, lb, "20 FOR N = 0 TO 62: READ Q : POKE 932+N,");
-    Image_Plot_String(image, 8 * 0, 8 * 13, lb, "Q: NEXT");
-    Image_Plot_String(image, 8 * 0, 8 * 14, lb, "30 FOR X = 0 TO 200");
-    Image_Plot_String(image, 8 * 0, 8 * 15, lb, "40 POKE V+4,X: REM UPDATE X COORDINATES");
-    Image_Plot_String(image, 8 * 0, 8 * 16, lb, "50 POKE V+5,X: REM UPDATE Y COORDINATES");
-    Image_Plot_String(image, 8 * 0, 8 * 17, lb, "60 NEXT X");
-    Image_Plot_String(image, 8 * 0, 8 * 18, lb, "70 GOTO 30");
-    Image_Plot_String(image, 8 * 0, 8 * 19, lb, "200 DATA 0,127,0,1,255,192,3,255,224,3,2");
-    Image_Plot_String(image, 8 * 0, 8 * 20, lb, "31,224");
-    Image_Plot_String(image, 8 * 0, 8 * 21, lb, "210 DATA 7,217,240,7,223,240,7,217,240,3");
-    Image_Plot_String(image, 8 * 0, 8 * 22, lb, ",231,224");
-    Image_Plot_String(image, 8 * 0, 8 * 23, lb, "220 DATA 3,255,224,3,255,224,2,255,160,1");
-    Image_Plot_String(image, 8 * 0, 8 * 24, lb, ",127,64");
-    Image_Plot_C64_Sprite(image, 128, 128, PixelBGRA { 0xFF, 0xFF, 0xFF, 0xFF });
-}
-
-void Image_Fill_Sample(ImageBGRA& image)
-{
-    Image_Fill_Fun(image);
-    for (int y = 0; y < 16; ++y)
-    {
-        for (int x = 0; x < 32; ++x)
-        {
-            Image_Plot_Char_PETSCII(image, 8 + 9 * x + 1, 8 + 9 * y + 1, PixelBGRA { 0x00, 0x00, 0x00, 0xFF }, x + 32 * y);
-        }
+  }
+  for (int y = 0; y < 16; ++y) {
+    for (int x = 0; x < 32; ++x) {
+      Image_Plot_Char_PETSCII(image, 8 + 9 * x, 8 + 9 * y,
+                              PixelBGRA{0xFF, 0xFF, 0xFF, 0xFF}, x + 32 * y);
     }
-    for (int y = 0; y < 16; ++y)
-    {
-        for (int x = 0; x < 32; ++x)
-        {
-            Image_Plot_Char_PETSCII(image, 8 + 9 * x, 8 + 9 * y, PixelBGRA { 0xFF, 0xFF, 0xFF, 0xFF }, x + 32 * y);
-        }
-    }
+  }
 }
 
-void Image_Fill_Commodore64(void* data, uint32_t width, uint32_t height, uint32_t stride)
-{
-    Image_Fill_Commodore64(ImageBGRA{ data, width, height, stride });
+void Image_Fill_Commodore64(void *data, uint32_t width, uint32_t height,
+                            uint32_t stride) {
+  Image_Fill_Commodore64(ImageBGRA{data, width, height, stride});
 }
 
-void Image_Fill_Sample(void* data, uint32_t width, uint32_t height, uint32_t stride)
-{
-    Image_Fill_Sample(ImageBGRA{ data, width, height, stride });
+void Image_Fill_Sample(void *data, uint32_t width, uint32_t height,
+                       uint32_t stride) {
+  Image_Fill_Sample(ImageBGRA{data, width, height, stride});
 }

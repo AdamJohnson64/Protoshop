@@ -1,7 +1,6 @@
 #pragma once
 
-class Object
-{
+class Object {
 public:
-    virtual ~Object() = default;
+  virtual ~Object() = default;
 };

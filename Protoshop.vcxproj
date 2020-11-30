@@ -92,6 +92,8 @@
     <FxCompile Include="Source\Sample_DXRWhitted.hlsl" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".clang-format" />
+    <None Include=".gitignore" />
     <None Include="Source\Sample_DXR_Implicit.inc" />
     <None Include="Source\Sample_DXR_RaySimple.inc" />
     <None Include="Source\Sample_DXR_Shaders.inc" />

@@ -6,11 +6,12 @@
 #include <dxgi1_6.h>
 #include <memory>
 
-class DXGISwapChain : public Object
-{
+class DXGISwapChain : public Object {
 public:
-    virtual IDXGISwapChain4* GetIDXGISwapChain() = 0;
+  virtual IDXGISwapChain4 *GetIDXGISwapChain() = 0;
 };
 
-std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D11Device> device, HWND hWnd);
-std::shared_ptr<DXGISwapChain> CreateDXGISwapChain(std::shared_ptr<Direct3D12Device> device, HWND hWnd);
+std::shared_ptr<DXGISwapChain>
+CreateDXGISwapChain(std::shared_ptr<Direct3D11Device> device, HWND hWnd);
+std::shared_ptr<DXGISwapChain>
+CreateDXGISwapChain(std::shared_ptr<Direct3D12Device> device, HWND hWnd);

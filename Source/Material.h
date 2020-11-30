@@ -2,16 +2,11 @@
 
 #include "Core_Object.h"
 
-class Material
-{
+class Material {
 public:
-    virtual ~Material() = default;
+  virtual ~Material() = default;
 };
 
-class Checkerboard : public Object, public Material
-{
-};
+class Checkerboard : public Object, public Material {};
 
-class RedPlastic : public Object, public Material
-{
-};
+class RedPlastic : public Object, public Material {};

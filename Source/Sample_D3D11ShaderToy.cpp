@@ -7,13 +7,13 @@
 // Also, Win32 sucks.
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "Core_Math.h"
-#include "Core_Object.h"
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_Math.h"
+#include "Core_Object.h"
 #include "Core_Util.h"
 #include "Scene_Camera.h"
 
@@ -22,60 +22,67 @@
 
 #include <Windows.h>
 
-class Sample_D3D11ShaderToy : public Object
-{
+class Sample_D3D11ShaderToy : public Object {
 private:
-    const int SHADERTOY_CODE_WIDTH = 512;
-    const int SHADERTOY_ERROR_HEIGHT = 64;
-    HWND m_hWindowHost;
-    HWND m_hWindowRender;
-    HWND m_hWindowCode;
-    HWND m_hWindowError;
-    std::shared_ptr<Direct3D11Device> m_pDevice;
-    std::shared_ptr<DXGISwapChain> m_pSwapChain;
-    CComPtr<ID3D11Buffer> m_pBufferConstants;
-    CComPtr<ID3D11ComputeShader> m_pComputeShader;
-    __declspec(align(16)) struct Constants
-    {
-        Matrix44 TransformClipToWorld;
-        float Time;
-    };
+  const int SHADERTOY_CODE_WIDTH = 512;
+  const int SHADERTOY_ERROR_HEIGHT = 64;
+  HWND m_hWindowHost;
+  HWND m_hWindowRender;
+  HWND m_hWindowCode;
+  HWND m_hWindowError;
+  std::shared_ptr<Direct3D11Device> m_pDevice;
+  std::shared_ptr<DXGISwapChain> m_pSwapChain;
+  CComPtr<ID3D11Buffer> m_pBufferConstants;
+  CComPtr<ID3D11ComputeShader> m_pComputeShader;
+  __declspec(align(16)) struct Constants {
+    Matrix44 TransformClipToWorld;
+    float Time;
+  };
+
 public:
-    Sample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device)
-        : m_pDevice(device)
+  Sample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device)
+      : m_pDevice(device) {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create all window classes.
+    static bool windowClassInitialized = false;
+    if (!windowClassInitialized) {
+      {
+        WNDCLASS wndclass = {};
+        wndclass.lpfnWndProc = WindowProcHost;
+        wndclass.cbWndExtra = sizeof(this);
+        wndclass.lpszClassName = L"ProtoshopShaderToyHost";
+        if (0 == RegisterClass(&wndclass))
+          throw FALSE;
+      }
+      {
+        WNDCLASS wndclass = {};
+        wndclass.lpfnWndProc = WindowProcRender;
+        wndclass.cbWndExtra = sizeof(this);
+        wndclass.lpszClassName = L"ProtoshopShaderToyRender";
+        if (0 == RegisterClass(&wndclass))
+          throw FALSE;
+      }
+      windowClassInitialized = true;
+    }
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create a window of this class.
     {
-        ////////////////////////////////////////////////////////////////////////////////
-        // Create all window classes.
-        static bool windowClassInitialized = false;
-        if (!windowClassInitialized)
-        {
-            {
-                WNDCLASS wndclass = {};
-                wndclass.lpfnWndProc = WindowProcHost;
-                wndclass.cbWndExtra = sizeof(this);
-                wndclass.lpszClassName = L"ProtoshopShaderToyHost";
-                if (0 == RegisterClass(&wndclass)) throw FALSE;
-            }
-            {
-                WNDCLASS wndclass = {};
-                wndclass.lpfnWndProc = WindowProcRender;
-                wndclass.cbWndExtra = sizeof(this);
-                wndclass.lpszClassName = L"ProtoshopShaderToyRender";
-                if (0 == RegisterClass(&wndclass)) throw FALSE;
-            }
-            windowClassInitialized = true;
-        }
-        ////////////////////////////////////////////////////////////////////////////////
-        // Create a window of this class.
-        {
-            RECT rect = { 64, 64, 64 + RENDERTARGET_WIDTH + SHADERTOY_CODE_WIDTH, 64 + RENDERTARGET_HEIGHT };
-            AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
-            m_hWindowHost = CreateWindow(L"ProtoshopShaderToyHost", L"Protoshop Shader Toy (Win32)", WS_OVERLAPPEDWINDOW | WS_VISIBLE, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, nullptr, this);
-        }
-        m_hWindowRender = CreateWindow(L"ProtoshopShaderToyRender", L"Render Window", WS_CHILD | WS_VISIBLE, 0, 0, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, m_hWindowHost, nullptr, nullptr, this);
-        m_pSwapChain = CreateDXGISwapChain(m_pDevice, m_hWindowRender);
-        std::string strShaderCode =
-R"SHADER(cbuffer Constants
+      RECT rect = {64, 64, 64 + RENDERTARGET_WIDTH + SHADERTOY_CODE_WIDTH,
+                   64 + RENDERTARGET_HEIGHT};
+      AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+      m_hWindowHost = CreateWindow(
+          L"ProtoshopShaderToyHost", L"Protoshop Shader Toy (Win32)",
+          WS_OVERLAPPEDWINDOW | WS_VISIBLE, rect.left, rect.top,
+          rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr,
+          nullptr, this);
+    }
+    m_hWindowRender = CreateWindow(L"ProtoshopShaderToyRender",
+                                   L"Render Window", WS_CHILD | WS_VISIBLE, 0,
+                                   0, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT,
+                                   m_hWindowHost, nullptr, nullptr, this);
+    m_pSwapChain = CreateDXGISwapChain(m_pDevice, m_hWindowRender);
+    std::string strShaderCode =
+        R"SHADER(cbuffer Constants
 {
     float4x4 TransformClipToWorld;
     float Time;
@@ -179,117 +186,135 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     renderTarget[dispatchThreadId.xy] = float4(0.4, 0.2, 0.8, 1);
 })SHADER";
-        {
-            // Because Win32 is dumb we need to replace newline characters.
-            size_t findnewline = strShaderCode.find("\n");
-            while(findnewline != std::string::npos)
-            {
-                strShaderCode.replace(findnewline, 1, "\r\n");
-                findnewline = strShaderCode.find("\n", findnewline + 2);
-            }
-        }
-        m_hWindowCode = CreateWindowA("EDIT", strShaderCode.c_str(), WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN, RENDERTARGET_WIDTH, 0, SHADERTOY_CODE_WIDTH, RENDERTARGET_HEIGHT - SHADERTOY_ERROR_HEIGHT, m_hWindowHost, nullptr, nullptr, nullptr);
-        m_hWindowError = CreateWindowA("EDIT", "Compilation successful.", WS_CHILD | WS_VISIBLE | ES_MULTILINE, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT - SHADERTOY_ERROR_HEIGHT, SHADERTOY_CODE_WIDTH, SHADERTOY_ERROR_HEIGHT, m_hWindowHost, nullptr, nullptr, nullptr);
-        ////////////////////////////////////////////////////////////////////////////////
-        // Create a constant buffer.
-        m_pBufferConstants = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
-        ////////////////////////////////////////////////////////////////////////////////
-        // Create the shader above.
-        {
-            CComPtr<ID3DBlob> pD3DBlobCodeCS = CompileShader("cs_5_0", "main", strShaderCode.c_str());
-            m_pComputeShader.Release();
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(), nullptr, &m_pComputeShader));
-        }
-        ////////////////////////////////////////////////////////////////////////////////
-        // Start a timer to drive frames.
-        SetTimer(m_hWindowRender, 0, 1000 / 30, [](HWND hWnd, UINT, UINT_PTR, DWORD)
-            {
-                InvalidateRect(hWnd, nullptr, FALSE);
-            });
-    }
-    static LRESULT WINAPI WindowProcHost(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
-        if (uMsg == WM_CREATE)
-        {
-            const CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
-            SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
-            return 0;
-        }
-        Sample_D3D11ShaderToy* window = reinterpret_cast<Sample_D3D11ShaderToy*>(GetWindowLongPtr(hWnd, 0));
-        if (uMsg == WM_CLOSE)
-        {
-            PostQuitMessage(0);
-            return 0;
-        }
-        if (uMsg == WM_COMMAND && reinterpret_cast<HWND>(lParam) == window->m_hWindowCode)
-        {
-            if (HIWORD(wParam) == EN_CHANGE)
-            {
-                const int buffersize = 65536;
-                std::unique_ptr<char[]> code(new char[buffersize]);
-                GetWindowTextA(window->m_hWindowCode, code.get(), buffersize);
-                try
-                {
-                    CComPtr<ID3DBlob> pD3DBlobCodeCS = CompileShader("cs_5_0", "main", code.get());
-                    window->m_pComputeShader.Release();
-                    TRYD3D(window->m_pDevice->GetID3D11Device()->CreateComputeShader(pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(), nullptr, &window->m_pComputeShader));
-                    SetWindowTextA(window->m_hWindowError, "Compilation successful.");
-                }
-                catch (std::exception& ex)
-                {
-                    SetWindowTextA(window->m_hWindowError, ex.what());
-                }
-                return 0;
-            }
-        }
-        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+      // Because Win32 is dumb we need to replace newline characters.
+      size_t findnewline = strShaderCode.find("\n");
+      while (findnewline != std::string::npos) {
+        strShaderCode.replace(findnewline, 1, "\r\n");
+        findnewline = strShaderCode.find("\n", findnewline + 2);
+      }
     }
-    static LRESULT WINAPI WindowProcRender(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    m_hWindowCode =
+        CreateWindowA("EDIT", strShaderCode.c_str(),
+                      WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL |
+                          ES_AUTOHSCROLL | ES_WANTRETURN,
+                      RENDERTARGET_WIDTH, 0, SHADERTOY_CODE_WIDTH,
+                      RENDERTARGET_HEIGHT - SHADERTOY_ERROR_HEIGHT,
+                      m_hWindowHost, nullptr, nullptr, nullptr);
+    m_hWindowError = CreateWindowA(
+        "EDIT", "Compilation successful.", WS_CHILD | WS_VISIBLE | ES_MULTILINE,
+        RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT - SHADERTOY_ERROR_HEIGHT,
+        SHADERTOY_CODE_WIDTH, SHADERTOY_ERROR_HEIGHT, m_hWindowHost, nullptr,
+        nullptr, nullptr);
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create a constant buffer.
+    m_pBufferConstants =
+        D3D11_Create_Buffer(m_pDevice->GetID3D11Device(),
+                            D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create the shader above.
     {
-        if (uMsg == WM_CREATE)
-        {
-            const CREATESTRUCT* cs = reinterpret_cast<CREATESTRUCT*>(lParam);
-            SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
-            return 0;
-        }
-        Sample_D3D11ShaderToy* window = reinterpret_cast<Sample_D3D11ShaderToy*>(GetWindowLongPtr(hWnd, 0));
-        if (uMsg == WM_CLOSE)
-        {
-            PostQuitMessage(0);
-            return 0;
-        }
-        if (uMsg == WM_PAINT)
-        {
-            CComPtr<ID3D11UnorderedAccessView> pUAVTarget = D3D11_Create_UAV_From_SwapChain(window->m_pDevice->GetID3D11Device(), window->m_pSwapChain->GetIDXGISwapChain());
-            window->m_pDevice->GetID3D11DeviceContext()->ClearState();
-            // Upload the constant buffer.
-            {
-                static float t = 0;
-                Constants constants;
-                constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
-                constants.Time = t;
-                window->m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(window->m_pBufferConstants, 0, nullptr, &constants, 0, 0);
-                t += 0.01;
-            }
-            // Render if we have a shader.
-            if (window->m_pComputeShader != nullptr)
-            {
-                window->m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &pUAVTarget.p, nullptr);
-                window->m_pDevice->GetID3D11DeviceContext()->CSSetShader(window->m_pComputeShader, nullptr, 0);
-                window->m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1, &window->m_pBufferConstants.p);
-                window->m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, 1);
-                window->m_pDevice->GetID3D11DeviceContext()->ClearState();
-                window->m_pDevice->GetID3D11DeviceContext()->Flush();
-            }
-            window->m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
-            ValidateRect(hWnd, nullptr);
-            return 0;
-        }
-        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+      CComPtr<ID3DBlob> pD3DBlobCodeCS =
+          CompileShader("cs_5_0", "main", strShaderCode.c_str());
+      m_pComputeShader.Release();
+      TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(
+          pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(),
+          nullptr, &m_pComputeShader));
     }
+    ////////////////////////////////////////////////////////////////////////////////
+    // Start a timer to drive frames.
+    SetTimer(m_hWindowRender, 0, 1000 / 30,
+             [](HWND hWnd, UINT, UINT_PTR, DWORD) {
+               InvalidateRect(hWnd, nullptr, FALSE);
+             });
+  }
+  static LRESULT WINAPI WindowProcHost(HWND hWnd, UINT uMsg, WPARAM wParam,
+                                       LPARAM lParam) {
+    if (uMsg == WM_CREATE) {
+      const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
+      SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
+      return 0;
+    }
+    Sample_D3D11ShaderToy *window =
+        reinterpret_cast<Sample_D3D11ShaderToy *>(GetWindowLongPtr(hWnd, 0));
+    if (uMsg == WM_CLOSE) {
+      PostQuitMessage(0);
+      return 0;
+    }
+    if (uMsg == WM_COMMAND &&
+        reinterpret_cast<HWND>(lParam) == window->m_hWindowCode) {
+      if (HIWORD(wParam) == EN_CHANGE) {
+        const int buffersize = 65536;
+        std::unique_ptr<char[]> code(new char[buffersize]);
+        GetWindowTextA(window->m_hWindowCode, code.get(), buffersize);
+        try {
+          CComPtr<ID3DBlob> pD3DBlobCodeCS =
+              CompileShader("cs_5_0", "main", code.get());
+          window->m_pComputeShader.Release();
+          TRYD3D(window->m_pDevice->GetID3D11Device()->CreateComputeShader(
+              pD3DBlobCodeCS->GetBufferPointer(),
+              pD3DBlobCodeCS->GetBufferSize(), nullptr,
+              &window->m_pComputeShader));
+          SetWindowTextA(window->m_hWindowError, "Compilation successful.");
+        } catch (std::exception &ex) {
+          SetWindowTextA(window->m_hWindowError, ex.what());
+        }
+        return 0;
+      }
+    }
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+  }
+  static LRESULT WINAPI WindowProcRender(HWND hWnd, UINT uMsg, WPARAM wParam,
+                                         LPARAM lParam) {
+    if (uMsg == WM_CREATE) {
+      const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
+      SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
+      return 0;
+    }
+    Sample_D3D11ShaderToy *window =
+        reinterpret_cast<Sample_D3D11ShaderToy *>(GetWindowLongPtr(hWnd, 0));
+    if (uMsg == WM_CLOSE) {
+      PostQuitMessage(0);
+      return 0;
+    }
+    if (uMsg == WM_PAINT) {
+      CComPtr<ID3D11UnorderedAccessView> pUAVTarget =
+          D3D11_Create_UAV_From_SwapChain(
+              window->m_pDevice->GetID3D11Device(),
+              window->m_pSwapChain->GetIDXGISwapChain());
+      window->m_pDevice->GetID3D11DeviceContext()->ClearState();
+      // Upload the constant buffer.
+      {
+        static float t = 0;
+        Constants constants;
+        constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
+        constants.Time = t;
+        window->m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
+            window->m_pBufferConstants, 0, nullptr, &constants, 0, 0);
+        t += 0.01;
+      }
+      // Render if we have a shader.
+      if (window->m_pComputeShader != nullptr) {
+        window->m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
+            0, 1, &pUAVTarget.p, nullptr);
+        window->m_pDevice->GetID3D11DeviceContext()->CSSetShader(
+            window->m_pComputeShader, nullptr, 0);
+        window->m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(
+            0, 1, &window->m_pBufferConstants.p);
+        window->m_pDevice->GetID3D11DeviceContext()->Dispatch(
+            RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, 1);
+        window->m_pDevice->GetID3D11DeviceContext()->ClearState();
+        window->m_pDevice->GetID3D11DeviceContext()->Flush();
+      }
+      window->m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
+      ValidateRect(hWnd, nullptr);
+      return 0;
+    }
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+  }
 };
 
-std::shared_ptr<Object> CreateSample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device)
-{
-    return std::shared_ptr<Object>(new Sample_D3D11ShaderToy(device));
+std::shared_ptr<Object>
+CreateSample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device) {
+  return std::shared_ptr<Object>(new Sample_D3D11ShaderToy(device));
 }
