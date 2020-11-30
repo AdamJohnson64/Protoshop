@@ -28,6 +28,11 @@ CreateSample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> swapchain,
 std::shared_ptr<Sample>
 CreateSample_D3D11Scene(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D11Device> device);
+
+std::shared_ptr<Sample>
+CreateSample_D3D11ShowTexture(std::shared_ptr<DXGISwapChain> swapchain,
+                              std::shared_ptr<Direct3D11Device> device);
+
 std::shared_ptr<Sample>
 CreateSample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> swapchain,
                                std::shared_ptr<Direct3D11Device> device);

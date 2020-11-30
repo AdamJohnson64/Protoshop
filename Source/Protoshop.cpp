@@ -36,10 +36,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Window> D3D11Basic = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Basic(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11ComputeCanvas = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11ComputeCanvas(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11DrawingContext = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11DrawingContext(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<Window> D3D11LightProbe = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11LightProbe(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
+    //std::shared_ptr<Window> D3D11LightProbe = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11LightProbe(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11Mesh = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Mesh(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11RayMarch = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11RayMarch(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11Scene = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Scene(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
+    std::shared_ptr<Window> D3D11ShowTexture = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11ShowTexture(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11Tessellation = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Tessellation(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     //std::shared_ptr<Window> D3D11Voxel = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Voxel(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     //std::shared_ptr<Object> D3DShaderToy = CreateSample_D3D11ShaderToy(deviceD3D11);
