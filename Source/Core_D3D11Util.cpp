@@ -10,6 +10,15 @@ D3D11_VIEWPORT Make_D3D11_VIEWPORT(UINT width, UINT height) {
   return desc;
 }
 
+D3D11_SHADER_RESOURCE_VIEW_DESC
+Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(DXGI_FORMAT format) {
+  D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+  desc.Format = format;
+  desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+  desc.Texture2D.MipLevels = 1;
+  return desc;
+}
+
 CComPtr<ID3D11Buffer> D3D11_Create_Buffer(ID3D11Device *device, UINT bindflags,
                                           int size) {
   D3D11_BUFFER_DESC desc = {};

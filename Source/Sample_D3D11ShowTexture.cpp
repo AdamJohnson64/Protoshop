@@ -28,7 +28,7 @@ private:
 
 public:
   Sample_D3D11ShowTexture(std::shared_ptr<DXGISwapChain> swapchain,
-                            std::shared_ptr<Direct3D11Device> device)
+                          std::shared_ptr<Direct3D11Device> device)
       : m_pSwapChain(swapchain), m_pDevice(device) {
     // Create a compute shader.
     CComPtr<ID3DBlob> pD3DBlobCodeCS =
@@ -50,18 +50,15 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       const uint32_t imageStride = sizeof(Pixel) * imageWidth;
       Pixel imageRaw[imageWidth * imageHeight];
       Image_Fill_Commodore64(imageRaw, imageWidth, imageHeight, imageStride);
-      m_pTex2DImage = D3D11_Create_Texture2D(
-          m_pDevice->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, imageWidth,
-          imageHeight, imageRaw);
+      m_pTex2DImage = D3D11_Create_Texture2D(m_pDevice->GetID3D11Device(),
+                                             DXGI_FORMAT_B8G8R8A8_UNORM,
+                                             imageWidth, imageHeight, imageRaw);
     }
-    {
-      D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
-      desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-      desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-      desc.Texture2D.MipLevels = 1;
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateShaderResourceView(
-          m_pTex2DImage, &desc, &m_pSRVImage.p));
-    }
+    TRYD3D(m_pDevice->GetID3D11Device()->CreateShaderResourceView(
+        m_pTex2DImage,
+        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
+            DXGI_FORMAT_B8G8R8A8_UNORM),
+        &m_pSRVImage.p));
     TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(
         pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(),
         nullptr, &m_pComputeShader));
@@ -89,7 +86,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 
 std::shared_ptr<Sample>
 CreateSample_D3D11ShowTexture(std::shared_ptr<DXGISwapChain> swapchain,
-                                std::shared_ptr<Direct3D11Device> device) {
+                              std::shared_ptr<Direct3D11Device> device) {
   return std::shared_ptr<Sample>(
       new Sample_D3D11ShowTexture(swapchain, device));
 }

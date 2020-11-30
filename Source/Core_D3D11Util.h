@@ -6,6 +6,8 @@
 
 D3D11_VIEWPORT Make_D3D11_VIEWPORT(UINT width, UINT height);
 
+D3D11_SHADER_RESOURCE_VIEW_DESC Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(DXGI_FORMAT format);
+
 CComPtr<ID3D11Buffer> D3D11_Create_Buffer(ID3D11Device *device, UINT bindflags,
                                           int size);
 

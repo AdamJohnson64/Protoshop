@@ -112,14 +112,11 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
           m_pDevice->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, IMAGE_WIDTH,
           IMAGE_HEIGHT, imageRaw);
     }
-    {
-      D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
-      desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-      desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-      desc.Texture2D.MipLevels = 1;
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateShaderResourceView(
-          m_pTex2DImage, &desc, &m_pSRVImage.p));
-    }
+    TRYD3D(m_pDevice->GetID3D11Device()->CreateShaderResourceView(
+        m_pTex2DImage,
+        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
+            DXGI_FORMAT_B8G8R8A8_UNORM),
+        &m_pSRVImage.p));
     TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(
         pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(),
         nullptr, &m_pComputeShader));
