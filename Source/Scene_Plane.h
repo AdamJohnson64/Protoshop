@@ -7,4 +7,5 @@ class Plane : public Object, public ParametricUV
 {
 public:
     Vector3 getVertexPosition(Vector2 uv) override;
+    Vector3 getVertexNormal(Vector2 uv) override;
 };

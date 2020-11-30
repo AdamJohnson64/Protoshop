@@ -13,6 +13,7 @@ public:
     uint32_t getVertexCount() override;
     uint32_t getIndexCount() override;
     void copyVertices(void* to, uint32_t stride) override;
+    void copyNormals(void* to, uint32_t stride) override;
     void copyIndices(void* to, uint32_t stride) override;
 private:
     std::shared_ptr<ParametricUV> m_shape;

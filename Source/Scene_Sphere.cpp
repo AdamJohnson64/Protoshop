@@ -8,3 +8,8 @@ Vector3 Sphere::getVertexPosition(Vector2 uv)
     float angleV = uv.Y * (1 * M_PI);
     return { sinf(angleU) * sinf(angleV), cosf(angleV), cosf(angleU) * sinf(angleV) };
 }
+
+Vector3 Sphere::getVertexNormal(Vector2 uv)
+{
+    return getVertexPosition(uv);
+}
