@@ -177,15 +177,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     void Render()
     {
         // Get the backbuffer and create a render target from it.
-        CComPtr<ID3D11UnorderedAccessView> pUAVTarget;
-        {
-            CComPtr<ID3D11Texture2D> pD3D11Texture2D;
-            TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&pD3D11Texture2D));
-            D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-            uavDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-            uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateUnorderedAccessView(pD3D11Texture2D, &uavDesc, &pUAVTarget));
-        }
+        CComPtr<ID3D11UnorderedAccessView> pUAVTarget = D3D11_Create_UAV_From_SwapChain(m_pDevice->GetID3D11Device(), m_pSwapChain->GetIDXGISwapChain());
+        m_pDevice->GetID3D11DeviceContext()->ClearState();
         // Upload the constant buffer.
         static float angle = 0;
         const float zoom = 2 + cosf(angle);
@@ -195,7 +188,6 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             CreateMatrixTranslate(Vector3 { RENDERTARGET_WIDTH / 2, RENDERTARGET_HEIGHT / 2, 0 });
         transform = Invert(transform);
         angle += 0.01f;
-        m_pDevice->GetID3D11DeviceContext()->ClearState();
         m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(m_pBufferConstants, 0, nullptr, &transform, 0, 0);
         // Beginning of rendering.
         m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &pUAVTarget.p, nullptr);
@@ -205,7 +197,6 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, 1);
         m_pDevice->GetID3D11DeviceContext()->ClearState();
         m_pDevice->GetID3D11DeviceContext()->Flush();
-        
         // End of rendering; send to display.
         m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
     }

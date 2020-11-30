@@ -260,15 +260,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         }
         if (uMsg == WM_PAINT)
         {
-            CComPtr<ID3D11UnorderedAccessView> pUAVTarget;
-            {
-                CComPtr<ID3D11Texture2D> pD3D11Texture2D;
-                TRYD3D(window->m_pSwapChain->GetIDXGISwapChain()->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&pD3D11Texture2D));
-                D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-                uavDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-                uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-                TRYD3D(window->m_pDevice->GetID3D11Device()->CreateUnorderedAccessView(pD3D11Texture2D, &uavDesc, &pUAVTarget));
-            }
+            CComPtr<ID3D11UnorderedAccessView> pUAVTarget = D3D11_Create_UAV_From_SwapChain(window->m_pDevice->GetID3D11Device(), window->m_pSwapChain->GetIDXGISwapChain());
+            window->m_pDevice->GetID3D11DeviceContext()->ClearState();
             // Upload the constant buffer.
             {
                 static float t = 0;
@@ -281,7 +274,6 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             // Render if we have a shader.
             if (window->m_pComputeShader != nullptr)
             {
-                window->m_pDevice->GetID3D11DeviceContext()->ClearState();
                 window->m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(0, 1, &pUAVTarget.p, nullptr);
                 window->m_pDevice->GetID3D11DeviceContext()->CSSetShader(window->m_pComputeShader, nullptr, 0);
                 window->m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1, &window->m_pBufferConstants.p);

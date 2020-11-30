@@ -46,3 +46,15 @@ CComPtr<ID3D11Texture2D> D3D11_Create_Texture2D(ID3D11Device* device, DXGI_FORMA
     TRYD3D(device->CreateTexture2D(&desc, &filldata, &resource.p));
     return resource;
 }
+
+CComPtr<ID3D11UnorderedAccessView> D3D11_Create_UAV_From_SwapChain(ID3D11Device* device, IDXGISwapChain* swapchain)
+{
+    CComPtr<ID3D11Texture2D> texture;
+    TRYD3D(swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&texture));
+    D3D11_UNORDERED_ACCESS_VIEW_DESC desc = {};
+    desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+    CComPtr<ID3D11UnorderedAccessView> uav;
+    TRYD3D(device->CreateUnorderedAccessView(texture, &desc, &uav));
+    return uav;
+}
