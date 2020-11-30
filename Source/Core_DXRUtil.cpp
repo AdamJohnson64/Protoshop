@@ -1,5 +1,6 @@
 #include "Core_D3D.h"
 #include "Core_D3D12Util.h"
+#include "Core_DXGIUtil.h"
 #include "Core_DXRUtil.h"
 #include "Core_Util.h"
 #include <array>
@@ -166,25 +167,14 @@ D3D12_RAYTRACING_AABB Make_D3D12_RAYTRACING_AABB(FLOAT minX, FLOAT minY, FLOAT m
     return o;
 }
 
-static int DXGIFormatSize(DXGI_FORMAT format)
-{
-    switch (format)
-    {
-    case DXGI_FORMAT_R32G32B32_FLOAT: return sizeof(float[3]);
-    case DXGI_FORMAT_R32G32_FLOAT: return sizeof(float[2]);
-    case DXGI_FORMAT_R32_UINT: return sizeof(unsigned int);
-    default: throw std::exception("Cannot determine byte size of pixel/vertex format.");
-    }
-}
-
 CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device* device, const void* vertices, int vertexCount, DXGI_FORMAT vertexFormat, const void* indices, int indexCount, DXGI_FORMAT indexFormat)
 {
     // The GPU is doing the actual acceleration structure building work so we need all the mesh data up on GPU first.
-    CComPtr<ID3D12Resource1> ResourceVertices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(vertexFormat) * vertexCount, DXGIFormatSize(vertexFormat) * vertexCount, vertices);
+    CComPtr<ID3D12Resource1> ResourceVertices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGI_FORMAT_Size(vertexFormat) * vertexCount, DXGI_FORMAT_Size(vertexFormat) * vertexCount, vertices);
     CComPtr<ID3D12Resource1> ResourceIndices;
     if (indices != nullptr)
     {
-        ResourceIndices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGIFormatSize(indexFormat) * indexCount, DXGIFormatSize(indexFormat) * indexCount, indices);
+        ResourceIndices = D3D12_Create_Buffer(device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, DXGI_FORMAT_Size(indexFormat) * indexCount, DXGI_FORMAT_Size(indexFormat) * indexCount, indices);
     }
     // Now create and initialize the BLAS with this data.
     CComPtr<ID3D12Resource1> ResourceBLAS;
@@ -203,7 +193,7 @@ CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device* device, const void* ver
         descGeometry.Triangles.VertexCount = vertexCount;
         descGeometry.Triangles.IndexBuffer = ResourceIndices != nullptr ? ResourceIndices->GetGPUVirtualAddress() : 0;
         descGeometry.Triangles.VertexBuffer.StartAddress = ResourceVertices->GetGPUVirtualAddress();
-        descGeometry.Triangles.VertexBuffer.StrideInBytes = DXGIFormatSize(vertexFormat);
+        descGeometry.Triangles.VertexBuffer.StrideInBytes = DXGI_FORMAT_Size(vertexFormat);
         descRaytracingInputs.pGeometryDescs = &descGeometry;
         device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&descRaytracingInputs, &descRaytracingPrebuild);
         // Create the output and scratch buffers.

@@ -82,22 +82,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
                 char* raster = reinterpret_cast<char*>(buffer.get()) + imageStride * (imageHeight - y - 1);
                 readit.read(raster, imageStride);
             }
-            {
-                D3D11_TEXTURE2D_DESC desc = {};
-                desc.Width = imageWidth;
-                desc.Height = imageHeight;
-                desc.MipLevels = 1;
-                desc.ArraySize = 1;
-                desc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-                desc.SampleDesc.Count = 1;
-                desc.Usage = D3D11_USAGE_IMMUTABLE;
-                desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-                D3D11_SUBRESOURCE_DATA descData = {};
-                descData.pSysMem = buffer.get();
-                descData.SysMemPitch = imageStride;
-                descData.SysMemSlicePitch = imageStride * imageHeight;
-                TRYD3D(m_pDevice->GetID3D11Device()->CreateTexture2D(&desc, &descData, &m_pTex2DImage.p));
-            }
+            m_pTex2DImage = D3D11_Create_Texture2D(m_pDevice->GetID3D11Device(), DXGI_FORMAT_R32G32B32_FLOAT, imageWidth, imageHeight, buffer.get());
         }
         {
             D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};

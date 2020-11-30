@@ -101,25 +101,10 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         m_pBufferConstants = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
         {
             struct Pixel { uint8_t B, G, R, A; };
-            const uint32_t imageStride = 4 * IMAGE_WIDTH;
+            const uint32_t imageStride = sizeof(Pixel) * IMAGE_WIDTH;
             Pixel imageRaw[IMAGE_WIDTH * IMAGE_HEIGHT];
             Image_Fill_Commodore64(imageRaw, IMAGE_WIDTH, IMAGE_HEIGHT, imageStride);
-            {
-                D3D11_TEXTURE2D_DESC desc = {};
-                desc.Width = IMAGE_WIDTH;
-                desc.Height = IMAGE_HEIGHT;
-                desc.MipLevels = 1;
-                desc.ArraySize = 1;
-                desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-                desc.SampleDesc.Count = 1;
-                desc.Usage = D3D11_USAGE_IMMUTABLE;
-                desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-                D3D11_SUBRESOURCE_DATA descData = {};
-                descData.pSysMem = imageRaw;
-                descData.SysMemPitch = sizeof(Pixel) * IMAGE_WIDTH;
-                descData.SysMemSlicePitch = sizeof(Pixel) * IMAGE_WIDTH * IMAGE_HEIGHT;
-                TRYD3D(m_pDevice->GetID3D11Device()->CreateTexture2D(&desc, &descData, &m_pTex2DImage.p));
-            }
+            m_pTex2DImage = D3D11_Create_Texture2D(m_pDevice->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, IMAGE_WIDTH, IMAGE_HEIGHT, imageRaw);
         }
         {
             D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
