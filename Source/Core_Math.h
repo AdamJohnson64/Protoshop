@@ -32,10 +32,10 @@ using Vector4 = TVector4<float>;
 template <class T> struct TMatrix44 {
   T
       // clang-format off
-        M11, M12, M13, M14,
-        M21, M22, M23, M24,
-        M31, M32, M33, M34,
-        M41, M42, M43, M44;
+      M11, M12, M13, M14,
+      M21, M22, M23, M24,
+      M31, M32, M33, M34,
+      M41, M42, M43, M44;
   // clang-format on
 };
 
@@ -154,22 +154,22 @@ template <class T> TMatrix44<T> Invert(const TMatrix44<T> &lhs) {
   float invdet = 1 / Determinant(lhs);
   return TMatrix44<T>{
       // clang-format off
-        invdet * (+(+lhs.M42 * (lhs.M23 * lhs.M34 - lhs.M33 * lhs.M24) - lhs.M43 * (lhs.M22 * lhs.M34 - lhs.M32 * lhs.M24) + lhs.M44 * (lhs.M22 * lhs.M33 - lhs.M32 * lhs.M23))),
-        invdet * (-(+lhs.M42 * (lhs.M13 * lhs.M34 - lhs.M33 * lhs.M14) - lhs.M43 * (lhs.M12 * lhs.M34 - lhs.M32 * lhs.M14) + lhs.M44 * (lhs.M12 * lhs.M33 - lhs.M32 * lhs.M13))),
-        invdet * (+(+lhs.M42 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M43 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) + lhs.M44 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13))),
-        invdet * (-(+lhs.M32 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M33 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) + lhs.M34 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13))),
-        invdet * (-(+lhs.M41 * (lhs.M23 * lhs.M34 - lhs.M33 * lhs.M24) - lhs.M43 * (lhs.M21 * lhs.M34 - lhs.M31 * lhs.M24) + lhs.M44 * (lhs.M21 * lhs.M33 - lhs.M31 * lhs.M23))),
-        invdet * (+(+lhs.M41 * (lhs.M13 * lhs.M34 - lhs.M33 * lhs.M14) - lhs.M43 * (lhs.M11 * lhs.M34 - lhs.M31 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M33 - lhs.M31 * lhs.M13))),
-        invdet * (-(+lhs.M41 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M43 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13))),
-        invdet * (+(+lhs.M31 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M33 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M34 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13))),
-        invdet * (+(+lhs.M41 * (lhs.M22 * lhs.M34 - lhs.M32 * lhs.M24) - lhs.M42 * (lhs.M21 * lhs.M34 - lhs.M31 * lhs.M24) + lhs.M44 * (lhs.M21 * lhs.M32 - lhs.M31 * lhs.M22))),
-        invdet * (-(+lhs.M41 * (lhs.M12 * lhs.M34 - lhs.M32 * lhs.M14) - lhs.M42 * (lhs.M11 * lhs.M34 - lhs.M31 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M32 - lhs.M31 * lhs.M12))),
-        invdet * (+(+lhs.M41 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) - lhs.M42 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
-        invdet * (-(+lhs.M31 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) - lhs.M32 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M34 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
-        invdet * (-(+lhs.M41 * (lhs.M22 * lhs.M33 - lhs.M32 * lhs.M23) - lhs.M42 * (lhs.M21 * lhs.M33 - lhs.M31 * lhs.M23) + lhs.M43 * (lhs.M21 * lhs.M32 - lhs.M31 * lhs.M22))),
-        invdet * (+(+lhs.M41 * (lhs.M12 * lhs.M33 - lhs.M32 * lhs.M13) - lhs.M42 * (lhs.M11 * lhs.M33 - lhs.M31 * lhs.M13) + lhs.M43 * (lhs.M11 * lhs.M32 - lhs.M31 * lhs.M12))),
-        invdet * (-(+lhs.M41 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M42 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M43 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
-        invdet * (+(+lhs.M31 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M32 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M33 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12)))
+      invdet * (+(+lhs.M42 * (lhs.M23 * lhs.M34 - lhs.M33 * lhs.M24) - lhs.M43 * (lhs.M22 * lhs.M34 - lhs.M32 * lhs.M24) + lhs.M44 * (lhs.M22 * lhs.M33 - lhs.M32 * lhs.M23))),
+      invdet * (-(+lhs.M42 * (lhs.M13 * lhs.M34 - lhs.M33 * lhs.M14) - lhs.M43 * (lhs.M12 * lhs.M34 - lhs.M32 * lhs.M14) + lhs.M44 * (lhs.M12 * lhs.M33 - lhs.M32 * lhs.M13))),
+      invdet * (+(+lhs.M42 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M43 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) + lhs.M44 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13))),
+      invdet * (-(+lhs.M32 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M33 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) + lhs.M34 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13))),
+      invdet * (-(+lhs.M41 * (lhs.M23 * lhs.M34 - lhs.M33 * lhs.M24) - lhs.M43 * (lhs.M21 * lhs.M34 - lhs.M31 * lhs.M24) + lhs.M44 * (lhs.M21 * lhs.M33 - lhs.M31 * lhs.M23))),
+      invdet * (+(+lhs.M41 * (lhs.M13 * lhs.M34 - lhs.M33 * lhs.M14) - lhs.M43 * (lhs.M11 * lhs.M34 - lhs.M31 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M33 - lhs.M31 * lhs.M13))),
+      invdet * (-(+lhs.M41 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M43 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13))),
+      invdet * (+(+lhs.M31 * (lhs.M13 * lhs.M24 - lhs.M23 * lhs.M14) - lhs.M33 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M34 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13))),
+      invdet * (+(+lhs.M41 * (lhs.M22 * lhs.M34 - lhs.M32 * lhs.M24) - lhs.M42 * (lhs.M21 * lhs.M34 - lhs.M31 * lhs.M24) + lhs.M44 * (lhs.M21 * lhs.M32 - lhs.M31 * lhs.M22))),
+      invdet * (-(+lhs.M41 * (lhs.M12 * lhs.M34 - lhs.M32 * lhs.M14) - lhs.M42 * (lhs.M11 * lhs.M34 - lhs.M31 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M32 - lhs.M31 * lhs.M12))),
+      invdet * (+(+lhs.M41 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) - lhs.M42 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M44 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
+      invdet * (-(+lhs.M31 * (lhs.M12 * lhs.M24 - lhs.M22 * lhs.M14) - lhs.M32 * (lhs.M11 * lhs.M24 - lhs.M21 * lhs.M14) + lhs.M34 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
+      invdet * (-(+lhs.M41 * (lhs.M22 * lhs.M33 - lhs.M32 * lhs.M23) - lhs.M42 * (lhs.M21 * lhs.M33 - lhs.M31 * lhs.M23) + lhs.M43 * (lhs.M21 * lhs.M32 - lhs.M31 * lhs.M22))),
+      invdet * (+(+lhs.M41 * (lhs.M12 * lhs.M33 - lhs.M32 * lhs.M13) - lhs.M42 * (lhs.M11 * lhs.M33 - lhs.M31 * lhs.M13) + lhs.M43 * (lhs.M11 * lhs.M32 - lhs.M31 * lhs.M12))),
+      invdet * (-(+lhs.M41 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M42 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M43 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12))),
+      invdet * (+(+lhs.M31 * (lhs.M12 * lhs.M23 - lhs.M22 * lhs.M13) - lhs.M32 * (lhs.M11 * lhs.M23 - lhs.M21 * lhs.M13) + lhs.M33 * (lhs.M11 * lhs.M22 - lhs.M21 * lhs.M12)))
       // clang-format on
   };
 }
@@ -178,10 +178,10 @@ template <class T>
 TVector4<T> Transform(const TMatrix44<T> &lhs, const TVector4<T> &rhs) {
   return {
       // clang-format off
-        lhs.M11 * rhs.X + lhs.M21 * rhs.Y + lhs.M31 * rhs.Z + lhs.M41 * rhs.W,
-        lhs.M12 * rhs.X + lhs.M22 * rhs.Y + lhs.M32 * rhs.Z + lhs.M42 * rhs.W,
-        lhs.M13 * rhs.X + lhs.M23 * rhs.Y + lhs.M33 * rhs.Z + lhs.M43 * rhs.W,
-        lhs.M14 * rhs.X + lhs.M24 * rhs.Y + lhs.M34 * rhs.Z + lhs.M44 * rhs.W
+      lhs.M11 * rhs.X + lhs.M21 * rhs.Y + lhs.M31 * rhs.Z + lhs.M41 * rhs.W,
+      lhs.M12 * rhs.X + lhs.M22 * rhs.Y + lhs.M32 * rhs.Z + lhs.M42 * rhs.W,
+      lhs.M13 * rhs.X + lhs.M23 * rhs.Y + lhs.M33 * rhs.Z + lhs.M43 * rhs.W,
+      lhs.M14 * rhs.X + lhs.M24 * rhs.Y + lhs.M34 * rhs.Z + lhs.M44 * rhs.W
       // clang-format on
   };
 }
@@ -189,34 +189,36 @@ TVector4<T> Transform(const TMatrix44<T> &lhs, const TVector4<T> &rhs) {
 template <class T> TMatrix44<T> Transpose(const TMatrix44<T> &lhs) {
   return {
       // clang-format off
-        lhs.M11, lhs.M21, lhs.M31, lhs.M41,
-        lhs.M12, lhs.M22, lhs.M32, lhs.M42,
-        lhs.M13, lhs.M23, lhs.M33, lhs.M43,
-        lhs.M14, lhs.M24, lhs.M34, lhs.M44
+      lhs.M11, lhs.M21, lhs.M31, lhs.M41,
+      lhs.M12, lhs.M22, lhs.M32, lhs.M42,
+      lhs.M13, lhs.M23, lhs.M33, lhs.M43,
+      lhs.M14, lhs.M24, lhs.M34, lhs.M44
       // clang-format on
   };
 }
 
 template <class T>
 TMatrix44<T> operator*(const TMatrix44<T> &lhs, const TMatrix44<T> &rhs) {
-  return TMatrix44<T>{// clang-format off
-        lhs.M11 * rhs.M11 + lhs.M12 * rhs.M21 + lhs.M13 * rhs.M31 + lhs.M14 * rhs.M41,
-        lhs.M11 * rhs.M12 + lhs.M12 * rhs.M22 + lhs.M13 * rhs.M32 + lhs.M14 * rhs.M42,
-        lhs.M11 * rhs.M13 + lhs.M12 * rhs.M23 + lhs.M13 * rhs.M33 + lhs.M14 * rhs.M43,
-        lhs.M11 * rhs.M14 + lhs.M12 * rhs.M24 + lhs.M13 * rhs.M34 + lhs.M14 * rhs.M44,
-        lhs.M21 * rhs.M11 + lhs.M22 * rhs.M21 + lhs.M23 * rhs.M31 + lhs.M24 * rhs.M41,
-        lhs.M21 * rhs.M12 + lhs.M22 * rhs.M22 + lhs.M23 * rhs.M32 + lhs.M24 * rhs.M42,
-        lhs.M21 * rhs.M13 + lhs.M22 * rhs.M23 + lhs.M23 * rhs.M33 + lhs.M24 * rhs.M43,
-        lhs.M21 * rhs.M14 + lhs.M22 * rhs.M24 + lhs.M23 * rhs.M34 + lhs.M24 * rhs.M44,
-        lhs.M31 * rhs.M11 + lhs.M32 * rhs.M21 + lhs.M33 * rhs.M31 + lhs.M34 * rhs.M41,
-        lhs.M31 * rhs.M12 + lhs.M32 * rhs.M22 + lhs.M33 * rhs.M32 + lhs.M34 * rhs.M42,
-        lhs.M31 * rhs.M13 + lhs.M32 * rhs.M23 + lhs.M33 * rhs.M33 + lhs.M34 * rhs.M43,
-        lhs.M31 * rhs.M14 + lhs.M32 * rhs.M24 + lhs.M33 * rhs.M34 + lhs.M34 * rhs.M44,
-        lhs.M41 * rhs.M11 + lhs.M42 * rhs.M21 + lhs.M43 * rhs.M31 + lhs.M44 * rhs.M41,
-        lhs.M41 * rhs.M12 + lhs.M42 * rhs.M22 + lhs.M43 * rhs.M32 + lhs.M44 * rhs.M42,
-        lhs.M41 * rhs.M13 + lhs.M42 * rhs.M23 + lhs.M43 * rhs.M33 + lhs.M44 * rhs.M43,
-        lhs.M41 * rhs.M14 + lhs.M42 * rhs.M24 + lhs.M43 * rhs.M34 + lhs.M44 * rhs.M44 };
-  // clang-format on
+  return TMatrix44<T>{
+      // clang-format off
+      lhs.M11 * rhs.M11 + lhs.M12 * rhs.M21 + lhs.M13 * rhs.M31 + lhs.M14 * rhs.M41,
+      lhs.M11 * rhs.M12 + lhs.M12 * rhs.M22 + lhs.M13 * rhs.M32 + lhs.M14 * rhs.M42,
+      lhs.M11 * rhs.M13 + lhs.M12 * rhs.M23 + lhs.M13 * rhs.M33 + lhs.M14 * rhs.M43,
+      lhs.M11 * rhs.M14 + lhs.M12 * rhs.M24 + lhs.M13 * rhs.M34 + lhs.M14 * rhs.M44,
+      lhs.M21 * rhs.M11 + lhs.M22 * rhs.M21 + lhs.M23 * rhs.M31 + lhs.M24 * rhs.M41,
+      lhs.M21 * rhs.M12 + lhs.M22 * rhs.M22 + lhs.M23 * rhs.M32 + lhs.M24 * rhs.M42,
+      lhs.M21 * rhs.M13 + lhs.M22 * rhs.M23 + lhs.M23 * rhs.M33 + lhs.M24 * rhs.M43,
+      lhs.M21 * rhs.M14 + lhs.M22 * rhs.M24 + lhs.M23 * rhs.M34 + lhs.M24 * rhs.M44,
+      lhs.M31 * rhs.M11 + lhs.M32 * rhs.M21 + lhs.M33 * rhs.M31 + lhs.M34 * rhs.M41,
+      lhs.M31 * rhs.M12 + lhs.M32 * rhs.M22 + lhs.M33 * rhs.M32 + lhs.M34 * rhs.M42,
+      lhs.M31 * rhs.M13 + lhs.M32 * rhs.M23 + lhs.M33 * rhs.M33 + lhs.M34 * rhs.M43,
+      lhs.M31 * rhs.M14 + lhs.M32 * rhs.M24 + lhs.M33 * rhs.M34 + lhs.M34 * rhs.M44,
+      lhs.M41 * rhs.M11 + lhs.M42 * rhs.M21 + lhs.M43 * rhs.M31 + lhs.M44 * rhs.M41,
+      lhs.M41 * rhs.M12 + lhs.M42 * rhs.M22 + lhs.M43 * rhs.M32 + lhs.M44 * rhs.M42,
+      lhs.M41 * rhs.M13 + lhs.M42 * rhs.M23 + lhs.M43 * rhs.M33 + lhs.M44 * rhs.M43,
+      lhs.M41 * rhs.M14 + lhs.M42 * rhs.M24 + lhs.M43 * rhs.M34 + lhs.M44 * rhs.M44
+      // clang-format on
+  };
 }
 
 template <class T> TMatrix44<T> CreateMatrixRotation(const TQuaternion<T> &q) {

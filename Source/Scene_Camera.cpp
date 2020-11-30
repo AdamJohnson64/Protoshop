@@ -3,12 +3,12 @@
 #include <math.h>
 
 static Matrix44 TransformWorldToView = {
-    // clang-format off
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, -1, 5, 1
-    // clang-format on
+  // clang-format off
+  1, 0, 0, 0,
+  0, 1, 0, 0,
+  0, 0, 1, 0,
+  0, -1, 5, 1
+  // clang-format on
 };
 
 Matrix44 GetCameraWorldToClip() {
