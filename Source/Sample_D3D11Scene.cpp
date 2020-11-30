@@ -8,17 +8,20 @@
 #include "Core_D3D.h"
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
+#include "Core_DXGI.h"
 #include "Core_Util.h"
-#include "Sample_D3D11Base.h"
+#include "Sample.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include <array>
 #include <atlbase.h>
 #include <vector>
 
-class Sample_D3D11Scene : public Sample_D3D11Base
+class Sample_D3D11Scene : public Sample
 {
 private:
+    std::shared_ptr<DXGISwapChain> m_pSwapChain;
+    std::shared_ptr<Direct3D11Device> m_pDevice;
     CComPtr<ID3D11Texture2D> m_pD3D11DepthStencilResource;
     CComPtr<ID3D11DepthStencilView> m_pD3D11DepthStencilView;
     CComPtr<ID3D11RasterizerState> m_pD3D11RasterizerState;
@@ -37,7 +40,8 @@ private:
     };
 public:
     Sample_D3D11Scene(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
-        Sample_D3D11Base(swapchain, device)
+        m_pSwapChain(swapchain),
+        m_pDevice(device)
     {
         {
             D3D11_TEXTURE2D_DESC desc = {};
@@ -115,12 +119,16 @@ float4 mainPS(VertexPS vin) : SV_Target
             TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(&inputdesc[0], 2, pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(), &m_pD3D11InputLayout));
         }
     }
-    void RenderSample() override
+    void Render() override
     {
+        // Get the backbuffer and create a render target from it.
+        CComPtr<ID3D11RenderTargetView> pD3D11RenderTargetView = D3D11_Create_RTV_From_SwapChain(m_pDevice->GetID3D11Device(), m_pSwapChain->GetIDXGISwapChain());
+        m_pDevice->GetID3D11DeviceContext()->ClearState();
+        // Beginning of rendering.
+        m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(pD3D11RenderTargetView, &std::array<FLOAT, 4> { 0.1f, 0.1f, 0.1f, 1.0f}[0]);
         m_pDevice->GetID3D11DeviceContext()->ClearDepthStencilView(m_pD3D11DepthStencilView, D3D10_CLEAR_DEPTH, 1.0f, 0);
-        CComPtr<ID3D11RenderTargetView> pRenderTargetViewOld;
-        m_pDevice->GetID3D11DeviceContext()->OMGetRenderTargets(1, &pRenderTargetViewOld.p, nullptr);
-        m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(1, &pRenderTargetViewOld.p, m_pD3D11DepthStencilView.p);
+        m_pDevice->GetID3D11DeviceContext()->RSSetViewports(1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+        m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(1, &pD3D11RenderTargetView.p, m_pD3D11DepthStencilView);
         std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
         // Create a vertex buffer.
         m_pDevice->GetID3D11DeviceContext()->VSSetShader(m_pD3D11VertexShader, nullptr, 0);
@@ -170,7 +178,10 @@ float4 mainPS(VertexPS vin) : SV_Target
             m_pDevice->GetID3D11DeviceContext()->IASetIndexBuffer(m_pD3D11BufferIndex[instance.GeometryIndex].p, DXGI_FORMAT_R32_UINT, 0);
             m_pDevice->GetID3D11DeviceContext()->DrawIndexed(scene->Meshes[instance.GeometryIndex]->getIndexCount(), 0, 0);
         }
+        m_pDevice->GetID3D11DeviceContext()->ClearState();
         m_pDevice->GetID3D11DeviceContext()->Flush();
+        // End of rendering; send to display.
+        m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
     }
 };
 

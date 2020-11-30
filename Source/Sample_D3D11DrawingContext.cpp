@@ -12,20 +12,25 @@
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
-#include "Sample_D3D11Base.h"
+#include "Core_Util.h"
+#include "Sample.h"
+#include <array>
 #include <atlbase.h>
 #include <functional>
 #include <vector>
 
-class Sample_D3D11DrawingContext : public Sample_D3D11Base
+class Sample_D3D11DrawingContext : public Sample
 {
 private:
+    std::shared_ptr<DXGISwapChain> m_pSwapChain;
+    std::shared_ptr<Direct3D11Device> m_pDevice;
     CComPtr<ID3D11VertexShader> m_pD3D11VertexShader;
     CComPtr<ID3D11PixelShader> m_pD3D11PixelShader;
     CComPtr<ID3D11InputLayout> m_pD3D11InputLayout;
 public:
     Sample_D3D11DrawingContext(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
-        Sample_D3D11Base(swapchain, device)
+        m_pSwapChain(swapchain),
+        m_pDevice(device)
     {
         ////////////////////////////////////////////////////////////////////////////////
         // Create a vertex shader.
@@ -55,8 +60,15 @@ float4 main() : SV_Target
             TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(&inputdesc, 1, pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(), &m_pD3D11InputLayout));
         }
     }
-    void RenderSample() override
+    void Render() override
     {
+        // Get the backbuffer and create a render target from it.
+        CComPtr<ID3D11RenderTargetView> pD3D11RenderTargetView = D3D11_Create_RTV_From_SwapChain(m_pDevice->GetID3D11Device(), m_pSwapChain->GetIDXGISwapChain());
+        m_pDevice->GetID3D11DeviceContext()->ClearState();
+        // Beginning of rendering.
+        m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(pD3D11RenderTargetView, &std::array<FLOAT, 4> { 0.1f, 0.1f, 0.1f, 1.0f}[0]);
+        m_pDevice->GetID3D11DeviceContext()->RSSetViewports(1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+        m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(1, &pD3D11RenderTargetView.p, nullptr);
         // Simple DrawingContext.
         std::vector<Vector2> vertices;
         std::function<void(const Vector2&, const Vector2&)> DCDrawLine = [&](const Vector2& p0, const Vector2& p1)
@@ -94,6 +106,10 @@ float4 main() : SV_Target
         }
         angle += 0.01f;
         DCFlush();
+        m_pDevice->GetID3D11DeviceContext()->ClearState();
+        m_pDevice->GetID3D11DeviceContext()->Flush();
+        // End of rendering; send to display.
+        m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
     }
 };
 

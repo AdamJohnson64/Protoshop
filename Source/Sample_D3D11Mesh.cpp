@@ -8,13 +8,18 @@
 #include "Core_D3D.h"
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
-#include "Sample_D3D11Base.h"
+#include "Core_DXGI.h"
+#include "Core_Util.h"
+#include "Sample.h"
 #include "Scene_Camera.h"
+#include <array>
 #include <atlbase.h>
 
-class Sample_D3D11Mesh : public Sample_D3D11Base
+class Sample_D3D11Mesh : public Sample
 {
 private:
+    std::shared_ptr<DXGISwapChain> m_pSwapChain;
+    std::shared_ptr<Direct3D11Device> m_pDevice;
     CComPtr<ID3D11RasterizerState> m_pD3D11RasterizerState;
     CComPtr<ID3D11Buffer> m_pD3D11BufferConstants;
     CComPtr<ID3D11VertexShader> m_pD3D11VertexShader;
@@ -22,7 +27,8 @@ private:
     CComPtr<ID3D11InputLayout> m_pD3D11InputLayout;
 public:
     Sample_D3D11Mesh(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
-        Sample_D3D11Base(swapchain, device)
+        m_pSwapChain(swapchain),
+        m_pDevice(device)
     {
         {
             D3D11_RASTERIZER_DESC rasterizerdesc = {};
@@ -58,8 +64,15 @@ float4 mainPS() : SV_Target
             TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(&inputdesc, 1, pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(), &m_pD3D11InputLayout));
         }
     }
-    void RenderSample() override
+    void Render() override
     {
+        // Get the backbuffer and create a render target from it.
+        CComPtr<ID3D11RenderTargetView> pD3D11RenderTargetView = D3D11_Create_RTV_From_SwapChain(m_pDevice->GetID3D11Device(), m_pSwapChain->GetIDXGISwapChain());
+        m_pDevice->GetID3D11DeviceContext()->ClearState();
+        // Beginning of rendering.
+        m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(pD3D11RenderTargetView, &std::array<FLOAT, 4> { 0.1f, 0.1f, 0.1f, 1.0f}[0]);
+        m_pDevice->GetID3D11DeviceContext()->RSSetViewports(1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+        m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(1, &pD3D11RenderTargetView.p, nullptr);
         // Update constant buffer.
         {
             char constants[1024];
@@ -91,7 +104,10 @@ float4 mainPS() : SV_Target
             m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(0, 1, &m_pD3D11BufferVertex.p, uStrides, uOffsets);
         }
         m_pDevice->GetID3D11DeviceContext()->Draw(6, 0);
+        m_pDevice->GetID3D11DeviceContext()->ClearState();
         m_pDevice->GetID3D11DeviceContext()->Flush();
+        // End of rendering; send to display.
+        m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
     }
 };
 
