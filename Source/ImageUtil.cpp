@@ -1,5 +1,157 @@
 #include "ImageUtil.h"
+#include "Core_Math.h"
 #include <cstdlib>
+
+struct PixelBGRA {
+  uint8_t B, G, R, A;
+};
+
+struct ImageBGRA {
+  void *data;
+  uint32_t width, height, stride;
+};
+
+static int Random2DMix(int x, int y) { return x + y * 57; }
+
+static int RandomExtend(int n) { return (n << 13) ^ n; }
+
+static float RandomFloat(int n) {
+  return 1.0f - ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) /
+                    1073741824.0;
+};
+
+static float Random2D(int x, int y) {
+  return RandomFloat(RandomExtend(Random2DMix(x, y)));
+}
+
+static float Noise2D(float x, float y) { return Random2D((int)x, (int)y); }
+
+static float SmoothNoiseFn(float x, float y) {
+  return (Noise2D(x - 1, y - 1) + Noise2D(x + 1, y - 1) +
+          Noise2D(x - 1, y + 1) + Noise2D(x + 1, y + 1)) /
+             16 +
+         (Noise2D(x - 1, y) + Noise2D(x + 1, y) + Noise2D(x, y - 1) +
+          Noise2D(x, y + 1)) /
+             8 +
+         (Noise2D(x, y)) / 4;
+}
+
+static float Lerp(float a, float b, float x) { return a + (b - a) * x; }
+
+static float InterpolatedNoiseFn(float x, float y) {
+  return Lerp(Lerp(SmoothNoiseFn((int)x, (int)y),
+                   SmoothNoiseFn((int)x + 1, (int)y), x - (int)x),
+              Lerp(SmoothNoiseFn((int)x, (int)y + 1),
+                   SmoothNoiseFn((int)x + 1, (int)y + 1), x - (int)x),
+              y - (int)y);
+}
+
+static float PerlinNoiseFn(float x, float y) {
+  return InterpolatedNoiseFn(x * 1, y * 1) * 1 +
+         InterpolatedNoiseFn(x * 2, y * 2) * 0.5 +
+         InterpolatedNoiseFn(x * 4, y * 4) * 0.25 +
+         InterpolatedNoiseFn(x * 8, y * 8) * 0.125;
+}
+
+static const Vector3 BRICK_COLOR = {0.5f, 0.2f, 0};
+static const float BRICK_DEPTH = 1.0f;
+static const Vector3 MORTAR_COLOR = {0.4f, 0.4f, 0.4f};
+static const float MORTAR_DEPTH = 0.8f;
+static const float MORTAR_HALF_HEIGHT = 0.02f;
+
+enum BrickTexelType {
+  BRICK,
+  MORTAR,
+};
+
+static BrickTexelType BrickType(float x, float y) {
+  if (y < MORTAR_HALF_HEIGHT) {
+    return MORTAR;
+  } else if (y < 0.5f - MORTAR_HALF_HEIGHT) {
+    if (x < MORTAR_HALF_HEIGHT) {
+      return MORTAR;
+    } else if (x < 1 - MORTAR_HALF_HEIGHT) {
+      return BRICK;
+    } else {
+      return MORTAR;
+    }
+    return BRICK;
+  } else if (y < 0.5f + MORTAR_HALF_HEIGHT) {
+    return MORTAR;
+  } else if (y < 1 - MORTAR_HALF_HEIGHT) {
+    if (x < 0.5f - MORTAR_HALF_HEIGHT) {
+      return BRICK;
+    } else if (x < 0.5f + MORTAR_HALF_HEIGHT) {
+      return MORTAR;
+    } else {
+      return BRICK;
+    }
+  } else {
+    return MORTAR;
+  }
+}
+
+static Vector3 BrickColor(float x, float y) {
+  switch (BrickType(x, y)) {
+  case BRICK:
+    return BRICK_COLOR;
+  default:
+    return MORTAR_COLOR;
+  }
+}
+
+static float BrickDepth(float x, float y) {
+  switch (BrickType(x, y)) {
+  case BRICK:
+    return BRICK_DEPTH + PerlinNoiseFn(x * 128, y * 128) * 0.002f;
+  default:
+    return MORTAR_DEPTH + PerlinNoiseFn(x * 32, y * 32) * 0.005f;
+  }
+}
+
+static Vector3 BrickNormal(float x, float y) {
+  float eta = 0.001f;
+  float dx = BrickDepth(x + eta, y) - BrickDepth(x - eta, y);
+  float dy = BrickDepth(x, y + eta) - BrickDepth(x, y - eta);
+  return Normalize(Vector3{-dx, -dy, 2 * eta});
+}
+
+static void Image_Fill_BrickAlbedo(const ImageBGRA &image) {
+  uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
+  for (int y = 0; y < image.height; ++y) {
+    for (int x = 0; x < image.width; ++x) {
+      Vector3 c = BrickColor((float)x / image.width, (float)y / image.height);
+      PixelBGRA pixel = {(uint8_t)(c.Z * 255), (uint8_t)(c.Y * 255),
+                         (uint8_t)(c.X * 255), 255};
+      *reinterpret_cast<PixelBGRA *>(bytes + sizeof(PixelBGRA) * x +
+                                     image.stride * y) = pixel;
+    }
+  }
+}
+
+void Image_Fill_BrickAlbedo(void *data, uint32_t width, uint32_t height,
+                            uint32_t stride) {
+  Image_Fill_BrickAlbedo(ImageBGRA{data, width, height, stride});
+}
+
+static void Image_Fill_BrickNormal(const ImageBGRA &image) {
+  uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
+  for (int y = 0; y < image.height; ++y) {
+    for (int x = 0; x < image.width; ++x) {
+      Vector3 n = BrickNormal((float)x / image.width, (float)y / image.height);
+      Vector3 c = Vector3{n.X + 1, n.Y + 1, n.Z + 1} * 0.5f;
+      PixelBGRA pixel = {(uint8_t)(c.Z * 255), (uint8_t)(c.Y * 255),
+                         (uint8_t)(c.X * 255), 255};
+      *reinterpret_cast<PixelBGRA *>(bytes + sizeof(PixelBGRA) * x +
+                                     image.stride * y) = pixel;
+    }
+  }
+}
+
+void Image_Fill_BrickNormal(void *data, uint32_t width, uint32_t height,
+                            uint32_t stride) {
+  Image_Fill_BrickNormal(ImageBGRA{data, width, height, stride});
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // I grew up with a Commodore 64 so I should probably include a copy of the
@@ -305,14 +457,6 @@ uint8_t Commodore64BalloonSprite[] = {
     224, 3,   255, 224, 2,   255, 160, 1,   127, 64,  1,   62,  64,
     0,   156, 128, 0,   156, 128, 0,   73,  0,   0,   73,  0,   0,
     62,  0,   0,   62,  0,   0,   62,  0,   0,   28,  0};
-
-struct PixelBGRA {
-  uint8_t B, G, R, A;
-};
-struct ImageBGRA {
-  void *data;
-  uint32_t width, height, stride;
-};
 
 void Image_Plot_Pixel(const ImageBGRA &image, int x, int y, PixelBGRA &color) {
   if (x >= 0 && x < image.width && y >= 0 && y < image.height) {
