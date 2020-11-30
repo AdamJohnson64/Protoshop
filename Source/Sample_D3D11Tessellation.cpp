@@ -7,6 +7,7 @@
 
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
@@ -115,13 +116,7 @@ float4 mainPS() : SV_Target
                 {0, 1},
                 {1, 0}
             };
-            D3D11_BUFFER_DESC bufferdesc = {};
-            bufferdesc.ByteWidth = sizeof(Vector2) * 3;
-            bufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
-            bufferdesc.BindFlags =  D3D11_BIND_VERTEX_BUFFER;
-            D3D11_SUBRESOURCE_DATA data = {};
-            data.pSysMem = vertices;
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&bufferdesc, &data, &m_pD3D11BufferVertex));
+            m_pD3D11BufferVertex = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER, sizeof(vertices), vertices);
         }
         m_pDevice->GetID3D11DeviceContext()->VSSetShader(m_pD3D11VertexShader, nullptr, 0);
         m_pDevice->GetID3D11DeviceContext()->HSSetShader(m_pD3D11HullShader, nullptr, 0);

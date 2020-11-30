@@ -9,6 +9,7 @@
 
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
@@ -68,13 +69,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     float2 uv = float2((direction.x * r + 1) / 2, (direction.y * r + 1) / 2);
     renderTarget[dispatchThreadId.xy] = userImage.Load(float3(uv.x * 1000, uv.y * 1000, 0)) * 10;
 })SHADER");
-        {
-            D3D11_BUFFER_DESC desc = {};
-            desc.ByteWidth = 1024;
-            desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-            desc.StructureByteStride = sizeof(Matrix44);
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&desc, nullptr, &m_pBufferConstants));
-        }
+        m_pBufferConstants = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
         {
             const int imageWidth = 1000;
             const int imageHeight = 1000;

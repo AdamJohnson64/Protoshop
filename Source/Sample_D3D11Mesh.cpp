@@ -6,6 +6,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "Core_D3D.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Sample_D3D11Base.h"
 #include "Scene_Camera.h"
@@ -29,13 +30,7 @@ public:
             rasterizerdesc.FillMode = D3D11_FILL_WIREFRAME;
             m_pDevice->GetID3D11Device()->CreateRasterizerState(&rasterizerdesc, &m_pD3D11RasterizerState);
         }
-        {
-            D3D11_BUFFER_DESC descBuffer = {};
-            descBuffer.ByteWidth = 1024;
-            descBuffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-            descBuffer.StructureByteStride = sizeof(Matrix44);
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, nullptr, &m_pD3D11BufferConstants));
-        }
+        m_pD3D11BufferConstants = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
         const char* szShaderCode = R"SHADER(
 cbuffer Constants
 {
@@ -82,13 +77,7 @@ float4 mainPS() : SV_Target
                 {-10, 0, -10},
                 {-10, 0,  10}
             };
-            D3D11_BUFFER_DESC bufferdesc = {};
-            bufferdesc.ByteWidth = sizeof(vertices);
-            bufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
-            bufferdesc.BindFlags =  D3D11_BIND_VERTEX_BUFFER;
-            D3D11_SUBRESOURCE_DATA data = {};
-            data.pSysMem = vertices;
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&bufferdesc, &data, &m_pD3D11BufferVertex));
+            m_pD3D11BufferVertex = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER, sizeof(vertices), vertices);
         }
         m_pDevice->GetID3D11DeviceContext()->VSSetShader(m_pD3D11VertexShader, nullptr, 0);
         m_pDevice->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1, &m_pD3D11BufferConstants.p);

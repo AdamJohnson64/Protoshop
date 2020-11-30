@@ -11,6 +11,7 @@
 #include "Core_Object.h"
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Util.h"
@@ -34,6 +35,11 @@ private:
     std::shared_ptr<DXGISwapChain> m_pSwapChain;
     CComPtr<ID3D11Buffer> m_pBufferConstants;
     CComPtr<ID3D11ComputeShader> m_pComputeShader;
+    __declspec(align(16)) struct Constants
+    {
+        Matrix44 TransformClipToWorld;
+        float Time;
+    };
 public:
     Sample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device)
         : m_pDevice(device)
@@ -186,13 +192,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         m_hWindowError = CreateWindowA("EDIT", "Compilation successful.", WS_CHILD | WS_VISIBLE | ES_MULTILINE, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT - SHADERTOY_ERROR_HEIGHT, SHADERTOY_CODE_WIDTH, SHADERTOY_ERROR_HEIGHT, m_hWindowHost, nullptr, nullptr, nullptr);
         ////////////////////////////////////////////////////////////////////////////////
         // Create a constant buffer.
-        {
-            D3D11_BUFFER_DESC desc = {};
-            desc.ByteWidth = 1024;
-            desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-            desc.StructureByteStride = sizeof(Matrix44);
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&desc, nullptr, &m_pBufferConstants));
-        }
+        m_pBufferConstants = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
         ////////////////////////////////////////////////////////////////////////////////
         // Create the shader above.
         {
@@ -272,11 +272,6 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             // Upload the constant buffer.
             {
                 static float t = 0;
-                struct Constants
-                {
-                    Matrix44 TransformClipToWorld;
-                    float Time;
-                };
                 Constants constants;
                 constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
                 constants.Time = t;

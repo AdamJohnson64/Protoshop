@@ -6,6 +6,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "Core_D3D.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_Util.h"
 #include "Sample_D3D11Base.h"
@@ -131,64 +132,41 @@ float4 mainPS(VertexPS vin) : SV_Target
         std::vector<CComPtr<ID3D11Buffer>> m_pD3D11BufferIndex;
         for (int meshIndex = 0; meshIndex < scene->Meshes.size(); ++meshIndex)
         {
-            // Create the vertex buffer.
-            int sizeVertex = sizeof(VertexFormat) * scene->Meshes[meshIndex]->getVertexCount();
-            std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-            scene->Meshes[meshIndex]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(VertexFormat));
-            scene->Meshes[meshIndex]->copyNormals(reinterpret_cast<Vector3*>(vertices.get() + sizeof(Vector3)), sizeof(VertexFormat));
+
             {
-                D3D11_BUFFER_DESC bufferdesc = {};
-                bufferdesc.ByteWidth = sizeVertex;
-                bufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
-                bufferdesc.BindFlags =  D3D11_BIND_VERTEX_BUFFER;
-                D3D11_SUBRESOURCE_DATA data = {};
-                data.pSysMem = vertices.get();
-                CComPtr<ID3D11Buffer> pD3D11BufferVertex;
-                TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&bufferdesc, &data, &pD3D11BufferVertex.p));
-                m_pD3D11BufferVertex.push_back(pD3D11BufferVertex);
+                // Create the vertex buffer.
+                int sizeVertex = sizeof(VertexFormat) * scene->Meshes[meshIndex]->getVertexCount();
+                std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
+                scene->Meshes[meshIndex]->copyVertices(reinterpret_cast<Vector3*>(vertices.get()), sizeof(VertexFormat));
+                scene->Meshes[meshIndex]->copyNormals(reinterpret_cast<Vector3*>(vertices.get() + sizeof(Vector3)), sizeof(VertexFormat));
+                m_pD3D11BufferVertex.push_back(D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER, sizeVertex, vertices.get()));
             }
-            // Create the index buffer.
-            int sizeIndices = sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
-            std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-            scene->Meshes[meshIndex]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
             {
-                D3D11_BUFFER_DESC bufferdesc = {};
-                bufferdesc.ByteWidth = sizeIndices;
-                bufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
-                bufferdesc.BindFlags =  D3D11_BIND_INDEX_BUFFER;
-                D3D11_SUBRESOURCE_DATA data = {};
-                data.pSysMem = indices.get();
-                CComPtr<ID3D11Buffer> pD3D11BufferIndex;
-                TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&bufferdesc, &data, &pD3D11BufferIndex.p));
-                m_pD3D11BufferIndex.push_back(pD3D11BufferIndex);
+                // Create the index buffer.
+                int sizeIndices = sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
+                std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
+                scene->Meshes[meshIndex]->copyIndices(reinterpret_cast<uint32_t*>(indices.get()), sizeof(uint32_t));
+                m_pD3D11BufferIndex.push_back(D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_INDEX_BUFFER, sizeIndices, indices.get()));
             }
         }
         // Now go through all the instances, create the constants, and draw.
-        UINT uStrides[] = { sizeof(VertexFormat) };
-        UINT uOffsets[] = { 0 };
         std::vector<CComPtr<ID3D11Buffer>> m_pD3D11BufferConstant;
         for (int instanceIndex = 0; instanceIndex < scene->Instances.size(); ++instanceIndex)
         {
             const Instance& instance = scene->Instances[instanceIndex];
             // Create the constant buffer.
             {
-                D3D11_BUFFER_DESC descBuffer = {};
-                descBuffer.ByteWidth = 1024;
-                descBuffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-                descBuffer.StructureByteStride = sizeof(Matrix44);
-                CComPtr<ID3D11Buffer> pD3D11BufferConstants;
-                TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&descBuffer, nullptr, &pD3D11BufferConstants.p));
-                {
-                    char data[1024];
-                    Constants* constants = reinterpret_cast<Constants*>(data);
-                    constants->TransformWorldToClip = instance.TransformObjectToWorld * GetCameraWorldToClip();
-                    constants->TransformObjectToWorld = instance.TransformObjectToWorld;
-                    m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(pD3D11BufferConstants, 0, nullptr, data, 0, 0);
-                }
-                m_pD3D11BufferConstant.push_back(pD3D11BufferConstants);
+                Constants constants = {};
+                constants.TransformWorldToClip = instance.TransformObjectToWorld * GetCameraWorldToClip();
+                constants.TransformObjectToWorld = instance.TransformObjectToWorld;
+                m_pD3D11BufferConstant.push_back(D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants), &constants));
             }
             m_pDevice->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1, &m_pD3D11BufferConstant[instanceIndex].p);
-            m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(0, 1, &m_pD3D11BufferVertex[instance.GeometryIndex].p, uStrides, uOffsets);
+            {
+                const UINT uStrides[] = { sizeof(VertexFormat) };
+                const UINT uOffsets[] = { 0 };
+                m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(0, 1, &m_pD3D11BufferVertex[instance.GeometryIndex].p, uStrides, uOffsets);
+            }
             m_pDevice->GetID3D11DeviceContext()->IASetIndexBuffer(m_pD3D11BufferIndex[instance.GeometryIndex].p, DXGI_FORMAT_R32_UINT, 0);
             m_pDevice->GetID3D11DeviceContext()->DrawIndexed(scene->Meshes[instance.GeometryIndex]->getIndexCount(), 0, 0);
         }

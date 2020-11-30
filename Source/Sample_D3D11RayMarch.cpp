@@ -7,6 +7,7 @@
 
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
@@ -25,6 +26,11 @@ private:
     std::shared_ptr<Direct3D11Device> m_pDevice;
     CComPtr<ID3D11ComputeShader> m_pComputeShader;
     CComPtr<ID3D11Buffer> m_pBufferConstants;
+    __declspec(align(16)) struct Constants
+    {
+        Matrix44 TransformClipToWorld;
+        float Time;
+    };
 public:
     Sample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> swapchain, std::shared_ptr<Direct3D11Device> device) :
         m_pSwapChain(swapchain),
@@ -136,13 +142,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     renderTarget[dispatchThreadId.xy] = float4(0.4, 0.2, 0.8, 1);
 })SHADER");
-        {
-            D3D11_BUFFER_DESC desc = {};
-            desc.ByteWidth = 1024;
-            desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-            desc.StructureByteStride = sizeof(Matrix44);
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&desc, nullptr, &m_pBufferConstants));
-        }
+        m_pBufferConstants = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
         TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(), nullptr, &m_pComputeShader));
     }
     void Render()
@@ -161,11 +161,6 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         // Upload the constant buffer.
         {
             static float t = 0;
-            struct Constants
-            {
-                Matrix44 TransformClipToWorld;
-                float Time;
-            };
             Constants constants;
             constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
             constants.Time = t;

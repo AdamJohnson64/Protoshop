@@ -8,6 +8,7 @@
 
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
@@ -70,16 +71,7 @@ float4 main() : SV_Target
         };
         std::function<void()> DCFlush = [&]()
         {
-            CComPtr<ID3D11Buffer> pD3D11BufferVertex;
-            {
-                D3D11_BUFFER_DESC bufferdesc = {};
-                bufferdesc.ByteWidth = sizeof(Vector2) * vertices.size();
-                bufferdesc.Usage = D3D11_USAGE_IMMUTABLE;
-                bufferdesc.BindFlags =  D3D11_BIND_VERTEX_BUFFER;
-                D3D11_SUBRESOURCE_DATA data = {};
-                data.pSysMem = &vertices.front();
-                TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&bufferdesc, &data, &pD3D11BufferVertex));
-            }
+            CComPtr<ID3D11Buffer> pD3D11BufferVertex = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER, sizeof(Vector2) * vertices.size(), &vertices[0]);
             {
                 UINT uStrides[] = { sizeof(Vector2) };
                 UINT uOffsets[] = { 0 };

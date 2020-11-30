@@ -9,6 +9,7 @@
 
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
@@ -97,13 +98,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     accumulateSamples /= superCountX * superCountY;
     renderTarget[dispatchThreadId.xy] = accumulateSamples;
 })SHADER");
-        {
-            D3D11_BUFFER_DESC desc = {};
-            desc.ByteWidth = 1024;
-            desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-            desc.StructureByteStride = sizeof(Matrix44);
-            TRYD3D(m_pDevice->GetID3D11Device()->CreateBuffer(&desc, nullptr, &m_pBufferConstants));
-        }
+        m_pBufferConstants = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
         {
             struct Pixel { uint8_t B, G, R, A; };
             const uint32_t imageStride = 4 * IMAGE_WIDTH;
