@@ -1,9 +1,12 @@
 #pragma once
 
-#include <ctgmath>
-
 template <class T>
 constexpr T Pi = static_cast<T>(3.1415926535897932384626433832795029L);
+
+float Cos(float x);
+double Cos(double x);
+float Tan(float x);
+double Tan(double x);
 
 ////////////////////////////////////////////////////////////////////////////////
 // 2D Vectors (XY)
@@ -264,7 +267,7 @@ TQuaternion<T> CreateQuaternionRotation(const TVector3<T> &axis, T angle) {
   T sinvalue = sin(radians_over_2);
   TVector3<T> normalized_axis = Normalize(axis);
   return {normalized_axis.X * sinvalue, normalized_axis.Y * sinvalue,
-          normalized_axis.Z * sinvalue, cos(radians_over_2)};
+          normalized_axis.Z * sinvalue, Cos(radians_over_2)};
 }
 
 template <class T>
@@ -293,8 +296,8 @@ TQuaternion<T> Multiply(const TQuaternion<T> &lhs, const TQuaternion<T> &rhs) {
 template <class T>
 TMatrix44<T> CreateProjection(T near_plane, T far_plane, T fov_horiz,
                               T fov_vert) {
-  T w = 1 / tan(fov_horiz * 0.5); // 1/tan(x) == cot(x)
-  T h = 1 / tan(fov_vert * 0.5);  // 1/tan(x) == cot(x)
+  T w = 1 / Tan(fov_horiz * 0.5); // 1/tan(x) == cot(x)
+  T h = 1 / Tan(fov_vert * 0.5);  // 1/tan(x) == cot(x)
   T Q = far_plane / (far_plane - near_plane);
   return {w, 0, 0, 0, 0, h, 0, 0, 0, 0, Q, 1, 0, 0, -Q * near_plane, 0};
 }

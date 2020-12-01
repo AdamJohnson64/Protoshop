@@ -1,5 +1,6 @@
 #include "Scene_MeshPLY.h"
 #include <fstream>
+#include <string>
 
 static void consumelineandexpect(std::ifstream &stream,
                                  const std::string &expect) {

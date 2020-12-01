@@ -45,6 +45,7 @@
     <ClCompile Include="Source\Core_DXGI.cpp" />
     <ClCompile Include="Source\Core_DXGIUtil.cpp" />
     <ClCompile Include="Source\Core_DXRUtil.cpp" />
+    <ClCompile Include="Source\Core_Math.cpp" />
     <ClCompile Include="Source\Core_OpenGL.cpp" />
     <ClCompile Include="Source\Core_Util.cpp" />
     <ClCompile Include="Source\Core_VK.cpp" />

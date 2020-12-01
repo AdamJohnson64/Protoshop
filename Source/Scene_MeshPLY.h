@@ -3,6 +3,7 @@
 #include "Core_Math.h"
 #include "Core_Object.h"
 #include "Scene_Mesh.h"
+#include <memory>
 
 ////////////////////////////////////////////////////////////////////////////////
 // NOTE: This is an INCREDIBLY limited PLY loader.
