@@ -16,7 +16,6 @@
 #include "Core_Object.h"
 #include "Core_Util.h"
 #include "Scene_Camera.h"
-#include "Scene_InstanceTable.h"
 #include "Scene_Mesh.h"
 #include "Scene_ParametricUV.h"
 #include "Scene_ParametricUVToMesh.h"
@@ -47,7 +46,6 @@ public:
         D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
     m_pRootSignatureGLOBAL =
         DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(device->m_pDevice);
-    std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
     ////////////////////////////////////////////////////////////////////////////////
     // PIPELINE - Build the pipeline with all ray shaders.
     {
@@ -115,7 +113,6 @@ public:
     }
   }
   void Render() override {
-    std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
     ////////////////////////////////////////////////////////////////////////////////
     // BLAS - Build the bottom level acceleration structures.
     ////////////////////////////////////////////////////////////////////////////////

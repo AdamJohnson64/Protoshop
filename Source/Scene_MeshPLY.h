@@ -5,7 +5,6 @@
 #include "Scene_Mesh.h"
 
 #include <string>
-#include <vector>
 
 ////////////////////////////////////////////////////////////////////////////////
 // NOTE: This is an INCREDIBLY limited PLY loader.
@@ -20,6 +19,8 @@ public:
   void copyIndices(void *to, uint32_t stride) override;
 
 private:
-  std::vector<TVector3<float>> m_vertices;
-  std::vector<TVector3<int>> m_faces;
+  int m_vertexCount;
+  int m_faceCount;
+  std::unique_ptr<TVector3<float>[]> m_vertices;
+  std::unique_ptr<TVector3<int>[]> m_faces;
 };

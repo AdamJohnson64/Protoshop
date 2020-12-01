@@ -22,7 +22,7 @@
 #include <functional>
 #include <memory>
 
-class Sample_D3D12Mesh : public Object, public ISample {
+class Sample_D3D12Scene : public Object, public ISample {
 private:
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<Direct3D12Device> m_pDevice;
@@ -31,8 +31,8 @@ private:
   CComPtr<ID3D12PipelineState> m_pPipelineState;
 
 public:
-  Sample_D3D12Mesh(std::shared_ptr<DXGISwapChain> swapchain,
-                   std::shared_ptr<Direct3D12Device> device)
+  Sample_D3D12Scene(std::shared_ptr<DXGISwapChain> swapchain,
+                    std::shared_ptr<Direct3D12Device> device)
       : m_pSwapChain(swapchain), m_pDevice(device) {
     m_pRootSignature = D3D12_Create_Signature_1CBV(device->m_pDevice);
     m_pDescriptorHeapCBVSRVUAV =
@@ -219,7 +219,7 @@ float4 main() : SV_Target
 };
 
 std::shared_ptr<ISample>
-CreateSample_D3D12Mesh(std::shared_ptr<DXGISwapChain> swapchain,
-                       std::shared_ptr<Direct3D12Device> device) {
-  return std::shared_ptr<ISample>(new Sample_D3D12Mesh(swapchain, device));
+CreateSample_D3D12Scene(std::shared_ptr<DXGISwapChain> swapchain,
+                        std::shared_ptr<Direct3D12Device> device) {
+  return std::shared_ptr<ISample>(new Sample_D3D12Scene(swapchain, device));
 }

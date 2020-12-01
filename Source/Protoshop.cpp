@@ -50,7 +50,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     // Direct3D 12 Samples
     std::shared_ptr<Direct3D12Device> deviceD3D12 = CreateDirect3D12Device();
     std::shared_ptr<IWindow> D3D12Basic = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D12Basic(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
-    std::shared_ptr<IWindow> D3D12Mesh = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D12Mesh(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
+    std::shared_ptr<IWindow> D3D12Scene = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D12Scene(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
     std::shared_ptr<IWindow> DXRAmbientOcclusion = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRAmbientOcclusion(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
     std::shared_ptr<IWindow> DXRBasic = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRBasic(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });
     std::shared_ptr<IWindow> DXRMesh = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_DXRMesh(CreateDXGISwapChain(deviceD3D12, hwnd), deviceD3D12); });

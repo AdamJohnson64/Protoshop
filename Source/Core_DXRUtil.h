@@ -1,11 +1,10 @@
 #pragma once
 
-#include "Core_D3D12.h"
 #include "Core_Math.h"
 #include <atlbase.h>
 #include <d3d12.h>
-#include <memory>
-#include <vector>
+
+class Direct3D12Device;
 
 // Create a DXR GLOBAL root signature that contains the required output UAV,
 // an SRV for the acceleration structure, and a CBV for global constants.

@@ -64,7 +64,7 @@
     <ClCompile Include="Source\Sample_D3D11Tessellation.cpp" />
     <ClCompile Include="Source\Sample_D3D11Voxel.cpp" />
     <ClCompile Include="Source\Sample_D3D12Basic.cpp" />
-    <ClCompile Include="Source\Sample_D3D12Mesh.cpp" />
+    <ClCompile Include="Source\Sample_D3D12Scene.cpp" />
     <ClCompile Include="Source\Sample_DXRAmbientOcclusion.cpp" />
     <ClCompile Include="Source\Sample_DXRMesh.cpp" />
     <ClCompile Include="Source\Sample_DXRBasic.cpp" />

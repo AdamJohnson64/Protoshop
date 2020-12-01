@@ -21,7 +21,7 @@ MeshPLY::MeshPLY(const std::string &filename) {
   // Get vertex count.
   if (line.substr(0, 15) != "element vertex ")
     throw std::exception("Expected 'element vertex <nnn>'.");
-  int vertexcount = std::stoi(line.substr(15));
+  m_vertexCount = std::stoi(line.substr(15));
   // Read vertex component schema.
   int componentcount = 0;
   int componentindexofx = -1;
@@ -54,11 +54,11 @@ ANOTHERPROPERTY:
   // Get face count.
   if (line.substr(0, 13) != "element face ")
     throw std::exception("Expected 'element face <nnn>'.");
-  int facecount = std::stoi(line.substr(13));
+  m_faceCount = std::stoi(line.substr(13));
   consumelineandexpect(readit, "property list uchar int vertex_indices");
   consumelineandexpect(readit, "end_header");
-  m_vertices.reserve(vertexcount);
-  for (int i = 0; i < vertexcount; ++i) {
+  m_vertices.reset(new TVector3<float>[m_vertexCount]);
+  for (int i = 0; i < m_vertexCount; ++i) {
     float x, y, z;
     for (int c = 0; c < componentcount; ++c) {
       if (c != componentcount - 1) {
@@ -73,10 +73,10 @@ ANOTHERPROPERTY:
       if (c == componentindexofz)
         z = std::stof(line);
     }
-    m_vertices.push_back({x, y, z});
+    m_vertices[i] = {x, y, z};
   }
-  m_faces.reserve(facecount);
-  for (int i = 0; i < facecount; ++i) {
+  m_faces.reset(new TVector3<int>[m_faceCount]);
+  for (int i = 0; i < m_faceCount; ++i) {
     std::getline(readit, line, ' ');
     int indexcount = std::stoi(line);
     if (indexcount != 3)
@@ -87,17 +87,17 @@ ANOTHERPROPERTY:
     int b = std::stoi(line);
     std::getline(readit, line);
     int c = std::stoi(line);
-    m_faces.push_back({a, b, c});
+    m_faces[i] = {a, b, c};
   }
 }
 
-uint32_t MeshPLY::getVertexCount() { return m_vertices.size(); }
+uint32_t MeshPLY::getVertexCount() { return m_vertexCount; }
 
-uint32_t MeshPLY::getIndexCount() { return 3 * m_faces.size(); }
+uint32_t MeshPLY::getIndexCount() { return 3 * m_faceCount; }
 
 void MeshPLY::copyVertices(void *to, uint32_t stride) {
   void *begin = to;
-  for (int i = 0; i < m_vertices.size(); ++i) {
+  for (int i = 0; i < m_vertexCount; ++i) {
     *reinterpret_cast<TVector3<float> *>(to) = m_vertices[i];
     to = reinterpret_cast<uint8_t *>(to) + stride;
   }
@@ -106,7 +106,7 @@ void MeshPLY::copyVertices(void *to, uint32_t stride) {
 
 void MeshPLY::copyIndices(void *to, uint32_t stride) {
   uint32_t *from = reinterpret_cast<uint32_t *>(&m_faces[0]);
-  for (int i = 0; i < m_faces.size() * 3; ++i) {
+  for (int i = 0; i < m_faceCount * 3; ++i) {
     *reinterpret_cast<uint32_t *>(to) = *from;
     ++from;
     to = reinterpret_cast<uint8_t *>(to) + stride;

@@ -57,8 +57,8 @@ std::shared_ptr<ISample>
 CreateSample_D3D12Basic(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D12Device> device);
 std::shared_ptr<ISample>
-CreateSample_D3D12Mesh(std::shared_ptr<DXGISwapChain> swapchain,
-                       std::shared_ptr<Direct3D12Device> device);
+CreateSample_D3D12Scene(std::shared_ptr<DXGISwapChain> swapchain,
+                        std::shared_ptr<Direct3D12Device> device);
 
 std::shared_ptr<ISample>
 CreateSample_DXRAmbientOcclusion(std::shared_ptr<DXGISwapChain> swapchain,

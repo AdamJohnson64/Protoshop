@@ -16,7 +16,6 @@
 #include "Core_Object.h"
 #include "Core_Util.h"
 #include "Scene_Camera.h"
-#include "Scene_InstanceTable.h"
 #include "generated.Sample_DXRWhitted.dxr.h"
 #include <array>
 #include <atlbase.h>
