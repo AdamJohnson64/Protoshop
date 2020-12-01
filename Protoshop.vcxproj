@@ -55,6 +55,7 @@
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
     <ClCompile Include="Source\Sample_D3D11LightProbe.cpp" />
+    <ClCompile Include="Source\Sample_D3D11NormalMap.cpp" />
     <ClCompile Include="Source\Sample_D3D11RayMarch.cpp" />
     <ClCompile Include="Source\Sample_D3D11Mesh.cpp" />
     <ClCompile Include="Source\Sample_D3D11Scene.cpp" />

@@ -113,7 +113,7 @@ static Vector3 BrickNormal(float x, float y) {
   float eta = 0.001f;
   float dx = BrickDepth(x + eta, y) - BrickDepth(x - eta, y);
   float dy = BrickDepth(x, y + eta) - BrickDepth(x, y - eta);
-  return Normalize(Vector3{-dx, -dy, 2 * eta});
+  return Normalize(Vector3{-dx, dy, 2 * eta});
 }
 
 static void Image_Fill_BrickAlbedo(const ImageBGRA &image) {
