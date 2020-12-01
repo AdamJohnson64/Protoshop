@@ -25,7 +25,6 @@
 #include <array>
 #include <atlbase.h>
 #include <memory>
-#include <string>
 
 class Sample_DXRMesh : public Object, public ISample {
 private:

@@ -4,15 +4,13 @@
 #include "Core_Object.h"
 #include "Scene_Mesh.h"
 
-#include <string>
-
 ////////////////////////////////////////////////////////////////////////////////
 // NOTE: This is an INCREDIBLY limited PLY loader.
 // There's just enough here to read the Stanford Bunny, but that's about it.
 ////////////////////////////////////////////////////////////////////////////////
 class MeshPLY : public Object, public Mesh {
 public:
-  MeshPLY(const std::string &filename);
+  MeshPLY(const char *filename);
   uint32_t getVertexCount() override;
   uint32_t getIndexCount() override;
   void copyVertices(void *to, uint32_t stride) override;

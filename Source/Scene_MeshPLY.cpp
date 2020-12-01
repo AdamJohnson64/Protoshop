@@ -9,7 +9,7 @@ static void consumelineandexpect(std::ifstream &stream,
     throw std::exception(std::string("Expected '" + expect + "'.").c_str());
 }
 
-MeshPLY::MeshPLY(const std::string &filename) {
+MeshPLY::MeshPLY(const char *filename) {
   std::ifstream readit(filename);
   std::string line;
   consumelineandexpect(readit, "ply");
