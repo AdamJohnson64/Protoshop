@@ -23,7 +23,6 @@ private:
   std::shared_ptr<Direct3D11Device> m_pDevice;
   CComPtr<ID3D11Texture2D> m_pD3D11DepthStencilResource;
   CComPtr<ID3D11DepthStencilView> m_pD3D11DepthStencilView;
-  CComPtr<ID3D11RasterizerState> m_pD3D11RasterizerState;
   CComPtr<ID3D11VertexShader> m_pD3D11VertexShader;
   CComPtr<ID3D11PixelShader> m_pD3D11PixelShader;
   CComPtr<ID3D11InputLayout> m_pD3D11InputLayout;
@@ -57,13 +56,6 @@ public:
       desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
       TRYD3D(m_pDevice->GetID3D11Device()->CreateDepthStencilView(
           m_pD3D11DepthStencilResource, &desc, &m_pD3D11DepthStencilView));
-    }
-    {
-      D3D11_RASTERIZER_DESC rasterizerdesc = {};
-      rasterizerdesc.CullMode = D3D11_CULL_BACK;
-      rasterizerdesc.FillMode = D3D11_FILL_SOLID;
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateRasterizerState(
-          &rasterizerdesc, &m_pD3D11RasterizerState));
     }
     const char *szShaderCode = R"SHADER(
 cbuffer Constants
@@ -146,7 +138,6 @@ float4 mainPS(VertexPS vin) : SV_Target
     // Create a vertex buffer.
     m_pDevice->GetID3D11DeviceContext()->VSSetShader(m_pD3D11VertexShader,
                                                      nullptr, 0);
-    m_pDevice->GetID3D11DeviceContext()->RSSetState(m_pD3D11RasterizerState);
     m_pDevice->GetID3D11DeviceContext()->PSSetShader(m_pD3D11PixelShader,
                                                      nullptr, 0);
     m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(

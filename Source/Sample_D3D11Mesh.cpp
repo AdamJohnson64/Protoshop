@@ -19,7 +19,6 @@ class Sample_D3D11Mesh : public Sample {
 private:
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<Direct3D11Device> m_pDevice;
-  CComPtr<ID3D11RasterizerState> m_pD3D11RasterizerState;
   CComPtr<ID3D11Buffer> m_pD3D11BufferConstants;
   CComPtr<ID3D11VertexShader> m_pD3D11VertexShader;
   CComPtr<ID3D11PixelShader> m_pD3D11PixelShader;
@@ -29,13 +28,6 @@ public:
   Sample_D3D11Mesh(std::shared_ptr<DXGISwapChain> swapchain,
                    std::shared_ptr<Direct3D11Device> device)
       : m_pSwapChain(swapchain), m_pDevice(device) {
-    {
-      D3D11_RASTERIZER_DESC rasterizerdesc = {};
-      rasterizerdesc.CullMode = D3D11_CULL_NONE;
-      rasterizerdesc.FillMode = D3D11_FILL_WIREFRAME;
-      m_pDevice->GetID3D11Device()->CreateRasterizerState(
-          &rasterizerdesc, &m_pD3D11RasterizerState);
-    }
     m_pD3D11BufferConstants =
         D3D11_Create_Buffer(m_pDevice->GetID3D11Device(),
                             D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
@@ -107,7 +99,6 @@ float4 mainPS() : SV_Target
                                                      nullptr, 0);
     m_pDevice->GetID3D11DeviceContext()->VSSetConstantBuffers(
         0, 1, &m_pD3D11BufferConstants.p);
-    m_pDevice->GetID3D11DeviceContext()->RSSetState(m_pD3D11RasterizerState);
     m_pDevice->GetID3D11DeviceContext()->PSSetShader(m_pD3D11PixelShader,
                                                      nullptr, 0);
     m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(
