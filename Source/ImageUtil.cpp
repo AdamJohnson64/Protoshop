@@ -94,7 +94,8 @@ static BrickTexelType BrickType(float x, float y) {
 static Vector3 BrickColor(float x, float y) {
   switch (BrickType(x, y)) {
   case BRICK:
-    return BRICK_COLOR + Vector3 { 0.0f, 0.1f, 0.0f } * PerlinNoiseFn(x * 128, y * 128);
+    return BRICK_COLOR +
+           Vector3{0.0f, 0.1f, 0.0f} * PerlinNoiseFn(x * 128, y * 128);
   default:
     return MORTAR_COLOR;
   }
@@ -148,7 +149,7 @@ static void Image_Fill_BrickDepth(const ImageBGRA &image) {
 }
 
 void Image_Fill_BrickDepth(void *data, uint32_t width, uint32_t height,
-                            uint32_t stride) {
+                           uint32_t stride) {
   Image_Fill_BrickDepth(ImageBGRA{data, width, height, stride});
 }
 

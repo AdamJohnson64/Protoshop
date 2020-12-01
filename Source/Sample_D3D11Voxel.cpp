@@ -10,17 +10,18 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ISample.h"
 #include "Core_Math.h"
+#include "Core_Object.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
-#include "Sample.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <memory>
 
 const int VOXEL_SIZE = 64;
 
-class Sample_D3D11Voxel : public Sample {
+class Sample_D3D11Voxel : public Object, public ISample {
 private:
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<Direct3D11Device> m_pDevice;
@@ -210,8 +211,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
   }
 };
 
-std::shared_ptr<Sample>
+std::shared_ptr<ISample>
 CreateSample_D3D11Voxel(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D11Device> device) {
-  return std::shared_ptr<Sample>(new Sample_D3D11Voxel(swapchain, device));
+  return std::shared_ptr<ISample>(new Sample_D3D11Voxel(swapchain, device));
 }

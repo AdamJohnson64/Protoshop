@@ -12,12 +12,13 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
-#include "Sample.h"
+#include "Core_ISample.h"
+#include "Core_Object.h"
 #include <atlbase.h>
 #include <functional>
 #include <memory>
 
-class Sample_D3D12Basic : public Sample {
+class Sample_D3D12Basic : public Object, public ISample {
 private:
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<Direct3D12Device> m_pDevice;
@@ -65,8 +66,8 @@ public:
   }
 };
 
-std::shared_ptr<Sample>
+std::shared_ptr<ISample>
 CreateSample_D3D12Basic(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D12Device> device) {
-  return std::shared_ptr<Sample>(new Sample_D3D12Basic(swapchain, device));
+  return std::shared_ptr<ISample>(new Sample_D3D12Basic(swapchain, device));
 }

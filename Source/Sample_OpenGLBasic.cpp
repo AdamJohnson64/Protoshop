@@ -1,17 +1,18 @@
+#include "Core_ISample.h"
+#include "Core_IWindow.h"
+#include "Core_Object.h"
 #include "Core_OpenGL.h"
-#include "Core_Window.h"
-#include "Sample.h"
 #include <gl/GL.h>
 #include <memory>
 
-class Sample_OpenGLBasic : public Sample {
+class Sample_OpenGLBasic : public Object, public ISample {
 private:
   std::shared_ptr<OpenGLDevice> m_pDevice;
-  std::shared_ptr<Window> m_pWindow;
+  std::shared_ptr<IWindow> m_pWindow;
 
 public:
   Sample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device,
-                     std::shared_ptr<Window> pWindow)
+                     std::shared_ptr<IWindow> pWindow)
       : m_pDevice(device), m_pWindow(pWindow) {}
   void Render() override {
     HDC hDC = GetDC(m_pWindow->GetWindowHandle());
@@ -57,8 +58,8 @@ public:
   }
 };
 
-std::shared_ptr<Sample>
+std::shared_ptr<ISample>
 CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device,
-                         std::shared_ptr<Window> pWindow) {
-  return std::shared_ptr<Sample>(new Sample_OpenGLBasic(device, pWindow));
+                         std::shared_ptr<IWindow> pWindow) {
+  return std::shared_ptr<ISample>(new Sample_OpenGLBasic(device, pWindow));
 }

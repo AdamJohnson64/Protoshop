@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Core_Object.h"
-#include <d3d11.h>
 #include <memory>
+
+class ID3D11Device;
+class ID3D11DeviceContext;
 
 class Direct3D11Device : public Object {
 public:

@@ -11,16 +11,17 @@
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
+#include "Core_ISample.h"
 #include "Core_Math.h"
+#include "Core_Object.h"
 #include "Core_Util.h"
-#include "Sample.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include "generated.Sample_DXRWhitted.dxr.h"
 #include <array>
 #include <atlbase.h>
 
-class Sample_DXRWhitted : public Sample {
+class Sample_DXRWhitted : public Object, public ISample {
 private:
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<Direct3D12Device> m_pDevice;
@@ -159,9 +160,9 @@ public:
     CComPtr<ID3D12Resource1> ResourceBLAS;
     {
       D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO
-          descRaytracingPrebuild = {};
+      descRaytracingPrebuild = {};
       D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
-          descRaytracingInputs = {};
+      descRaytracingInputs = {};
       descRaytracingInputs.Type =
           D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
       descRaytracingInputs.NumDescs = 1;
@@ -413,8 +414,8 @@ public:
   }
 };
 
-std::shared_ptr<Sample>
+std::shared_ptr<ISample>
 CreateSample_DXRWhitted(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D12Device> device) {
-  return std::shared_ptr<Sample>(new Sample_DXRWhitted(swapchain, device));
+  return std::shared_ptr<ISample>(new Sample_DXRWhitted(swapchain, device));
 }

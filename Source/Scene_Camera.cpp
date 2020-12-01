@@ -1,6 +1,4 @@
 #include "Scene_Camera.h"
-#define _USE_MATH_DEFINES
-#include <math.h>
 
 static Matrix44 TransformWorldToView = {
     // clang-format off
@@ -12,7 +10,7 @@ static Matrix44 TransformWorldToView = {
 };
 
 static Matrix44 TransformViewToClip = CreateProjection<float>(
-    0.01f, 100.0f, 45 * (M_PI / 180), 45 * (M_PI / 180));
+    0.01f, 100.0f, 45 * (Pi<float> / 180), 45 * (Pi<float> / 180));
 
 Matrix44 GetCameraWorldToClip() {
   return TransformWorldToView * TransformViewToClip;

@@ -3,6 +3,7 @@
 #include "Core_D3D12Util.h"
 #include "Core_Util.h"
 #include <atlbase.h>
+#include <d3d11.h>
 #include <memory>
 
 #pragma comment(lib, "dxgi.lib")

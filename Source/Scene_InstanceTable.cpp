@@ -1,4 +1,5 @@
 #include "Scene_InstanceTable.h"
+#include "Scene_Material.h"
 #include "Scene_ParametricUV.h"
 #include "Scene_ParametricUVToMesh.h"
 #include "Scene_Plane.h"

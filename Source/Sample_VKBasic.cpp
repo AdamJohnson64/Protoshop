@@ -4,10 +4,10 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "Core_ISample.h"
+#include "Core_Object.h"
 #include "Core_Util.h"
 #include "Core_VK.h"
-#include "Core_Window.h"
-#include "Sample.h"
 #include <atlbase.h>
 #include <d3d12.h>
 #include <functional>
@@ -24,7 +24,7 @@ public:
   }
 };
 
-class Sample_VKBasic : public Sample {
+class Sample_VKBasic : public Object, public ISample {
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<VKDevice> m_pDeviceVK;
   std::shared_ptr<Direct3D12Device> m_pDeviceD3D12;
@@ -215,11 +215,11 @@ public:
   }
 };
 
-std::shared_ptr<Sample>
+std::shared_ptr<ISample>
 CreateSample_VKBasic(std::shared_ptr<DXGISwapChain> swapchain,
                      std::shared_ptr<VKDevice> device,
                      std::shared_ptr<Direct3D12Device> pDevice12) {
-  return std::shared_ptr<Sample>(
+  return std::shared_ptr<ISample>(
       new Sample_VKBasic(swapchain, device, pDevice12));
 }
 

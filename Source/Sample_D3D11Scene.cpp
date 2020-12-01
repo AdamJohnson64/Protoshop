@@ -9,15 +9,17 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ISample.h"
+#include "Core_Object.h"
 #include "Core_Util.h"
-#include "Sample.h"
 #include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
+#include "Scene_Mesh.h"
 #include <array>
 #include <atlbase.h>
 #include <vector>
 
-class Sample_D3D11Scene : public Sample {
+class Sample_D3D11Scene : public Object, public ISample {
 private:
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<Direct3D11Device> m_pDevice;
@@ -210,8 +212,8 @@ float4 mainPS(VertexPS vin) : SV_Target
   }
 };
 
-std::shared_ptr<Sample>
+std::shared_ptr<ISample>
 CreateSample_D3D11Scene(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D11Device> device) {
-  return std::shared_ptr<Sample>(new Sample_D3D11Scene(swapchain, device));
+  return std::shared_ptr<ISample>(new Sample_D3D11Scene(swapchain, device));
 }

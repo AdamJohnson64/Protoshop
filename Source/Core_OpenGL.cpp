@@ -1,6 +1,5 @@
 #include "Core_OpenGL.h"
-#include "Core_Window.h"
-
+#include "Core_IWindow.h"
 #include <Windows.h>
 #include <gl/GL.h>
 #include <memory>

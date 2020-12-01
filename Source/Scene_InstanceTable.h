@@ -1,8 +1,10 @@
 #pragma once
 
+class InstanceTable;
+class Material;
+class Mesh;
+
 #include "Core_Math.h"
-#include "Material.h"
-#include "Scene_Mesh.h"
 #include <memory>
 #include <stdint.h>
 #include <vector>

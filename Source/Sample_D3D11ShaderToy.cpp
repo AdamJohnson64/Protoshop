@@ -16,11 +16,9 @@
 #include "Core_Object.h"
 #include "Core_Util.h"
 #include "Scene_Camera.h"
-
+#include <Windows.h>
 #include <memory>
 #include <string>
-
-#include <Windows.h>
 
 class Sample_D3D11ShaderToy : public Object {
 private:

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core_Object.h"
+#include <Windows.h>
 #include <memory>
-#include <windows.h>
 
 // This GL header (annoyingly) has a dependency on windows.h
 #include <gl/GL.h>

@@ -6,14 +6,15 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ISample.h"
+#include "Core_Object.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
-#include "Sample.h"
 #include "Scene_Camera.h"
 #include <array>
 #include <atlbase.h>
 
-class Sample_D3D11ParallaxMap : public Sample {
+class Sample_D3D11ParallaxMap : public Object, public ISample {
 private:
   std::shared_ptr<DXGISwapChain> m_pSwapChain;
   std::shared_ptr<Direct3D11Device> m_pDevice;
@@ -232,7 +233,7 @@ float4 mainPS(VertexPS vin) : SV_Target
       constants.TransformWorldToClip = GetCameraWorldToClip();
       constants.TransformWorldToView = GetCameraWorldToView();
       Matrix44 t = Invert(GetCameraWorldToView());
-      constants.CameraPosition = Vector3 { t.M41, t.M42, t.M43 };
+      constants.CameraPosition = Vector3{t.M41, t.M42, t.M43};
       m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
           m_pD3D11BufferConstants, 0, nullptr, &constants, 0, 0);
     }
@@ -289,9 +290,9 @@ float4 mainPS(VertexPS vin) : SV_Target
   }
 };
 
-std::shared_ptr<Sample>
+std::shared_ptr<ISample>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<DXGISwapChain> swapchain,
                               std::shared_ptr<Direct3D11Device> device) {
-  return std::shared_ptr<Sample>(
+  return std::shared_ptr<ISample>(
       new Sample_D3D11ParallaxMap(swapchain, device));
 }

@@ -2,9 +2,10 @@
 
 #include "Core_Object.h"
 #include "Scene_Mesh.h"
-#include "Scene_ParametricUV.h"
 #include <memory>
 #include <stdint.h>
+
+class ParametricUV;
 
 class ParametricUVToMesh : public Object, public Mesh {
 public:

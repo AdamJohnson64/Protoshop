@@ -1,10 +1,10 @@
-#include "Core_Window.h"
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_ISample.h"
+#include "Core_IWindow.h"
 #include "Core_Math.h"
 #include "Core_Object.h"
 #include "Core_Util.h"
-#include "Sample.h"
 #include "Scene_Camera.h"
 #include <Windows.h>
 #include <functional>
@@ -19,10 +19,10 @@ static int mouseY = 0;
 Vector3 cameraPos = {0, 1, -5};
 Quaternion cameraRot = {0, 0, 0, 1};
 
-class WindowImpl : public Window {
+class WindowImpl : public Object, public IWindow {
 private:
   HWND m_hWindow;
-  std::shared_ptr<Sample> m_pSample;
+  std::shared_ptr<ISample> m_pSample;
 
 public:
   WindowImpl() {
@@ -60,7 +60,7 @@ public:
     DestroyWindow(m_hWindow);
   }
   HWND GetWindowHandle() override { return m_hWindow; }
-  void SetSample(std::shared_ptr<Sample> pSample) override {
+  void SetSample(std::shared_ptr<ISample> pSample) override {
     m_pSample = pSample;
   }
   virtual void OnPaint() {
@@ -148,6 +148,6 @@ private:
   }
 };
 
-std::shared_ptr<Window> CreateNewWindow() {
-  return std::shared_ptr<Window>(new WindowImpl());
+std::shared_ptr<IWindow> CreateNewWindow() {
+  return std::shared_ptr<IWindow>(new WindowImpl());
 }
