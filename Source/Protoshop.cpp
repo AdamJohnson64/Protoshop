@@ -39,6 +39,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     //std::shared_ptr<Window> D3D11LightProbe = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11LightProbe(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11Mesh = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Mesh(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11NormalMap = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11NormalMap(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
+    std::shared_ptr<Window> D3D11ParallaxMap = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11ParallaxMap(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11RayMarch = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11RayMarch(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11Scene = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Scene(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
     std::shared_ptr<Window> D3D11ShowTexture = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11ShowTexture(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });

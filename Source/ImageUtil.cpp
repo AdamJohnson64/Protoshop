@@ -57,7 +57,7 @@ static const Vector3 BRICK_COLOR = {0.5f, 0.2f, 0};
 static const float BRICK_DEPTH = 1.0f;
 static const Vector3 MORTAR_COLOR = {0.4f, 0.4f, 0.4f};
 static const float MORTAR_DEPTH = 0.8f;
-static const float MORTAR_HALF_HEIGHT = 0.02f;
+static const float MORTAR_HALF_HEIGHT = 0.05f;
 
 enum BrickTexelType {
   BRICK,
@@ -94,7 +94,7 @@ static BrickTexelType BrickType(float x, float y) {
 static Vector3 BrickColor(float x, float y) {
   switch (BrickType(x, y)) {
   case BRICK:
-    return BRICK_COLOR;
+    return BRICK_COLOR + Vector3 { 0.0f, 0.1f, 0.0f } * PerlinNoiseFn(x * 128, y * 128);
   default:
     return MORTAR_COLOR;
   }
@@ -132,6 +132,24 @@ static void Image_Fill_BrickAlbedo(const ImageBGRA &image) {
 void Image_Fill_BrickAlbedo(void *data, uint32_t width, uint32_t height,
                             uint32_t stride) {
   Image_Fill_BrickAlbedo(ImageBGRA{data, width, height, stride});
+}
+
+static void Image_Fill_BrickDepth(const ImageBGRA &image) {
+  uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
+  for (int y = 0; y < image.height; ++y) {
+    for (int x = 0; x < image.width; ++x) {
+      float d = BrickDepth((float)x / image.width, (float)y / image.height);
+      PixelBGRA pixel = {(uint8_t)(d * 255), (uint8_t)(d * 255),
+                         (uint8_t)(d * 255), 255};
+      *reinterpret_cast<PixelBGRA *>(bytes + sizeof(PixelBGRA) * x +
+                                     image.stride * y) = pixel;
+    }
+  }
+}
+
+void Image_Fill_BrickDepth(void *data, uint32_t width, uint32_t height,
+                            uint32_t stride) {
+  Image_Fill_BrickDepth(ImageBGRA{data, width, height, stride});
 }
 
 static void Image_Fill_BrickNormal(const ImageBGRA &image) {

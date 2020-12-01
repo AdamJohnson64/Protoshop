@@ -28,6 +28,10 @@ CreateSample_D3D11NormalMap(std::shared_ptr<DXGISwapChain> swapchain,
                             std::shared_ptr<Direct3D11Device> device);
 
 std::shared_ptr<Sample>
+CreateSample_D3D11ParallaxMap(std::shared_ptr<DXGISwapChain> swapchain,
+                              std::shared_ptr<Direct3D11Device> device);
+
+std::shared_ptr<Sample>
 CreateSample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> swapchain,
                            std::shared_ptr<Direct3D11Device> device);
 std::shared_ptr<Sample>
