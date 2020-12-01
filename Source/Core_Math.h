@@ -3,8 +3,13 @@
 template <class T>
 constexpr T Pi = static_cast<T>(3.1415926535897932384626433832795029L);
 
+////////////////////////////////////////////////////////////////////////////////
+// Private trancendental functions (avoid including math.h).
+
 float Cos(float x);
 double Cos(double x);
+float Sin(float x);
+double Sin(double x);
 float Tan(float x);
 double Tan(double x);
 

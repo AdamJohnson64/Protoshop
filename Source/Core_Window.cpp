@@ -8,8 +8,6 @@
 #include "Scene_Camera.h"
 #include <Windows.h>
 #include <functional>
-#define _USE_MATH_DEFINES
-#include <math.h>
 #include <memory>
 
 static bool mouseDown = false;
@@ -111,12 +109,12 @@ private:
           if (mouseDeltaX != 0)
             cameraRot =
                 Multiply<float>(CreateQuaternionRotation<float>(
-                                    {0, 1, 0}, mouseDeltaX / (2 * M_PI)),
+                                    {0, 1, 0}, mouseDeltaX / (2 * Pi<float>)),
                                 cameraRot);
           if (mouseDeltaY != 0)
             cameraRot = Multiply<float>(
                 cameraRot, CreateQuaternionRotation<float>(
-                               {1, 0, 0}, mouseDeltaY / (2 * M_PI)));
+                               {1, 0, 0}, mouseDeltaY / (2 * Pi<float>)));
         }
         // Camera Dolly
         if (modifierShift && modifierCtrl) {
