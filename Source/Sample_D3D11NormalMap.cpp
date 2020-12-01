@@ -45,15 +45,8 @@ public:
   Sample_D3D11NormalMap(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D11Device> device)
       : m_pSwapChain(swapchain), m_pDevice(device) {
-    {
-      D3D11_SAMPLER_DESC desc = {};
-      desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-      desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-      desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-      desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateSamplerState(
-          &desc, &m_pD3D11SamplerState.p));
-    }
+    TRYD3D(m_pDevice->GetID3D11Device()->CreateSamplerState(
+        &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &m_pD3D11SamplerState.p));
     m_pD3D11BufferConstants =
         D3D11_Create_Buffer(m_pDevice->GetID3D11Device(),
                             D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));

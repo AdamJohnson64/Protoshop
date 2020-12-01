@@ -4,6 +4,8 @@
 #include <atlbase.h>
 #include <dxgi1_6.h>
 
+D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultWrap();
+
 D3D11_VIEWPORT Make_D3D11_VIEWPORT(UINT width, UINT height);
 
 D3D11_SHADER_RESOURCE_VIEW_DESC Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(DXGI_FORMAT format);

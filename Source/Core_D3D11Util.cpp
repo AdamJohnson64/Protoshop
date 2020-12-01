@@ -2,6 +2,15 @@
 #include "Core_D3D.h"
 #include "Core_DXGIUtil.h"
 
+D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultWrap() {
+  D3D11_SAMPLER_DESC desc = {};
+  desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+  desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+  desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+  desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+  return desc;
+}
+
 D3D11_VIEWPORT Make_D3D11_VIEWPORT(UINT width, UINT height) {
   D3D11_VIEWPORT desc = {};
   desc.Width = width;
