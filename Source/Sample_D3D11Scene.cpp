@@ -17,48 +17,50 @@
 #include "Scene_Mesh.h"
 #include <array>
 #include <atlbase.h>
+#include <functional>
 #include <vector>
 
 class Sample_D3D11Scene : public Object, public ISample {
 private:
-  std::shared_ptr<DXGISwapChain> m_pSwapChain;
-  std::shared_ptr<Direct3D11Device> m_pDevice;
-  CComPtr<ID3D11Texture2D> m_pD3D11DepthStencilResource;
-  CComPtr<ID3D11DepthStencilView> m_pD3D11DepthStencilView;
-  CComPtr<ID3D11VertexShader> m_pD3D11VertexShader;
-  CComPtr<ID3D11PixelShader> m_pD3D11PixelShader;
-  CComPtr<ID3D11InputLayout> m_pD3D11InputLayout;
-  struct Constants {
-    Matrix44 TransformWorldToClip;
-    Matrix44 TransformObjectToWorld;
-  };
-  struct VertexFormat {
-    Vector3 Position;
-    Vector3 Normal;
-  };
+  std::function<void()> m_fnRender;
 
 public:
-  Sample_D3D11Scene(std::shared_ptr<DXGISwapChain> swapchain,
-                    std::shared_ptr<Direct3D11Device> device)
-      : m_pSwapChain(swapchain), m_pDevice(device) {
+  Sample_D3D11Scene(std::shared_ptr<DXGISwapChain> m_pSwapChain,
+                    std::shared_ptr<Direct3D11Device> m_pDevice) {
+    struct Constants {
+      Matrix44 TransformWorldToClip;
+      Matrix44 TransformObjectToWorld;
+    };
+    struct VertexFormat {
+      Vector3 Position;
+      Vector3 Normal;
+    };
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create an appropriately sized depth buffer and its view.
+    CComPtr<ID3D11DepthStencilView> srvDepth;
     {
-      D3D11_TEXTURE2D_DESC desc = {};
-      desc.Width = RENDERTARGET_WIDTH;
-      desc.Height = RENDERTARGET_HEIGHT;
-      desc.ArraySize = 1;
-      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-      desc.SampleDesc.Count = 1;
-      desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateTexture2D(
-          &desc, nullptr, &m_pD3D11DepthStencilResource));
+      CComPtr<ID3D11Texture2D> textureDepth;
+      {
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = RENDERTARGET_WIDTH;
+        desc.Height = RENDERTARGET_HEIGHT;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        desc.SampleDesc.Count = 1;
+        desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+        TRYD3D(m_pDevice->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
+                                                             &textureDepth));
+      }
+      {
+        D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
+        desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        TRYD3D(m_pDevice->GetID3D11Device()->CreateDepthStencilView(
+            textureDepth, &desc, &srvDepth));
+      }
     }
-    {
-      D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
-      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-      desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateDepthStencilView(
-          m_pD3D11DepthStencilResource, &desc, &m_pD3D11DepthStencilView));
-    }
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create all the shaders that we might need.
     const char *szShaderCode = R"SHADER(
 cbuffer Constants
 {
@@ -96,120 +98,145 @@ float4 mainPS(VertexPS vin) : SV_Target
     float illum = dot(n, l);
     return float4(illum, illum, illum, 1);
 })SHADER";
-    CComPtr<ID3DBlob> pD3DBlobCodeVS =
+    CComPtr<ID3D11VertexShader> shaderVertex;
+    CComPtr<ID3DBlob> blobShaderVertex =
         CompileShader("vs_5_0", "mainVS", szShaderCode);
     TRYD3D(m_pDevice->GetID3D11Device()->CreateVertexShader(
-        pD3DBlobCodeVS->GetBufferPointer(), pD3DBlobCodeVS->GetBufferSize(),
-        nullptr, &m_pD3D11VertexShader));
-    ID3DBlob *pD3DBlobCodePS = CompileShader("ps_5_0", "mainPS", szShaderCode);
-    TRYD3D(m_pDevice->GetID3D11Device()->CreatePixelShader(
-        pD3DBlobCodePS->GetBufferPointer(), pD3DBlobCodePS->GetBufferSize(),
-        nullptr, &m_pD3D11PixelShader));
+        blobShaderVertex->GetBufferPointer(), blobShaderVertex->GetBufferSize(),
+        nullptr, &shaderVertex));
+    CComPtr<ID3D11PixelShader> shaderPixel;
     {
-      std::array<D3D11_INPUT_ELEMENT_DESC, 2> inputdesc = {};
-      inputdesc[0].SemanticName = "SV_Position";
-      inputdesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-      inputdesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[0].AlignedByteOffset = 0;
-      inputdesc[1].SemanticName = "NORMAL";
-      inputdesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-      inputdesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[1].AlignedByteOffset = sizeof(Vector3);
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(
-          &inputdesc[0], 2, pD3DBlobCodeVS->GetBufferPointer(),
-          pD3DBlobCodeVS->GetBufferSize(), &m_pD3D11InputLayout));
+      ID3DBlob *blob = CompileShader("ps_5_0", "mainPS", szShaderCode);
+      TRYD3D(m_pDevice->GetID3D11Device()->CreatePixelShader(
+          blob->GetBufferPointer(), blob->GetBufferSize(), nullptr,
+          &shaderPixel));
     }
-  }
-  void Render() override {
-    // Get the backbuffer and create a render target from it.
-    CComPtr<ID3D11RenderTargetView> pD3D11RenderTargetView =
-        D3D11_Create_RTV_From_SwapChain(m_pDevice->GetID3D11Device(),
-                                        m_pSwapChain->GetIDXGISwapChain());
-    m_pDevice->GetID3D11DeviceContext()->ClearState();
-    // Beginning of rendering.
-    m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(
-        pD3D11RenderTargetView,
-        &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
-    m_pDevice->GetID3D11DeviceContext()->ClearDepthStencilView(
-        m_pD3D11DepthStencilView, D3D10_CLEAR_DEPTH, 1.0f, 0);
-    m_pDevice->GetID3D11DeviceContext()->RSSetViewports(
-        1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-    m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(
-        1, &pD3D11RenderTargetView.p, m_pD3D11DepthStencilView);
-    std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
-    // Create a vertex buffer.
-    m_pDevice->GetID3D11DeviceContext()->VSSetShader(m_pD3D11VertexShader,
-                                                     nullptr, 0);
-    m_pDevice->GetID3D11DeviceContext()->PSSetShader(m_pD3D11PixelShader,
-                                                     nullptr, 0);
-    m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(
-        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(m_pD3D11InputLayout);
-    std::vector<CComPtr<ID3D11Buffer>> m_pD3D11BufferVertex;
-    std::vector<CComPtr<ID3D11Buffer>> m_pD3D11BufferIndex;
-    for (int meshIndex = 0; meshIndex < scene->Meshes.size(); ++meshIndex) {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create the input vertex layout.
+    CComPtr<ID3D11InputLayout> inputLayout;
+    {
+      std::array<D3D11_INPUT_ELEMENT_DESC, 2> desc = {};
+      desc[0].SemanticName = "SV_Position";
+      desc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+      desc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+      desc[0].AlignedByteOffset = 0;
+      desc[1].SemanticName = "NORMAL";
+      desc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+      desc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+      desc[1].AlignedByteOffset = sizeof(Vector3);
+      TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(
+          &desc[0], 2, blobShaderVertex->GetBufferPointer(),
+          blobShaderVertex->GetBufferSize(), &inputLayout));
+    }
+    ////////////////////////////////////////////////////////////////////////////////
+    // Choose the scene.
+    std::shared_ptr<InstanceTable> theScene(InstanceTable::Default());
+    ////////////////////////////////////////////////////////////////////////////////
+    // Build all vertex/index buffer resources for the scene.
+    std::vector<CComPtr<ID3D11Buffer>> bufferMeshVertex;
+    std::vector<CComPtr<ID3D11Buffer>> bufferMeshIndex;
+    for (int meshIndex = 0; meshIndex < theScene->Meshes.size(); ++meshIndex) {
 
       {
         // Create the vertex buffer.
-        int sizeVertex =
-            sizeof(VertexFormat) * scene->Meshes[meshIndex]->getVertexCount();
-        std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-        scene->Meshes[meshIndex]->copyVertices(
-            reinterpret_cast<Vector3 *>(vertices.get()), sizeof(VertexFormat));
-        scene->Meshes[meshIndex]->copyNormals(
-            reinterpret_cast<Vector3 *>(vertices.get() + sizeof(Vector3)),
+        int sizeVertex = sizeof(VertexFormat) *
+                         theScene->Meshes[meshIndex]->getVertexCount();
+        std::unique_ptr<int8_t[]> bytesVertex(new int8_t[sizeVertex]);
+        theScene->Meshes[meshIndex]->copyVertices(
+            reinterpret_cast<Vector3 *>(bytesVertex.get()),
             sizeof(VertexFormat));
-        m_pD3D11BufferVertex.push_back(D3D11_Create_Buffer(
+        theScene->Meshes[meshIndex]->copyNormals(
+            reinterpret_cast<Vector3 *>(bytesVertex.get() + sizeof(Vector3)),
+            sizeof(VertexFormat));
+        bufferMeshVertex.push_back(D3D11_Create_Buffer(
             m_pDevice->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER, sizeVertex,
-            vertices.get()));
+            bytesVertex.get()));
       }
       {
         // Create the index buffer.
         int sizeIndices =
-            sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
-        std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-        scene->Meshes[meshIndex]->copyIndices(
-            reinterpret_cast<uint32_t *>(indices.get()), sizeof(uint32_t));
-        m_pD3D11BufferIndex.push_back(D3D11_Create_Buffer(
+            sizeof(int32_t) * theScene->Meshes[meshIndex]->getIndexCount();
+        std::unique_ptr<int8_t[]> bytesIndex(new int8_t[sizeIndices]);
+        theScene->Meshes[meshIndex]->copyIndices(
+            reinterpret_cast<uint32_t *>(bytesIndex.get()), sizeof(uint32_t));
+        bufferMeshIndex.push_back(D3D11_Create_Buffer(
             m_pDevice->GetID3D11Device(), D3D11_BIND_INDEX_BUFFER, sizeIndices,
-            indices.get()));
+            bytesIndex.get()));
       }
     }
-    // Now go through all the instances, create the constants, and draw.
-    std::vector<CComPtr<ID3D11Buffer>> m_pD3D11BufferConstant;
-    for (int instanceIndex = 0; instanceIndex < scene->Instances.size();
-         ++instanceIndex) {
-      const Instance &instance = scene->Instances[instanceIndex];
-      // Create the constant buffer.
-      {
-        Constants constants = {};
-        constants.TransformWorldToClip =
-            instance.TransformObjectToWorld * GetCameraWorldToClip();
-        constants.TransformObjectToWorld = instance.TransformObjectToWorld;
-        m_pD3D11BufferConstant.push_back(D3D11_Create_Buffer(
-            m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
-            sizeof(Constants), &constants));
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Capture all of the above into the rendering function for every frame.
+    //
+    // One really good reason to use a lambda is that they can implicitly
+    // capture state moving into the render. There's no need to declare class
+    // members to carry this state. This should make it easier to offload
+    // processing into construction without changing things too much (you should
+    // just move the code out of the lambda).
+    m_fnRender = [=]() {
+      ////////////////////////////////////////////////////////////////////////////////
+      // Build all instance constant buffers for the scene.
+      std::vector<CComPtr<ID3D11Buffer>> bufferInstanceConstants;
+      for (int instanceIndex = 0; instanceIndex < theScene->Instances.size();
+           ++instanceIndex) {
+        const Instance &instance = theScene->Instances[instanceIndex];
+        // Create the constant buffer.
+        {
+          Constants constants = {};
+          constants.TransformWorldToClip =
+              instance.TransformObjectToWorld * GetCameraWorldToClip();
+          constants.TransformObjectToWorld = instance.TransformObjectToWorld;
+          bufferInstanceConstants.push_back(D3D11_Create_Buffer(
+              m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
+              sizeof(Constants), &constants));
+        }
       }
-      m_pDevice->GetID3D11DeviceContext()->VSSetConstantBuffers(
-          0, 1, &m_pD3D11BufferConstant[instanceIndex].p);
-      {
-        const UINT uStrides[] = {sizeof(VertexFormat)};
-        const UINT uOffsets[] = {0};
-        m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(
-            0, 1, &m_pD3D11BufferVertex[instance.GeometryIndex].p, uStrides,
-            uOffsets);
+      ////////////////////////////////////////////////////////////////////////////////
+      // Get the backbuffer and create a render target from it.
+      CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
+          D3D11_Create_RTV_From_SwapChain(m_pDevice->GetID3D11Device(),
+                                          m_pSwapChain->GetIDXGISwapChain());
+      ////////////////////////////////////////////////////////////////////////////////
+      // Beginning of rendering.
+      m_pDevice->GetID3D11DeviceContext()->ClearState();
+      m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(
+          rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
+      m_pDevice->GetID3D11DeviceContext()->ClearDepthStencilView(
+          srvDepth, D3D10_CLEAR_DEPTH, 1.0f, 0);
+      m_pDevice->GetID3D11DeviceContext()->RSSetViewports(
+          1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+      m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(
+          1, &rtvBackbuffer.p, srvDepth);
+      m_pDevice->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr,
+                                                       0);
+      m_pDevice->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr, 0);
+      m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(
+          D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+      m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
+      for (int instanceIndex = 0; instanceIndex < theScene->Instances.size();
+           ++instanceIndex) {
+        const Instance &instance = theScene->Instances[instanceIndex];
+        m_pDevice->GetID3D11DeviceContext()->VSSetConstantBuffers(
+            0, 1, &bufferInstanceConstants[instanceIndex].p);
+        {
+          const UINT vertexStride[] = {sizeof(VertexFormat)};
+          const UINT vertexOffset[] = {0};
+          m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(
+              0, 1, &bufferMeshVertex[instance.GeometryIndex].p, vertexStride,
+              vertexOffset);
+        }
+        m_pDevice->GetID3D11DeviceContext()->IASetIndexBuffer(
+            bufferMeshIndex[instance.GeometryIndex].p, DXGI_FORMAT_R32_UINT, 0);
+        m_pDevice->GetID3D11DeviceContext()->DrawIndexed(
+            theScene->Meshes[instance.GeometryIndex]->getIndexCount(), 0, 0);
       }
-      m_pDevice->GetID3D11DeviceContext()->IASetIndexBuffer(
-          m_pD3D11BufferIndex[instance.GeometryIndex].p, DXGI_FORMAT_R32_UINT,
-          0);
-      m_pDevice->GetID3D11DeviceContext()->DrawIndexed(
-          scene->Meshes[instance.GeometryIndex]->getIndexCount(), 0, 0);
-    }
-    m_pDevice->GetID3D11DeviceContext()->ClearState();
-    m_pDevice->GetID3D11DeviceContext()->Flush();
-    // End of rendering; send to display.
-    m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
+      m_pDevice->GetID3D11DeviceContext()->ClearState();
+      m_pDevice->GetID3D11DeviceContext()->Flush();
+      // End of rendering; send to display.
+      m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
+    };
   }
+  void Render() override { m_fnRender(); }
 };
 
 std::shared_ptr<ISample>
