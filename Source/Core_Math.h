@@ -243,6 +243,16 @@ template <class T> TMatrix44<T> CreateMatrixRotation(const TQuaternion<T> &q) {
                       m31, m32, m33, 0, 0,   0,   0,   1};
 }
 
+template <class T> TMatrix44<T> CreateMatrixRotationZ(T angle) {
+  TMatrix44<T> o = {};
+  o.M11 = o.M22 = o.M33 = o.M44 = 1;
+  o.M11 = Cos(angle);
+  o.M12 = Sin(angle);
+  o.M21 = -Sin(angle);
+  o.M22 = Cos(angle);
+  return o;
+}
+
 template <class T> TMatrix44<T> CreateMatrixScale(const TVector3<T> scale) {
   TMatrix44<T> o = {};
   o.M11 = scale.X;

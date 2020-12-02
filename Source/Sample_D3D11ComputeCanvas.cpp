@@ -129,16 +129,11 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     m_pDevice->GetID3D11DeviceContext()->ClearState();
     // Upload the constant buffer.
     static float angle = 0;
-    const float zoom = 2 + cosf(angle);
-    Matrix44 rotate = {};
-    rotate.M11 = rotate.M22 = rotate.M33 = rotate.M44 = 1;
-    rotate.M11 = cosf(angle);
-    rotate.M12 = sinf(angle);
-    rotate.M21 = -sinf(angle);
-    rotate.M22 = cosf(angle);
+    const float zoom = 2 + Cos(angle);
     Matrix44 transformImageToPixel =
         CreateMatrixTranslate(Vector3{-IMAGE_WIDTH / 2, -IMAGE_HEIGHT / 2, 0}) *
-        CreateMatrixScale(Vector3{zoom, zoom, 1}) * rotate *
+        CreateMatrixScale(Vector3{zoom, zoom, 1}) *
+        CreateMatrixRotationZ(angle) *
         CreateMatrixTranslate(
             Vector3{RENDERTARGET_WIDTH / 2, RENDERTARGET_HEIGHT / 2, 0});
     angle += 0.01f;
