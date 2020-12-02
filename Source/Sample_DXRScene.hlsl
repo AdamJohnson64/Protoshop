@@ -19,5 +19,6 @@ void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes
 [shader("closesthit")]
 void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    rayPayload.Color = float3(1, 0, 0);
+    // Make the meshes easier to see by rendering the barycentric coordinates.
+    rayPayload.Color = float3(1 - intersectionAttributes.Normal.x - intersectionAttributes.Normal.y, intersectionAttributes.Normal.xy);
 }
