@@ -1,11 +1,12 @@
 #include "Scene_InstanceTable.h"
 #include "Scene_Material.h"
+#include "Scene_MeshOBJ.h"
 #include "Scene_ParametricUV.h"
 #include "Scene_ParametricUVToMesh.h"
 #include "Scene_Plane.h"
 #include "Scene_Sphere.h"
 
-std::shared_ptr<InstanceTable> InstanceTable::Default() {
+static std::shared_ptr<InstanceTable> CreateSimple() {
   static std::shared_ptr<InstanceTable> scene(new InstanceTable());
   static bool initialized = false;
   if (!initialized) {
@@ -42,6 +43,30 @@ std::shared_ptr<InstanceTable> InstanceTable::Default() {
     initialized = true;
   }
   return scene;
+}
+
+static std::shared_ptr<InstanceTable> CreateSponza() {
+  static std::shared_ptr<InstanceTable> scene(new InstanceTable());
+  static bool initialized = false;
+  if (!initialized) {
+    // Create Materials.
+    std::shared_ptr<Material> _checkerboard(new Checkerboard());
+    uint32_t hCheckerboard = scene->addMaterial(_checkerboard);
+    std::shared_ptr<Material> _plastic(new RedPlastic());
+    uint32_t hPlastic = scene->addMaterial(_plastic);
+    // Create Geometry.
+    std::shared_ptr<Mesh> _mesh(new MeshOBJ("C:\\_\\RenderToy\\ThirdParty\\RenderToyAssets\\Models\\Sponza\\sponza.obj"));
+    uint32_t hSponza = scene->addMesh(_mesh);
+    // Create Instances.
+    Matrix44 transformObjectToWorld = CreateMatrixScale(Vector3 {1, 1, 1});
+    scene->addInstance(transformObjectToWorld, hSponza, hPlastic);
+    initialized = true;
+  }
+  return scene;
+}
+
+std::shared_ptr<InstanceTable> InstanceTable::Default() {
+  return CreateSimple();
 }
 
 uint32_t InstanceTable::addMaterial(std::shared_ptr<Material> material) {
