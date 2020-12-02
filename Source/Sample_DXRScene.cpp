@@ -32,25 +32,20 @@
 
 class Sample_DXRScene : public Object, public ISample {
 private:
-  std::shared_ptr<DXGISwapChain> m_pSwapChain;
-  std::shared_ptr<Direct3D12Device> m_pDevice;
-  CComPtr<ID3D12Resource1> m_pResourceTargetUAV;
-  CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapCBVSRVUAV;
-  CComPtr<ID3D12RootSignature> m_pRootSignatureGLOBAL;
-  CComPtr<ID3D12StateObject> m_pPipelineStateObject;
+  std::function<void()> m_fnRender;
 
 public:
   Sample_DXRScene(std::shared_ptr<DXGISwapChain> swapchain,
-                  std::shared_ptr<Direct3D12Device> device)
-      : m_pSwapChain(swapchain), m_pDevice(device) {
-    m_pResourceTargetUAV = DXR_Create_Output_UAV(device->m_pDevice);
-    m_pDescriptorHeapCBVSRVUAV =
+                  std::shared_ptr<Direct3D12Device> device) {
+    CComPtr<ID3D12Resource1> resourceTarget =
+        DXR_Create_Output_UAV(device->m_pDevice);
+    CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
         D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
-    m_pRootSignatureGLOBAL =
+    CComPtr<ID3D12RootSignature> rootSignatureGLOBAL =
         DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(device->m_pDevice);
-    std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
     ////////////////////////////////////////////////////////////////////////////////
     // PIPELINE - Build the pipeline with all ray shaders.
+    CComPtr<ID3D12StateObject> pipelineStateObject;
     {
       uint32_t setupSubobject = 0;
 
@@ -64,34 +59,21 @@ public:
       descSubobject[setupSubobject].pDesc = &descLibrary;
       ++setupSubobject;
 
-      std::vector<std::shared_ptr<std::wstring>> hitGroupNames;
-      std::vector<std::shared_ptr<D3D12_HIT_GROUP_DESC>> hitGroups;
-      std::vector<const WCHAR *> shaderExports;
-      shaderExports.push_back(L"RayGenerationMVPClip");
-      shaderExports.push_back(L"Miss");
-      for (int i = 0; i < scene->Materials.size(); ++i) {
-        const Material *pMaterial = scene->Materials[i].get();
-        std::shared_ptr<std::wstring> descHitGroupName(
-            new std::wstring(std::wstring(L"HitGroup") + std::to_wstring(i)));
-        hitGroupNames.push_back(descHitGroupName);
-        std::shared_ptr<D3D12_HIT_GROUP_DESC> descHitGroup(
-            new D3D12_HIT_GROUP_DESC());
-        hitGroups.push_back(descHitGroup);
-        shaderExports.push_back(descHitGroupName->c_str());
-        descHitGroup->HitGroupExport = descHitGroupName->c_str();
-        descHitGroup->Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-        if (dynamic_cast<const Checkerboard *>(pMaterial)) {
-          descHitGroup->ClosestHitShaderImport = L"MaterialCheckerboard";
-        } else if (dynamic_cast<const RedPlastic *>(pMaterial)) {
-          descHitGroup->ClosestHitShaderImport = L"MaterialRedPlastic";
-        } else {
-          throw std::exception("Unable to construct material.");
-        }
-        descSubobject[setupSubobject].Type =
-            D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-        descSubobject[setupSubobject].pDesc = descHitGroup.get();
-        ++setupSubobject;
-      }
+      D3D12_HIT_GROUP_DESC descHitGroup0 = {};
+      descHitGroup0.HitGroupExport = L"HitGroup0";
+      descHitGroup0.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+      descHitGroup0.ClosestHitShaderImport = L"MaterialCheckerboard";
+      descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+      descSubobject[setupSubobject].pDesc = &descHitGroup0;
+      ++setupSubobject;
+
+      D3D12_HIT_GROUP_DESC descHitGroup1 = {};
+      descHitGroup1.HitGroupExport = L"HitGroup1";
+      descHitGroup1.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+      descHitGroup1.ClosestHitShaderImport = L"MaterialRedPlastic";
+      descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+      descSubobject[setupSubobject].pDesc = &descHitGroup1;
+      ++setupSubobject;
 
       D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig = {};
       descShaderConfig.MaxPayloadSizeInBytes =
@@ -103,8 +85,11 @@ public:
       descSubobject[setupSubobject].pDesc = &descShaderConfig;
       ++setupSubobject;
 
+      const WCHAR *shaderExports[] = {L"RayGenerationMVPClip", L"Miss",
+                                      L"HitGroup0", L"HitGroup1"};
+
       D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
-      descSubobjectExports.NumExports = shaderExports.size();
+      descSubobjectExports.NumExports = _countof(shaderExports);
       descSubobjectExports.pExports = &shaderExports[0];
       descSubobjectExports.pSubobjectToAssociate =
           &descSubobject[setupSubobject - 1];
@@ -115,7 +100,7 @@ public:
 
       descSubobject[setupSubobject].Type =
           D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-      descSubobject[setupSubobject].pDesc = &m_pRootSignatureGLOBAL.p;
+      descSubobject[setupSubobject].pDesc = &rootSignatureGLOBAL.p;
       ++setupSubobject;
 
       D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
@@ -129,108 +114,17 @@ public:
       descStateObject.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
       descStateObject.NumSubobjects = setupSubobject;
       descStateObject.pSubobjects = &descSubobject[0];
-      TRYD3D(m_pDevice->m_pDevice->CreateStateObject(
+      TRYD3D(device->m_pDevice->CreateStateObject(
           &descStateObject, __uuidof(ID3D12StateObject),
-          (void **)&m_pPipelineStateObject));
-      m_pPipelineStateObject->SetName(L"DXR Pipeline State");
-    }
-  }
-  void Render() override {
-    std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
-    ////////////////////////////////////////////////////////////////////////////////
-    // BLAS - Build the bottom level acceleration structures.
-    ////////////////////////////////////////////////////////////////////////////////
-    // Create and initialize the BLAS.
-    std::vector<CComPtr<ID3D12Resource1>> BottomLevelAS;
-    BottomLevelAS.resize(scene->Meshes.size());
-    for (int i = 0; i < scene->Meshes.size(); ++i) {
-      int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
-      std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-      scene->Meshes[i]->copyVertices(
-          reinterpret_cast<Vector3 *>(vertices.get()), sizeof(Vector3));
-      int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
-      std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-      scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t *>(indices.get()),
-                                    sizeof(uint32_t));
-      BottomLevelAS[i] = DXRCreateBLAS(
-          m_pDevice.get(), vertices.get(), scene->Meshes[i]->getVertexCount(),
-          DXGI_FORMAT_R32G32B32_FLOAT, indices.get(),
-          scene->Meshes[i]->getIndexCount(), DXGI_FORMAT_R32_UINT);
-    }
-    ////////////////////////////////////////////////////////////////////////////////
-    // TLAS - Build the top level acceleration structure.
-    ////////////////////////////////////////////////////////////////////////////////
-    CComPtr<ID3D12Resource1> ResourceTLAS;
-    {
-      std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDescs;
-      instanceDescs.resize(scene->Instances.size());
-      for (int i = 0; i < scene->Instances.size(); ++i) {
-        instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-            scene->Instances[i].TransformObjectToWorld,
-            scene->Instances[i].MaterialIndex,
-            BottomLevelAS[scene->Instances[i].GeometryIndex]
-                ->GetGPUVirtualAddress());
-        instanceDescs[i].InstanceID = i;
-      }
-      ResourceTLAS = DXRCreateTLAS(m_pDevice.get(), &instanceDescs[0],
-                                   instanceDescs.size());
-    }
-    // Create a constant buffer view for top level data.
-    CComPtr<ID3D12Resource> ResourceConstants = D3D12_Create_Buffer(
-        m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44),
-        &Invert(GetCameraWorldToClip()));
-    ////////////////////////////////////////////////////////////////////////////////
-    // Build the descriptor table to establish resource views.
-    //
-    // These descriptors will be attached via the GLOBAL signature as they are
-    // all shared throughout all shaders. The GLOBAL signature is established by
-    // the compute root signature and descriptor heap.
-    ////////////////////////////////////////////////////////////////////////////////
-    {
-      D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =
-          m_pDescriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
-      UINT descriptorElementSize =
-          m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(
-              D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-      // Create the UAV for the raytracer output.
-      {
-        D3D12_UNORDERED_ACCESS_VIEW_DESC descUAV = {};
-        descUAV.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        m_pDevice->m_pDevice->CreateUnorderedAccessView(
-            m_pResourceTargetUAV, nullptr, &descUAV, descriptorBase);
-        descriptorBase.ptr += descriptorElementSize;
-      }
-      // Create the SRV for the acceleration structure.
-      {
-        D3D12_SHADER_RESOURCE_VIEW_DESC descSRV = {};
-        descSRV.Format = DXGI_FORMAT_UNKNOWN;
-        descSRV.ViewDimension =
-            D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-        descSRV.Shader4ComponentMapping =
-            D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        descSRV.RaytracingAccelerationStructure.Location =
-            ResourceTLAS->GetGPUVirtualAddress();
-        m_pDevice->m_pDevice->CreateShaderResourceView(nullptr, &descSRV,
-                                                       descriptorBase);
-        descriptorBase.ptr += descriptorElementSize;
-      }
-      // Create the CBV for the scene constants.
-      {
-        D3D12_CONSTANT_BUFFER_VIEW_DESC descCBV = {};
-        descCBV.BufferLocation = ResourceConstants->GetGPUVirtualAddress();
-        descCBV.SizeInBytes = 256;
-        m_pDevice->m_pDevice->CreateConstantBufferView(&descCBV,
-                                                       descriptorBase);
-        descriptorBase.ptr += descriptorElementSize;
-      }
+          (void **)&pipelineStateObject));
+      pipelineStateObject->SetName(L"DXR Pipeline State");
     }
     ////////////////////////////////////////////////////////////////////////////////
     // SHADER TABLE - Create a table of all shaders for the raytracer.
     //
-    // Note that we don't have any local parameters to our shaders here so there
-    // are no local descriptors following any shader identifier entry.
-    ////////////////////////////////////////////////////////////////////////////////
+    // Note that we don't have any local parameters to our shaders here so
+    // there are no local descriptors following any shader identifier entry.
+    //
     // Our shader entry is a shader function entrypoint only; no other
     // descriptors or data.
     const uint32_t shaderEntrySize =
@@ -250,12 +144,11 @@ public:
     const uint32_t shaderTableSize =
         descriptorOffsetHitGroup + shaderEntrySize * 2;
     // Now build this table.
-    CComPtr<ID3D12Resource1> ResourceShaderTable;
+    CComPtr<ID3D12Resource1> resourceShaderTable;
     {
       CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
-      TRYD3D(
-          m_pPipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(
-              &stateObjectProperties));
+      TRYD3D(pipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(
+          &stateObjectProperties));
       std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
       memset(&shaderTableCPU[0], 0, shaderTableSize);
       // Shader Index 0 - Ray Generation Shader
@@ -275,77 +168,178 @@ public:
       memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
              stateObjectProperties->GetShaderIdentifier(L"HitGroup1"),
              D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-      ResourceShaderTable = D3D12_Create_Buffer(
-          m_pDevice.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+      resourceShaderTable = D3D12_Create_Buffer(
+          device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
           D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize,
           &shaderTableCPU[0]);
-      ResourceShaderTable->SetName(L"DXR Shader Table");
+      resourceShaderTable->SetName(L"DXR Shader Table");
     }
     ////////////////////////////////////////////////////////////////////////////////
-    // Get the next available backbuffer.
+    // Choose the scene.
+    std::shared_ptr<InstanceTable> theScene(InstanceTable::Default());
     ////////////////////////////////////////////////////////////////////////////////
-    CComPtr<ID3D12Resource> pD3D12Resource;
-    TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(
-        m_pSwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
-        __uuidof(ID3D12Resource), (void **)&pD3D12Resource));
-    pD3D12Resource->SetName(L"D3D12Resource (Backbuffer)");
-    m_pDevice->m_pDevice->CreateRenderTargetView(
-        pD3D12Resource, &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
-        m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
+    // BLAS - Build the bottom level acceleration structures.
+    std::vector<CComPtr<ID3D12Resource1>> resourceBLAS;
+    resourceBLAS.resize(theScene->Meshes.size());
+    for (int i = 0; i < theScene->Meshes.size(); ++i) {
+      int sizeVertex = sizeof(float[3]) * theScene->Meshes[i]->getVertexCount();
+      std::unique_ptr<int8_t[]> dataVertex(new int8_t[sizeVertex]);
+      theScene->Meshes[i]->copyVertices(
+          reinterpret_cast<Vector3 *>(dataVertex.get()), sizeof(Vector3));
+      int sizeIndices = sizeof(int32_t) * theScene->Meshes[i]->getIndexCount();
+      std::unique_ptr<int8_t[]> dataIndex(new int8_t[sizeIndices]);
+      theScene->Meshes[i]->copyIndices(
+          reinterpret_cast<uint32_t *>(dataIndex.get()), sizeof(uint32_t));
+      resourceBLAS[i] = DXRCreateBLAS(
+          device.get(), dataVertex.get(), theScene->Meshes[i]->getVertexCount(),
+          DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
+          theScene->Meshes[i]->getIndexCount(), DXGI_FORMAT_R32_UINT);
+    }
     ////////////////////////////////////////////////////////////////////////////////
-    // RAYTRACE - Finally call the raytracer and generate the frame.
-    ////////////////////////////////////////////////////////////////////////////////
-    D3D12_Run_Synchronously(m_pDevice.get(), [&](ID3D12GraphicsCommandList4
-                                                     *RaytraceCommandList) {
-      // Attach the GLOBAL signature and descriptors to the compute root.
-      RaytraceCommandList->SetComputeRootSignature(m_pRootSignatureGLOBAL);
-      RaytraceCommandList->SetDescriptorHeaps(1, &m_pDescriptorHeapCBVSRVUAV.p);
-      RaytraceCommandList->SetComputeRootDescriptorTable(
-          0, m_pDescriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
-      // Prepare the pipeline for raytracing.
-      RaytraceCommandList->SetPipelineState1(m_pPipelineStateObject);
-      {
-        D3D12_DISPATCH_RAYS_DESC descDispatchRays = {};
-        descDispatchRays.RayGenerationShaderRecord.StartAddress =
-            ResourceShaderTable->GetGPUVirtualAddress() +
-            descriptorOffsetRayGenerationShader;
-        descDispatchRays.RayGenerationShaderRecord.SizeInBytes =
-            shaderEntrySize;
-        descDispatchRays.MissShaderTable.StartAddress =
-            ResourceShaderTable->GetGPUVirtualAddress() +
-            descriptorOffsetMissShader;
-        descDispatchRays.MissShaderTable.SizeInBytes = shaderEntrySize;
-        descDispatchRays.HitGroupTable.StartAddress =
-            ResourceShaderTable->GetGPUVirtualAddress() +
-            descriptorOffsetHitGroup;
-        descDispatchRays.HitGroupTable.SizeInBytes = shaderEntrySize;
-        descDispatchRays.HitGroupTable.StrideInBytes = shaderEntrySize;
-        descDispatchRays.Width = RENDERTARGET_WIDTH;
-        descDispatchRays.Height = RENDERTARGET_HEIGHT;
-        descDispatchRays.Depth = 1;
-        RaytraceCommandList->DispatchRays(&descDispatchRays);
-        RaytraceCommandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(m_pResourceTargetUAV,
-                                            D3D12_RESOURCE_STATE_COMMON,
-                                            D3D12_RESOURCE_STATE_COPY_SOURCE));
-        RaytraceCommandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(pD3D12Resource,
-                                            D3D12_RESOURCE_STATE_COMMON,
-                                            D3D12_RESOURCE_STATE_COPY_DEST));
-        RaytraceCommandList->CopyResource(pD3D12Resource, m_pResourceTargetUAV);
-        RaytraceCommandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(m_pResourceTargetUAV,
-                                            D3D12_RESOURCE_STATE_COPY_SOURCE,
-                                            D3D12_RESOURCE_STATE_COMMON));
-        RaytraceCommandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(pD3D12Resource,
-                                            D3D12_RESOURCE_STATE_COPY_DEST,
-                                            D3D12_RESOURCE_STATE_COMMON));
+    // TLAS - Build the top level acceleration structure.
+    CComPtr<ID3D12Resource1> resourceTLAS;
+    {
+      std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDescs;
+      instanceDescs.resize(theScene->Instances.size());
+      for (int i = 0; i < theScene->Instances.size(); ++i) {
+        instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
+            theScene->Instances[i].TransformObjectToWorld,
+            theScene->Instances[i].MaterialIndex,
+            resourceBLAS[theScene->Instances[i].GeometryIndex]
+                ->GetGPUVirtualAddress());
+        instanceDescs[i].InstanceID = i;
       }
-    });
-    // Swap the backbuffer and send this to the desktop composer for display.
-    TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
+      resourceTLAS =
+          DXRCreateTLAS(device.get(), &instanceDescs[0], instanceDescs.size());
+    }
+    m_fnRender = [=] {
+      ////////////////////////////////////////////////////////////////////////////////
+      // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+      //
+      // This line here LOOKS innocuous and pointless but IT IS IMPORTANT.
+      //
+      // Anything the lambda doesn't capture could be freed when we leave the
+      // constructor. The TLAS sees the BLAS only by address so we need to capture the
+      // BLAS table to stop it from deallocating. Do that and your TLAS will have
+      // dangling pointers to GPU memory.
+      //
+      // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+      auto persistBLAS = resourceBLAS;
+      ////////////////////////////////////////////////////////////////////////////////
+      // Create a constant buffer view for top level data.
+      CComPtr<ID3D12Resource> resourceConstants = D3D12_Create_Buffer(
+          device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+          D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44),
+          &Invert(GetCameraWorldToClip()));
+      ////////////////////////////////////////////////////////////////////////////////
+      // Build the descriptor table to establish resource views.
+      //
+      // These descriptors will be attached via the GLOBAL signature as they are
+      // all shared throughout all shaders. The GLOBAL signature is established
+      // by the compute root signature and descriptor heap.
+      {
+        D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =
+            descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
+        UINT descriptorElementSize =
+            device->m_pDevice->GetDescriptorHandleIncrementSize(
+                D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        // Create the UAV for the raytracer output.
+        {
+          D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+          desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+          device->m_pDevice->CreateUnorderedAccessView(resourceTarget, nullptr,
+                                                       &desc, descriptorBase);
+          descriptorBase.ptr += descriptorElementSize;
+        }
+        // Create the SRV for the acceleration structure.
+        {
+          D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+          desc.Format = DXGI_FORMAT_UNKNOWN;
+          desc.ViewDimension =
+              D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+          desc.Shader4ComponentMapping =
+              D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+          desc.RaytracingAccelerationStructure.Location =
+              resourceTLAS->GetGPUVirtualAddress();
+          device->m_pDevice->CreateShaderResourceView(nullptr, &desc,
+                                                      descriptorBase);
+          descriptorBase.ptr += descriptorElementSize;
+        }
+        // Create the CBV for the scene constants.
+        {
+          D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
+          desc.BufferLocation = resourceConstants->GetGPUVirtualAddress();
+          desc.SizeInBytes = 256;
+          device->m_pDevice->CreateConstantBufferView(&desc, descriptorBase);
+          descriptorBase.ptr += descriptorElementSize;
+        }
+      }
+      ////////////////////////////////////////////////////////////////////////////////
+      // Get the next available backbuffer.
+      CComPtr<ID3D12Resource> resourceBackbuffer;
+      TRYD3D(swapchain->GetIDXGISwapChain()->GetBuffer(
+          swapchain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
+          __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
+      resourceBackbuffer->SetName(L"D3D12Resource (Backbuffer)");
+      device->m_pDevice->CreateRenderTargetView(
+          resourceBackbuffer,
+          &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
+          device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
+      ////////////////////////////////////////////////////////////////////////////////
+      // RAYTRACE - Finally call the raytracer and generate the frame.
+      D3D12_Run_Synchronously(
+          device.get(), [&](ID3D12GraphicsCommandList5 *commandList) {
+            // Attach the GLOBAL signature and descriptors to the compute root.
+            commandList->SetComputeRootSignature(rootSignatureGLOBAL);
+            commandList->SetDescriptorHeaps(1, &descriptorHeapCBVSRVUAV.p);
+            commandList->SetComputeRootDescriptorTable(
+                0,
+                descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
+            // Prepare the pipeline for raytracing.
+            commandList->SetPipelineState1(pipelineStateObject);
+            {
+              D3D12_DISPATCH_RAYS_DESC desc = {};
+              desc.RayGenerationShaderRecord.StartAddress =
+                  resourceShaderTable->GetGPUVirtualAddress() +
+                  descriptorOffsetRayGenerationShader;
+              desc.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
+              desc.MissShaderTable.StartAddress =
+                  resourceShaderTable->GetGPUVirtualAddress() +
+                  descriptorOffsetMissShader;
+              desc.MissShaderTable.SizeInBytes = shaderEntrySize;
+              desc.HitGroupTable.StartAddress =
+                  resourceShaderTable->GetGPUVirtualAddress() +
+                  descriptorOffsetHitGroup;
+              desc.HitGroupTable.SizeInBytes = shaderEntrySize;
+              desc.HitGroupTable.StrideInBytes = shaderEntrySize;
+              desc.Width = RENDERTARGET_WIDTH;
+              desc.Height = RENDERTARGET_HEIGHT;
+              desc.Depth = 1;
+              commandList->DispatchRays(&desc);
+              commandList->ResourceBarrier(
+                  1, &Make_D3D12_RESOURCE_BARRIER(
+                         resourceTarget, D3D12_RESOURCE_STATE_COMMON,
+                         D3D12_RESOURCE_STATE_COPY_SOURCE));
+              commandList->ResourceBarrier(
+                  1, &Make_D3D12_RESOURCE_BARRIER(
+                         resourceBackbuffer, D3D12_RESOURCE_STATE_COMMON,
+                         D3D12_RESOURCE_STATE_COPY_DEST));
+              commandList->CopyResource(resourceBackbuffer, resourceTarget);
+              commandList->ResourceBarrier(
+                  1, &Make_D3D12_RESOURCE_BARRIER(
+                         resourceTarget, D3D12_RESOURCE_STATE_COPY_SOURCE,
+                         D3D12_RESOURCE_STATE_COMMON));
+              commandList->ResourceBarrier(
+                  1, &Make_D3D12_RESOURCE_BARRIER(
+                         resourceBackbuffer, D3D12_RESOURCE_STATE_COPY_DEST,
+                         D3D12_RESOURCE_STATE_COMMON));
+            }
+          });
+      // Swap the backbuffer and send this to the desktop composer for display.
+      TRYD3D(swapchain->GetIDXGISwapChain()->Present(0, 0));
+    };
   }
+  void Render() override { m_fnRender(); }
 };
 
 std::shared_ptr<ISample>
