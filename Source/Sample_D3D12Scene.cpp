@@ -24,18 +24,14 @@
 
 class Sample_D3D12Scene : public Object, public ISample {
 private:
-  std::shared_ptr<DXGISwapChain> m_pSwapChain;
-  std::shared_ptr<Direct3D12Device> m_pDevice;
-  CComPtr<ID3D12RootSignature> m_pRootSignature;
-  CComPtr<ID3D12DescriptorHeap> m_pDescriptorHeapCBVSRVUAV;
-  CComPtr<ID3D12PipelineState> m_pPipelineState;
+  std::function<void()> m_fnRender;
 
 public:
   Sample_D3D12Scene(std::shared_ptr<DXGISwapChain> swapchain,
-                    std::shared_ptr<Direct3D12Device> device)
-      : m_pSwapChain(swapchain), m_pDevice(device) {
-    m_pRootSignature = D3D12_Create_Signature_1CBV(device->m_pDevice);
-    m_pDescriptorHeapCBVSRVUAV =
+                    std::shared_ptr<Direct3D12Device> device) {
+    CComPtr<ID3D12RootSignature> rootSignature =
+        D3D12_Create_Signature_1CBV(device->m_pDevice);
+    CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
         D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 256);
     ////////////////////////////////////////////////////////////////////////////////
     // Create a vertex shader.
@@ -61,9 +57,10 @@ float4 main() : SV_Target
 
     ////////////////////////////////////////////////////////////////////////////////
     // Create a pipeline with these shaders.
+    CComPtr<ID3D12PipelineState> pipelineState;
     {
       D3D12_GRAPHICS_PIPELINE_STATE_DESC descPipeline = {};
-      descPipeline.pRootSignature = m_pRootSignature;
+      descPipeline.pRootSignature = rootSignature;
       descPipeline.VS.pShaderBytecode = pD3DBlobCodeVS->GetBufferPointer();
       descPipeline.VS.BytecodeLength = pD3DBlobCodeVS->GetBufferSize();
       descPipeline.PS.pShaderBytecode = pD3DBlobCodePS->GetBufferPointer();
@@ -84,138 +81,132 @@ float4 main() : SV_Target
       descPipeline.SampleDesc.Count = 1;
       TRYD3D(device->m_pDevice->CreateGraphicsPipelineState(
           &descPipeline, __uuidof(ID3D12PipelineState),
-          (void **)&m_pPipelineState.p));
+          (void **)&pipelineState.p));
     }
-  }
-  void Render() override {
-    std::shared_ptr<InstanceTable> scene(InstanceTable::Default());
-    CComPtr<ID3D12Resource> pD3D12Resource;
-    TRYD3D(m_pSwapChain->GetIDXGISwapChain()->GetBuffer(
-        m_pSwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
-        __uuidof(ID3D12Resource), (void **)&pD3D12Resource));
-    pD3D12Resource->SetName(L"D3D12Resource (Backbuffer)");
-    m_pDevice->m_pDevice->CreateRenderTargetView(
-        pD3D12Resource, &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
-        m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
-    std::vector<CComPtr<ID3D12Resource1>> vertexBuffers;
-    std::vector<CComPtr<ID3D12Resource1>> indexBuffers;
-    for (int i = 0; i < scene->Meshes.size(); ++i) {
+    std::shared_ptr<InstanceTable> theScene(InstanceTable::Default());
+    std::vector<CComPtr<ID3D12Resource1>> resourceVertex;
+    std::vector<CComPtr<ID3D12Resource1>> resourceIndex;
+    for (int i = 0; i < theScene->Meshes.size(); ++i) {
       {
-        int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+        int sizeVertex =
+            sizeof(float[3]) * theScene->Meshes[i]->getVertexCount();
         std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-        scene->Meshes[i]->copyVertices(
+        theScene->Meshes[i]->copyVertices(
             reinterpret_cast<Vector3 *>(vertices.get()), sizeof(Vector3));
-        vertexBuffers.push_back(
-            D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE,
-                                D3D12_RESOURCE_STATE_COMMON, sizeVertex,
-                                sizeVertex, vertices.get()));
+        resourceVertex.push_back(D3D12_Create_Buffer(
+            device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+            sizeVertex, sizeVertex, vertices.get()));
       }
       {
-        int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+        int sizeIndices =
+            sizeof(int32_t) * theScene->Meshes[i]->getIndexCount();
         std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-        scene->Meshes[i]->copyIndices(
+        theScene->Meshes[i]->copyIndices(
             reinterpret_cast<uint32_t *>(indices.get()), sizeof(uint32_t));
-        indexBuffers.push_back(
-            D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE,
-                                D3D12_RESOURCE_STATE_COMMON, sizeIndices,
-                                sizeIndices, indices.get()));
+        resourceIndex.push_back(D3D12_Create_Buffer(
+            device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+            sizeIndices, sizeIndices, indices.get()));
       }
     }
-    std::vector<CComPtr<ID3D12Resource1>> constantBuffers;
-    for (int i = 0; i < scene->Instances.size(); ++i) {
-      constantBuffers.push_back(
-          D3D12_Create_Buffer(m_pDevice.get(), D3D12_RESOURCE_FLAG_NONE,
-                              D3D12_RESOURCE_STATE_COMMON, 256, 256,
-                              &(scene->Instances[i].TransformObjectToWorld *
-                                GetCameraWorldToClip())));
-      {
-        D3D12_CONSTANT_BUFFER_VIEW_DESC descConstantBuffer = {};
-        descConstantBuffer.BufferLocation =
-            constantBuffers[i]->GetGPUVirtualAddress();
-        descConstantBuffer.SizeInBytes = 256;
-        D3D12_CPU_DESCRIPTOR_HANDLE handle =
-            m_pDescriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
-        handle.ptr =
-            handle.ptr + m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(
-                             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) *
-                             i;
-        m_pDevice->m_pDevice->CreateConstantBufferView(&descConstantBuffer,
-                                                       handle);
+    m_fnRender = [=]() {
+      std::vector<CComPtr<ID3D12Resource1>> resourceConstants;
+      for (int i = 0; i < theScene->Instances.size(); ++i) {
+        resourceConstants.push_back(D3D12_Create_Buffer(
+            device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+            256, 256,
+            &(theScene->Instances[i].TransformObjectToWorld *
+              GetCameraWorldToClip())));
+        {
+          D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
+          desc.BufferLocation = resourceConstants[i]->GetGPUVirtualAddress();
+          desc.SizeInBytes = 256;
+          D3D12_CPU_DESCRIPTOR_HANDLE handle =
+              descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
+          handle.ptr =
+              handle.ptr + device->m_pDevice->GetDescriptorHandleIncrementSize(
+                               D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) *
+                               i;
+          device->m_pDevice->CreateConstantBufferView(&desc, handle);
+        }
       }
-    }
-    D3D12_Run_Synchronously(
-        m_pDevice.get(),
-        [&](ID3D12GraphicsCommandList5 *pD3D12GraphicsCommandList) {
-          pD3D12GraphicsCommandList->SetGraphicsRootSignature(m_pRootSignature);
-          ID3D12DescriptorHeap *descriptorHeaps[] = {
-              m_pDescriptorHeapCBVSRVUAV};
-          pD3D12GraphicsCommandList->SetDescriptorHeaps(1, descriptorHeaps);
-          // Put the RTV into render target state and clear it before use.
-          pD3D12GraphicsCommandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(
-                     pD3D12Resource, D3D12_RESOURCE_STATE_COMMON,
-                     D3D12_RESOURCE_STATE_RENDER_TARGET));
+      CComPtr<ID3D12Resource> resourceBackbuffer;
+      TRYD3D(swapchain->GetIDXGISwapChain()->GetBuffer(
+          swapchain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
+          __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
+      resourceBackbuffer->SetName(L"D3D12Resource (Backbuffer)");
+      device->m_pDevice->CreateRenderTargetView(
+          resourceBackbuffer,
+          &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
+          device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
+      D3D12_Run_Synchronously(device.get(), [&](ID3D12GraphicsCommandList5
+                                                    *commandList) {
+        commandList->SetGraphicsRootSignature(rootSignature);
+        ID3D12DescriptorHeap *descriptorHeaps[] = {descriptorHeapCBVSRVUAV};
+        commandList->SetDescriptorHeaps(1, descriptorHeaps);
+        // Put the RTV into render target state and clear it before use.
+        commandList->ResourceBarrier(
+            1, &Make_D3D12_RESOURCE_BARRIER(
+                   resourceBackbuffer, D3D12_RESOURCE_STATE_COMMON,
+                   D3D12_RESOURCE_STATE_RENDER_TARGET));
+        {
+          float color[4] = {0.25f, 0.25f, 0.25f, 1};
+          commandList->ClearRenderTargetView(
+              device->m_pDescriptorHeapRTV
+                  ->GetCPUDescriptorHandleForHeapStart(),
+              color, 0, nullptr);
+        }
+        commandList->SetPipelineState(pipelineState);
+        commandList->IASetPrimitiveTopology(
+            D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->RSSetViewports(
+            1, &Make_D3D12_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+        commandList->RSSetScissorRects(
+            1, &Make_D3D12_RECT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+        commandList->OMSetRenderTargets(
+            1,
+            &device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(),
+            FALSE, nullptr);
+        for (int i = 0; i < theScene->Instances.size(); ++i) {
+          D3D12_GPU_DESCRIPTOR_HANDLE handle =
+              descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
+          handle.ptr =
+              handle.ptr + device->m_pDevice->GetDescriptorHandleIncrementSize(
+                               D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) *
+                               i;
+          commandList->SetGraphicsRootDescriptorTable(0, handle);
+          int32_t meshIndex = theScene->Instances[i].GeometryIndex;
           {
-            float color[4] = {0.25f, 0.25f, 0.25f, 1};
-            pD3D12GraphicsCommandList->ClearRenderTargetView(
-                m_pDevice->m_pDescriptorHeapRTV
-                    ->GetCPUDescriptorHandleForHeapStart(),
-                color, 0, nullptr);
+            D3D12_VERTEX_BUFFER_VIEW desc = {};
+            desc.BufferLocation =
+                resourceVertex[meshIndex]->GetGPUVirtualAddress();
+            desc.SizeInBytes = sizeof(float[3]) *
+                               theScene->Meshes[meshIndex]->getVertexCount();
+            desc.StrideInBytes = sizeof(float[3]);
+            commandList->IASetVertexBuffers(0, 1, &desc);
           }
-          pD3D12GraphicsCommandList->SetPipelineState(m_pPipelineState);
-          pD3D12GraphicsCommandList->IASetPrimitiveTopology(
-              D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-          pD3D12GraphicsCommandList->RSSetViewports(
-              1, &Make_D3D12_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-          pD3D12GraphicsCommandList->RSSetScissorRects(
-              1, &Make_D3D12_RECT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-          pD3D12GraphicsCommandList->OMSetRenderTargets(
-              1,
-              &m_pDevice->m_pDescriptorHeapRTV
-                   ->GetCPUDescriptorHandleForHeapStart(),
-              FALSE, nullptr);
-          for (int i = 0; i < scene->Instances.size(); ++i) {
-            D3D12_GPU_DESCRIPTOR_HANDLE handle =
-                m_pDescriptorHeapCBVSRVUAV
-                    ->GetGPUDescriptorHandleForHeapStart();
-            handle.ptr = handle.ptr +
-                         m_pDevice->m_pDevice->GetDescriptorHandleIncrementSize(
-                             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) *
-                             i;
-            pD3D12GraphicsCommandList->SetGraphicsRootDescriptorTable(0,
-                                                                      handle);
-            int32_t meshIndex = scene->Instances[i].GeometryIndex;
-            {
-              D3D12_VERTEX_BUFFER_VIEW descVertexBufferView = {};
-              descVertexBufferView.BufferLocation =
-                  vertexBuffers[meshIndex]->GetGPUVirtualAddress();
-              descVertexBufferView.SizeInBytes =
-                  sizeof(float[3]) * scene->Meshes[meshIndex]->getVertexCount();
-              descVertexBufferView.StrideInBytes = sizeof(float[3]);
-              pD3D12GraphicsCommandList->IASetVertexBuffers(
-                  0, 1, &descVertexBufferView);
-            }
-            {
-              D3D12_INDEX_BUFFER_VIEW descIndexBufferView = {};
-              descIndexBufferView.BufferLocation =
-                  indexBuffers[meshIndex]->GetGPUVirtualAddress();
-              descIndexBufferView.SizeInBytes =
-                  sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
-              descIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-              pD3D12GraphicsCommandList->IASetIndexBuffer(&descIndexBufferView);
-            }
-            pD3D12GraphicsCommandList->DrawIndexedInstanced(
-                scene->Meshes[meshIndex]->getIndexCount(), 1, 0, 0, 0);
+          {
+            D3D12_INDEX_BUFFER_VIEW desc = {};
+            desc.BufferLocation =
+                resourceIndex[meshIndex]->GetGPUVirtualAddress();
+            desc.SizeInBytes =
+                sizeof(int32_t) * theScene->Meshes[meshIndex]->getIndexCount();
+            desc.Format = DXGI_FORMAT_R32_UINT;
+            commandList->IASetIndexBuffer(&desc);
           }
-          // Transition the render target into presentation state for display.
-          pD3D12GraphicsCommandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(
-                     pD3D12Resource, D3D12_RESOURCE_STATE_RENDER_TARGET,
-                     D3D12_RESOURCE_STATE_PRESENT));
-        });
-    // Swap the backbuffer and send this to the desktop composer for display.
-    TRYD3D(m_pSwapChain->GetIDXGISwapChain()->Present(0, 0));
+          commandList->DrawIndexedInstanced(
+              theScene->Meshes[meshIndex]->getIndexCount(), 1, 0, 0, 0);
+        }
+        // Transition the render target into presentation state for display.
+        commandList->ResourceBarrier(
+            1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
+                                            D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                            D3D12_RESOURCE_STATE_PRESENT));
+      });
+      // Swap the backbuffer and send this to the desktop composer for display.
+      TRYD3D(swapchain->GetIDXGISwapChain()->Present(0, 0));
+    };
   }
+  void Render() override { m_fnRender(); }
 };
 
 std::shared_ptr<ISample>
