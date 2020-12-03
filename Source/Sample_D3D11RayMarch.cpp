@@ -18,26 +18,20 @@
 #include "Scene_Camera.h"
 #include <atlbase.h>
 #include <cstdint>
+#include <functional>
 #include <memory>
 
 class Sample_D3D11RayMarch : public Object, public ISample {
 private:
-  std::shared_ptr<DXGISwapChain> m_pSwapChain;
-  std::shared_ptr<Direct3D11Device> m_pDevice;
-  CComPtr<ID3D11ComputeShader> m_pComputeShader;
-  CComPtr<ID3D11Buffer> m_pBufferConstants;
-  __declspec(align(16)) struct Constants {
-    Matrix44 TransformClipToWorld;
-    float Time;
-  };
+  std::function<void()> m_fnRender;
 
 public:
-  Sample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> swapchain,
-                       std::shared_ptr<Direct3D11Device> device)
-      : m_pSwapChain(swapchain), m_pDevice(device) {
+  Sample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> m_pSwapChain,
+                       std::shared_ptr<Direct3D11Device> m_pDevice) {
     // Create a compute shader.
-    CComPtr<ID3DBlob> pD3DBlobCodeCS =
-        CompileShader("cs_5_0", "main", R"SHADER(
+    CComPtr<ID3D11ComputeShader> shaderCompute;
+    {
+      CComPtr<ID3DBlob> blobCS = CompileShader("cs_5_0", "main", R"SHADER(
 cbuffer Constants
 {
     float4x4 TransformClipToWorld;
@@ -142,43 +136,49 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     renderTarget[dispatchThreadId.xy] = float4(0.4, 0.2, 0.8, 1);
 })SHADER");
-    m_pBufferConstants =
+      TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(
+          blobCS->GetBufferPointer(), blobCS->GetBufferSize(), nullptr,
+          &shaderCompute));
+    }
+    __declspec(align(16)) struct Constants {
+      Matrix44 TransformClipToWorld;
+      float Time;
+    };
+    CComPtr<ID3D11Buffer> bufferConstants =
         D3D11_Create_Buffer(m_pDevice->GetID3D11Device(),
                             D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
-    TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(
-        pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(),
-        nullptr, &m_pComputeShader));
+    m_fnRender = [=]() {
+      // Get the backbuffer and create a render target from it.
+      CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
+          D3D11_Create_UAV_From_SwapChain(m_pDevice->GetID3D11Device(),
+                                          m_pSwapChain->GetIDXGISwapChain());
+      m_pDevice->GetID3D11DeviceContext()->ClearState();
+      // Upload the constant buffer.
+      {
+        static float t = 0;
+        Constants constants;
+        constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
+        constants.Time = t;
+        m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
+            bufferConstants, 0, nullptr, &constants, 0, 0);
+        t += 0.01;
+      }
+      // Beginning of rendering.
+      m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
+          0, 1, &uavBackbuffer.p, nullptr);
+      m_pDevice->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr,
+                                                       0);
+      m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(
+          0, 1, &bufferConstants.p);
+      m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
+                                                    RENDERTARGET_HEIGHT, 1);
+      m_pDevice->GetID3D11DeviceContext()->ClearState();
+      m_pDevice->GetID3D11DeviceContext()->Flush();
+      // End of rendering; send to display.
+      m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
+    };
   }
-  void Render() {
-    // Get the backbuffer and create a render target from it.
-    CComPtr<ID3D11UnorderedAccessView> pUAVTarget =
-        D3D11_Create_UAV_From_SwapChain(m_pDevice->GetID3D11Device(),
-                                        m_pSwapChain->GetIDXGISwapChain());
-    m_pDevice->GetID3D11DeviceContext()->ClearState();
-    // Upload the constant buffer.
-    {
-      static float t = 0;
-      Constants constants;
-      constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
-      constants.Time = t;
-      m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
-          m_pBufferConstants, 0, nullptr, &constants, 0, 0);
-      t += 0.01;
-    }
-    // Beginning of rendering.
-    m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
-        0, 1, &pUAVTarget.p, nullptr);
-    m_pDevice->GetID3D11DeviceContext()->CSSetShader(m_pComputeShader, nullptr,
-                                                     0);
-    m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(
-        0, 1, &m_pBufferConstants.p);
-    m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
-                                                  RENDERTARGET_HEIGHT, 1);
-    m_pDevice->GetID3D11DeviceContext()->ClearState();
-    m_pDevice->GetID3D11DeviceContext()->Flush();
-    // End of rendering; send to display.
-    m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
-  }
+  void Render() { m_fnRender(); }
 };
 
 std::shared_ptr<ISample>
