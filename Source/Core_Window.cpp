@@ -1,6 +1,7 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3D11Util.h"
+#include "Core_D3D12.h"
 #include "Core_ISample.h"
 #include "Core_IWindow.h"
 #include "Core_Math.h"
@@ -160,6 +161,18 @@ public:
   }
 };
 
+class WindowAndSwapChain12 : public WindowSimple {
+protected:
+  std::shared_ptr<Direct3D12Device> m_Device;
+  std::shared_ptr<DXGISwapChain> m_SwapChain;
+
+public:
+  WindowAndSwapChain12(std::shared_ptr<Direct3D12Device> device) {
+    m_Device = device;
+    m_SwapChain = CreateDXGISwapChain(device, m_hWindow);
+  }
+};
+
 class WindowWithSwapChain : public WindowAndSwapChain {
   std::function<void(IDXGISwapChain *)> m_fnRender;
 
@@ -213,6 +226,25 @@ public:
   }
 };
 
+class WindowWithRTV12 : public WindowAndSwapChain12 {
+  std::function<void(ID3D12Resource *)> m_fnRender;
+
+public:
+  WindowWithRTV12(std::shared_ptr<Direct3D12Device> device,
+                  std::function<void(ID3D12Resource *)> fnRender)
+      : WindowAndSwapChain12(device) {
+    m_fnRender = fnRender;
+  }
+  void OnPaint() override {
+    CComPtr<ID3D12Resource> resourceBackbuffer;
+    TRYD3D(m_SwapChain->GetIDXGISwapChain()->GetBuffer(
+        m_SwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
+        __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
+    m_fnRender(resourceBackbuffer);
+    m_SwapChain->GetIDXGISwapChain()->Present(0, 0);
+  }
+};
+
 std::shared_ptr<IWindow> CreateNewWindow() {
   return std::shared_ptr<IWindow>(new WindowSimple());
 }
@@ -233,4 +265,10 @@ std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
                 std::function<void(ID3D11UnorderedAccessView *)> fnRender) {
   return std::shared_ptr<Object>(new WindowWithUAV(device, fnRender));
+}
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D12Device> device,
+                std::function<void(ID3D12Resource *rt)> fnRender) {
+  return std::shared_ptr<Object>(new WindowWithRTV12(device, fnRender));
 }
