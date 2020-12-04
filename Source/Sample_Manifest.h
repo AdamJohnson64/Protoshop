@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Core_D3D11.h"
+#include <d3d11.h>
+#include <functional>
+
 class DXGISwapChain;
 class Direct3D11Device;
 class Direct3D12Device;
@@ -8,9 +12,9 @@ class VKDevice;
 
 #include <memory>
 
-std::shared_ptr<ISample>
-CreateSample_D3D11Basic(std::shared_ptr<DXGISwapChain> swapchain,
-                        std::shared_ptr<Direct3D11Device> device);
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11Basic(std::shared_ptr<Direct3D11Device> device);
+
 std::shared_ptr<ISample>
 CreateSample_D3D11ComputeCanvas(std::shared_ptr<DXGISwapChain> swapchain,
                                 std::shared_ptr<Direct3D11Device> device);

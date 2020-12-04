@@ -1,11 +1,13 @@
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
+#include "Core_D3D11Util.h"
 #include "Core_ISample.h"
 #include "Core_IWindow.h"
 #include "Core_Math.h"
 #include "Core_Object.h"
 #include "Core_Util.h"
 #include "Scene_Camera.h"
+#include <d3d11.h>
 #include <Windows.h>
 #include <functional>
 #include <memory>
@@ -14,23 +16,23 @@ static bool mouseDown = false;
 static int mouseX = 0;
 static int mouseY = 0;
 
-Vector3 cameraPos = {0, 1, -5};
-Quaternion cameraRot = {0, 0, 0, 1};
+static Vector3 cameraPos = {0, 1, -5};
+static Quaternion cameraRot = {0, 0, 0, 1};
 
-class WindowImpl : public Object, public IWindow {
-private:
+class WindowSimple : public Object, public IWindow {
+protected:
   HWND m_hWindow;
   std::shared_ptr<ISample> m_pSample;
 
 public:
-  WindowImpl() {
+  WindowSimple() {
     ////////////////////////////////////////////////////////////////////////////////
     // Create a window class.
     static bool windowClassInitialized = false;
     if (!windowClassInitialized) {
       WNDCLASS wndclass = {};
       wndclass.lpfnWndProc = WindowProc;
-      wndclass.cbWndExtra = sizeof(WindowImpl *);
+      wndclass.cbWndExtra = sizeof(WindowSimple *);
       wndclass.lpszClassName = L"Protoshop";
       if (0 == RegisterClass(&wndclass))
         throw FALSE;
@@ -53,7 +55,7 @@ public:
       InvalidateRect(hWnd, nullptr, FALSE);
     });
   }
-  ~WindowImpl() {
+  ~WindowSimple() {
     KillTimer(m_hWindow, 0);
     DestroyWindow(m_hWindow);
   }
@@ -70,8 +72,8 @@ public:
 private:
   static LRESULT WINAPI WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
                                    LPARAM lParam) {
-    WindowImpl *window =
-        reinterpret_cast<WindowImpl *>(GetWindowLongPtr(hWnd, 0));
+    WindowSimple *window =
+        reinterpret_cast<WindowSimple *>(GetWindowLongPtr(hWnd, 0));
     if (uMsg == WM_CREATE) {
       const CREATESTRUCT *cs = reinterpret_cast<CREATESTRUCT *>(lParam);
       SetWindowLongPtr(hWnd, 0, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
@@ -146,6 +148,63 @@ private:
   }
 };
 
+
+class WindowAndSwapChain : public WindowSimple {
+protected:
+  std::shared_ptr<Direct3D11Device> m_Device;
+  std::shared_ptr<DXGISwapChain> m_SwapChain;
+
+public:
+  WindowAndSwapChain(std::shared_ptr<Direct3D11Device> device)
+      {
+    m_Device = device;
+    m_SwapChain = CreateDXGISwapChain(device, m_hWindow);
+  }
+};
+
+class WindowWithSwapChain : public WindowAndSwapChain {
+  std::function<void(IDXGISwapChain*)> m_fnRender;
+
+public:
+  WindowWithSwapChain(std::shared_ptr<Direct3D11Device> device,
+                      std::function<void(IDXGISwapChain *)> fnRender) : WindowAndSwapChain(device)
+      {
+    m_fnRender = fnRender;
+  }
+  void OnPaint() override {
+    m_fnRender(m_SwapChain->GetIDXGISwapChain());
+    m_SwapChain->GetIDXGISwapChain()->Present(0, 0);
+  }
+};
+
+class WindowWithRTV : public WindowAndSwapChain {
+  std::function<void(ID3D11RenderTargetView*)> m_fnRender;
+
+public:
+  WindowWithRTV(std::shared_ptr<Direct3D11Device> device,
+                      std::function<void(ID3D11RenderTargetView *)> fnRender) : WindowAndSwapChain(device)
+      {
+    m_fnRender = fnRender;
+  }
+  void OnPaint() override {
+    // Get the backbuffer and create a render target from it.
+    CComPtr<ID3D11RenderTargetView> pD3D11RenderTargetView =
+        D3D11_Create_RTV_From_SwapChain(m_Device->GetID3D11Device(), m_SwapChain->GetIDXGISwapChain());
+    m_fnRender(pD3D11RenderTargetView);
+    m_SwapChain->GetIDXGISwapChain()->Present(0, 0);
+  }
+};
+
 std::shared_ptr<IWindow> CreateNewWindow() {
-  return std::shared_ptr<IWindow>(new WindowImpl());
+  return std::shared_ptr<IWindow>(new WindowSimple());
+}
+
+std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(IDXGISwapChain*)> fnRender)
+{
+  return std::shared_ptr<Object>(new WindowWithSwapChain(device, fnRender));
+}
+
+std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(ID3D11RenderTargetView*)> fnRender)
+{
+  return std::shared_ptr<Object>(new WindowWithRTV(device, fnRender));
 }
