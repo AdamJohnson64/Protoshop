@@ -37,8 +37,8 @@ D3D12_RESOURCE_BARRIER Make_D3D12_RESOURCE_BARRIER(ID3D12Resource *resource,
 
 D3D12_VIEWPORT Make_D3D12_VIEWPORT(FLOAT width, FLOAT height) {
   D3D12_VIEWPORT desc = {};
-  desc.Width = RENDERTARGET_WIDTH;
-  desc.Height = RENDERTARGET_HEIGHT;
+  desc.Width = width;
+  desc.Height = height;
   desc.MaxDepth = 1.0f;
   return desc;
 }
