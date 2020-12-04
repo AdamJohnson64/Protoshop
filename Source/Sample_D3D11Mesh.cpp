@@ -16,7 +16,7 @@
 #include <atlbase.h>
 #include <functional>
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11Mesh(std::shared_ptr<Direct3D11Device> device) {
   const char *szShaderCode = R"SHADER(
 cbuffer Constants
@@ -68,19 +68,23 @@ float4 mainPS() : SV_Target
         D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER,
                             sizeof(vertices), vertices);
   }
-  return [=](ID3D11RenderTargetView *rtvBackbuffer) {
+  return [=](ID3D11Texture2D *textureBackbuffer) {
+    CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
+        D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
+                                        textureBackbuffer);
     device->GetID3D11DeviceContext()->ClearState();
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer,
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
                                                          nullptr);
     // Update constant buffer.
     {
       char constants[1024];
-      memcpy(constants, &GetTransformSource()->GetTransformWorldToClip(), sizeof(Matrix44));
+      memcpy(constants, &GetTransformSource()->GetTransformWorldToClip(),
+             sizeof(Matrix44));
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, constants, 0, 0);
     }

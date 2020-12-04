@@ -276,16 +276,19 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       return 0;
     }
     if (uMsg == WM_PAINT) {
+      CComPtr<ID3D11Texture2D> textureBackbuffer;
+      TRYD3D(window->m_pSwapChain->GetIDXGISwapChain()->GetBuffer(
+          0, __uuidof(ID3D11Texture2D), (void **)&textureBackbuffer.p));
       CComPtr<ID3D11UnorderedAccessView> pUAVTarget =
-          D3D11_Create_UAV_From_SwapChain(
-              window->m_pDevice->GetID3D11Device(),
-              window->m_pSwapChain->GetIDXGISwapChain());
+          D3D11_Create_UAV_From_Texture2D(window->m_pDevice->GetID3D11Device(),
+                                          textureBackbuffer);
       window->m_pDevice->GetID3D11DeviceContext()->ClearState();
       // Upload the constant buffer.
       {
         static float t = 0;
         Constants constants;
-        constants.TransformClipToWorld = Invert(GetTransformSource()->GetTransformWorldToClip());
+        constants.TransformClipToWorld =
+            Invert(GetTransformSource()->GetTransformWorldToClip());
         constants.Time = t;
         window->m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
             window->m_pBufferConstants, 0, nullptr, &constants, 0, 0);

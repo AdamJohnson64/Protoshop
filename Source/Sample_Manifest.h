@@ -12,40 +12,40 @@ class VKDevice;
 
 #include <memory>
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11Basic(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11UnorderedAccessView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11ComputeCanvas(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11DrawingContext(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11UnorderedAccessView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11LightProbe(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11Mesh(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11UnorderedAccessView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11UnorderedAccessView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11ShowTexture(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11Tessellation(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11UnorderedAccessView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11Voxel(std::shared_ptr<Direct3D11Device> device);
 
 std::shared_ptr<Object>

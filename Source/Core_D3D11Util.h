@@ -2,7 +2,6 @@
 
 #include <atlbase.h>
 #include <d3d11.h>
-#include <dxgi1_6.h>
 
 D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultWrap();
 
@@ -22,9 +21,7 @@ CComPtr<ID3D11Texture2D> D3D11_Create_Texture2D(ID3D11Device *device,
                                                 int height, const void *data);
 
 CComPtr<ID3D11RenderTargetView>
-D3D11_Create_RTV_From_SwapChain(ID3D11Device *device,
-                                IDXGISwapChain *swapchain);
+D3D11_Create_RTV_From_Texture2D(ID3D11Device *device, ID3D11Texture2D *texture);
 
 CComPtr<ID3D11UnorderedAccessView>
-D3D11_Create_UAV_From_SwapChain(ID3D11Device *device,
-                                IDXGISwapChain *swapchain);
+D3D11_Create_UAV_From_Texture2D(ID3D11Device *device, ID3D11Texture2D *texture);

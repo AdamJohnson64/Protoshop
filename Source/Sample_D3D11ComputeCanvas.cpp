@@ -23,7 +23,7 @@
 const int IMAGE_WIDTH = 320;
 const int IMAGE_HEIGHT = 200;
 
-std::function<void(ID3D11UnorderedAccessView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11ComputeCanvas(std::shared_ptr<Direct3D11Device> device) {
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -121,7 +121,10 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
             DXGI_FORMAT_B8G8R8A8_UNORM),
         &srvCanvasImage.p));
   }
-  return [=](ID3D11UnorderedAccessView *uavBackbuffer) {
+  return [=](ID3D11Texture2D *textureBackbuffer) {
+    CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
+        D3D11_Create_UAV_From_Texture2D(device->GetID3D11Device(),
+                                        textureBackbuffer);
     ////////////////////////////////////////////////////////////////////////////////
     // Start rendering.
     device->GetID3D11DeviceContext()->ClearState();
@@ -139,7 +142,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         bufferConstants, 0, nullptr, &Invert(transformImageToPixel), 0, 0);
     // Beginning of draw.
     device->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
-        0, 1, &uavBackbuffer, nullptr);
+        0, 1, &uavBackbuffer.p, nullptr);
     device->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr, 0);
     device->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1,
                                                            &bufferConstants.p);

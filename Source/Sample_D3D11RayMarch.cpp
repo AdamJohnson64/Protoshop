@@ -19,7 +19,7 @@
 #include <functional>
 #include <memory>
 
-std::function<void(ID3D11UnorderedAccessView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device) {
   // Create a compute shader.
   CComPtr<ID3D11ComputeShader> shaderCompute;
@@ -139,13 +139,17 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
   };
   CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
       device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
-  return [=](ID3D11UnorderedAccessView *uavBackbuffer) {
+  return [=](ID3D11Texture2D *textureBackbuffer) {
+    CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
+        D3D11_Create_UAV_From_Texture2D(device->GetID3D11Device(),
+                                        textureBackbuffer);
     device->GetID3D11DeviceContext()->ClearState();
     // Upload the constant buffer.
     {
       static float t = 0;
       Constants constants;
-      constants.TransformClipToWorld = Invert(GetTransformSource()->GetTransformWorldToClip());
+      constants.TransformClipToWorld =
+          Invert(GetTransformSource()->GetTransformWorldToClip());
       constants.Time = t;
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, &constants, 0, 0);
@@ -153,7 +157,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
-        0, 1, &uavBackbuffer, nullptr);
+        0, 1, &uavBackbuffer.p, nullptr);
     device->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr, 0);
     device->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1,
                                                            &bufferConstants.p);

@@ -16,7 +16,7 @@
 #include <atlbase.h>
 #include <functional>
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device) {
   __declspec(align(16)) struct Constants {
     Matrix44 TransformWorldToClip;
@@ -205,7 +205,10 @@ float4 mainPS(VertexPS vin) : SV_Target
             DXGI_FORMAT_B8G8R8A8_UNORM),
         &srvDepthMap.p));
   }
-  return [=](ID3D11RenderTargetView *rtvBackbuffer) {
+  return [=](ID3D11Texture2D *textureBackbuffer) {
+    CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
+        D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
+                                        textureBackbuffer);
     device->GetID3D11DeviceContext()->ClearState();
     ////////////////////////////////////////////////////////////////////////////////
     // Beginning of rendering.
@@ -213,14 +216,16 @@ float4 mainPS(VertexPS vin) : SV_Target
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer,
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
                                                          nullptr);
     ////////////////////////////////////////////////////////////////////////////////
     // Update constant buffer.
     {
       Constants constants = {};
-      constants.TransformWorldToClip = GetTransformSource()->GetTransformWorldToClip();
-      constants.TransformWorldToView = GetTransformSource()->GetTransformWorldToView();
+      constants.TransformWorldToClip =
+          GetTransformSource()->GetTransformWorldToClip();
+      constants.TransformWorldToView =
+          GetTransformSource()->GetTransformWorldToView();
       Matrix44 t = Invert(GetTransformSource()->GetTransformWorldToView());
       constants.CameraPosition = Vector3{t.M41, t.M42, t.M43};
       device->GetID3D11DeviceContext()->UpdateSubresource(

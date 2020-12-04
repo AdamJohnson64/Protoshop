@@ -46,7 +46,7 @@ Matrix44 ConvertMatrix(vr::HmdMatrix44_t &m) {
 }
 #endif // USE_OPENVR
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device) {
   struct Constants {
     Matrix44 TransformWorldToClip;
@@ -330,8 +330,12 @@ float4 mainPS(VertexPS vin) : SV_Target
     }
   };
 #else
-  return [=](ID3D11RenderTargetView *rtvBackbuffer) {
-    fnRenderInto(rtvBackbuffer, GetTransformSource()->GetTransformWorldToClip());
+  return [=](ID3D11Texture2D *textureBackbuffer) {
+    CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
+        D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
+                                        textureBackbuffer);
+    fnRenderInto(rtvBackbuffer,
+                 GetTransformSource()->GetTransformWorldToClip());
   };
 #endif // USE_OPENVR
 }

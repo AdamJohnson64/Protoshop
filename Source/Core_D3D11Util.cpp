@@ -75,10 +75,8 @@ CComPtr<ID3D11Texture2D> D3D11_Create_Texture2D(ID3D11Device *device,
 }
 
 CComPtr<ID3D11RenderTargetView>
-D3D11_Create_RTV_From_SwapChain(ID3D11Device *device,
-                                IDXGISwapChain *swapchain) {
-  CComPtr<ID3D11Texture2D> texture;
-  TRYD3D(swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&texture));
+D3D11_Create_RTV_From_Texture2D(ID3D11Device *device,
+                                ID3D11Texture2D *texture) {
   D3D11_RENDER_TARGET_VIEW_DESC desc = {};
   desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
   CComPtr<ID3D11RenderTargetView> rtv;
@@ -87,10 +85,8 @@ D3D11_Create_RTV_From_SwapChain(ID3D11Device *device,
 }
 
 CComPtr<ID3D11UnorderedAccessView>
-D3D11_Create_UAV_From_SwapChain(ID3D11Device *device,
-                                IDXGISwapChain *swapchain) {
-  CComPtr<ID3D11Texture2D> texture;
-  TRYD3D(swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&texture));
+D3D11_Create_UAV_From_Texture2D(ID3D11Device *device,
+                                ID3D11Texture2D *texture) {
   D3D11_UNORDERED_ACCESS_VIEW_DESC desc = {};
   desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
   desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;

@@ -16,7 +16,7 @@
 #include <atlbase.h>
 #include <functional>
 
-std::function<void(ID3D11RenderTargetView *)>
+std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device) {
 
   __declspec(align(16)) struct Constants {
@@ -177,7 +177,10 @@ float4 mainPS(Vertex vin) : SV_Target
         D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER,
                             sizeof(vertices), vertices);
   }
-  return [=](ID3D11RenderTargetView *rtvBackbuffer) {
+  return [=](ID3D11Texture2D *textureBackbuffer) {
+    CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
+        D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
+                                        textureBackbuffer);
     device->GetID3D11DeviceContext()->ClearState();
     ////////////////////////////////////////////////////////////////////////////////
     // Beginning of rendering.
@@ -185,14 +188,15 @@ float4 mainPS(Vertex vin) : SV_Target
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer,
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
                                                          nullptr);
     ////////////////////////////////////////////////////////////////////////////////
     // Update constant buffer.
     {
       static float angle = 0;
       Constants constants = {};
-      constants.TransformWorldToClip = GetTransformSource()->GetTransformWorldToClip();
+      constants.TransformWorldToClip =
+          GetTransformSource()->GetTransformWorldToClip();
       constants.Light = Normalize(Vector3{sinf(angle), 1, -cosf(angle)});
       angle += 0.05f;
       device->GetID3D11DeviceContext()->UpdateSubresource(

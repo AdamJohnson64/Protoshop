@@ -192,41 +192,20 @@ public:
   }
 };
 
-class WindowRenderToD3D11RTV : public WindowWithSwapChainD3D11 {
-  std::function<void(ID3D11RenderTargetView *)> m_fnRender;
+class WindowRenderToD3D11Texture2D : public WindowWithSwapChainD3D11 {
+  std::function<void(ID3D11Texture2D *)> m_fnRender;
 
 public:
-  WindowRenderToD3D11RTV(std::shared_ptr<Direct3D11Device> device,
-                         std::function<void(ID3D11RenderTargetView *)> fnRender)
+  WindowRenderToD3D11Texture2D(std::shared_ptr<Direct3D11Device> device,
+                               std::function<void(ID3D11Texture2D *)> fnRender)
       : WindowWithSwapChainD3D11(device) {
     m_fnRender = fnRender;
   }
   void OnPaint() override {
-    // Get the backbuffer and create a render target from it.
-    CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
-        D3D11_Create_RTV_From_SwapChain(m_Direct3D11Device->GetID3D11Device(),
-                                        m_DXGISwapChain->GetIDXGISwapChain());
-    m_fnRender(rtvBackbuffer);
-    m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
-  }
-};
-
-class WindowRenderToD3D11UAV : public WindowWithSwapChainD3D11 {
-  std::function<void(ID3D11UnorderedAccessView *)> m_fnRender;
-
-public:
-  WindowRenderToD3D11UAV(
-      std::shared_ptr<Direct3D11Device> deviceD3D11,
-      std::function<void(ID3D11UnorderedAccessView *)> fnRender)
-      : WindowWithSwapChainD3D11(deviceD3D11) {
-    m_fnRender = fnRender;
-  }
-  void OnPaint() override {
-    // Get the backbuffer and create a render target from it.
-    CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
-        D3D11_Create_UAV_From_SwapChain(m_Direct3D11Device->GetID3D11Device(),
-                                        m_DXGISwapChain->GetIDXGISwapChain());
-    m_fnRender(uavBackbuffer);
+    CComPtr<ID3D11Texture2D> textureBackbuffer;
+    TRYD3D(m_DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
+        0, __uuidof(ID3D11Texture2D), (void **)&textureBackbuffer.p));
+    m_fnRender(textureBackbuffer);
     m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
   }
 };
@@ -461,16 +440,9 @@ public:
 
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
-                std::function<void(ID3D11RenderTargetView *)> fnRender) {
+                std::function<void(ID3D11Texture2D *)> fnRender) {
   return std::shared_ptr<Object>(
-      new WindowRenderToD3D11RTV(deviceD3D11, fnRender));
-}
-
-std::shared_ptr<Object>
-CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
-                std::function<void(ID3D11UnorderedAccessView *)> fnRender) {
-  return std::shared_ptr<Object>(
-      new WindowRenderToD3D11UAV(deviceD3D11, fnRender));
+      new WindowRenderToD3D11Texture2D(deviceD3D11, fnRender));
 }
 
 std::shared_ptr<Object>

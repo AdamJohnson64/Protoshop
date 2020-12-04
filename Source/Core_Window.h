@@ -9,8 +9,18 @@
 #include <functional>
 #include <memory>
 
-std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(ID3D11RenderTargetView*)> fnRender);
-std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(ID3D11UnorderedAccessView*)> fnRender);
-std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D12Device> device, std::function<void(ID3D12Resource*)> fnRender);
-std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<OpenGLDevice> device, std::function<void()> fnRender);
-std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<VKDevice> deviceVK, std::shared_ptr<Direct3D12Device> device12, std::function<void(VKDevice*,vk::Image)> fnRender);
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
+                std::function<void(ID3D11Texture2D *)> fnRender);
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D12Device> device,
+                std::function<void(ID3D12Resource *)> fnRender);
+
+std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<OpenGLDevice> device,
+                                        std::function<void()> fnRender);
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
+                std::shared_ptr<Direct3D12Device> device12,
+                std::function<void(VKDevice *, vk::Image)> fnRender);
