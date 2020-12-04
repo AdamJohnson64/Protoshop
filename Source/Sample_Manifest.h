@@ -78,13 +78,9 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device);
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device);
 
-std::shared_ptr<ISample>
-CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device,
-                         std::shared_ptr<IWindow> pWindow);
+std::function<void()>
+CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device);
 
 #if VULKAN_INSTALLED
-std::shared_ptr<ISample>
-CreateSample_VKBasic(std::shared_ptr<DXGISwapChain> swapchain,
-                     std::shared_ptr<VKDevice> pDeviceVK,
-                     std::shared_ptr<Direct3D12Device> pDeviceD3D12);
+std::function<void(VKDevice *, vk::Image)> CreateSample_VKBasic();
 #endif // VULKAN_INSTALLED

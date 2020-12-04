@@ -21,10 +21,9 @@
     <ClInclude Include="Source\Core_OpenGL.h" />
     <ClInclude Include="Source\Core_Util.h" />
     <ClInclude Include="Source\Core_VK.h" />
-    <ClInclude Include="Source\Core_IWindow.h" />
+    <ClInclude Include="Source\Core_Window.h" />
     <ClInclude Include="Source\ImageUtil.h" />
     <ClInclude Include="Source\Scene_Material.h" />
-    <ClInclude Include="Source\Core_ISample.h" />
     <ClInclude Include="Source\Sample_DXR_RayRecurse.inc" />
     <ClInclude Include="Source\Sample_Manifest.h" />
     <ClInclude Include="Source\Scene_Camera.h" />

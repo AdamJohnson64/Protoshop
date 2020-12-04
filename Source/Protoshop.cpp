@@ -2,29 +2,14 @@
 #include "Core_D3D11.h"
 #include "Core_D3D12.h"
 #include "Core_DXGI.h"
-#include "Core_IWindow.h"
 #include "Core_Object.h"
 #include "Core_OpenGL.h"
 #include "Core_VK.h"
+#include "Core_Window.h"
 #include "Sample_Manifest.h"
 #include <Windows.h>
 #include <functional>
 #include <memory>
-
-std::shared_ptr<IWindow> CreateSampleInWindow(
-    std::function<std::shared_ptr<ISample>(std::shared_ptr<IWindow>)>
-        createsample) {
-  std::shared_ptr<IWindow> window(CreateNewWindow());
-  window->SetSample(createsample(window));
-  return window;
-}
-
-std::shared_ptr<IWindow> CreateSampleInWindow(
-    std::function<std::shared_ptr<ISample>(HWND)> createsample) {
-  return CreateSampleInWindow([&](std::shared_ptr<IWindow> w) {
-    return createsample(w->GetWindowHandle());
-  });
-}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nShowCmd) {
@@ -61,12 +46,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     ////////////////////////////////////////////////////////////////////////////////
     // OpenGL Samples
     std::shared_ptr<OpenGLDevice> deviceGL = CreateOpenGLDevice();
-    std::shared_ptr<IWindow> GLBasic = CreateSampleInWindow([&](std::shared_ptr<IWindow> wnd) { return CreateSample_OpenGLBasic(deviceGL, wnd); });
+    std::shared_ptr<Object> GLBasic = CreateNewWindow(deviceGL, CreateSample_OpenGLBasic(deviceGL));
 #if VULKAN_INSTALLED
     ////////////////////////////////////////////////////////////////////////////////
     // Vulkan Samples
     std::shared_ptr<VKDevice> deviceVK = CreateVKDevice();
-    std::shared_ptr<IWindow> VKBasic = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_VKBasic(CreateDXGISwapChain(deviceD3D12, hwnd), deviceVK, deviceD3D12); });
+    std::shared_ptr<Object> VKBasic = CreateNewWindow(deviceVK, deviceD3D12, CreateSample_VKBasic());
 #endif // VULKAN_INSTALLED
     // clang-format on
     {
