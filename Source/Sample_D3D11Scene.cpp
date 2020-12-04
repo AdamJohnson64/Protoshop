@@ -20,6 +20,34 @@
 #include <functional>
 #include <vector>
 
+//#define USE_OPENVR
+
+#ifdef USE_OPENVR
+#include <openvr.h>
+
+Matrix44 ConvertMatrix(vr::HmdMatrix34_t &m) {
+  Matrix44 o = {};
+  // clang-format on
+  o.M11 = m.m[0][0]; o.M12 = m.m[1][0]; o.M13 = m.m[2][0]; o.M14 = 0;
+  o.M21 = m.m[0][1]; o.M22 = m.m[1][1]; o.M23 = m.m[2][1]; o.M24 = 0;
+  o.M31 = m.m[0][2]; o.M32 = m.m[1][2]; o.M33 = m.m[2][2]; o.M34 = 0;
+  o.M41 = m.m[0][3]; o.M42 = m.m[1][3]; o.M43 = m.m[2][3]; o.M44 = 1;
+  // clang-format off
+  return o;
+}
+
+Matrix44 ConvertMatrix(vr::HmdMatrix44_t &m) {
+  Matrix44 o = {};
+  // clang-format on
+  o.M11 = m.m[0][0]; o.M12 = m.m[1][0]; o.M13 = m.m[2][0]; o.M14 = m.m[3][0];
+  o.M21 = m.m[0][1]; o.M22 = m.m[1][1]; o.M23 = m.m[2][1]; o.M24 = m.m[3][1];
+  o.M31 = m.m[0][2]; o.M32 = m.m[1][2]; o.M33 = m.m[2][2]; o.M34 = m.m[3][2];
+  o.M41 = m.m[0][3]; o.M42 = m.m[1][3]; o.M43 = m.m[2][3]; o.M44 = m.m[3][3];
+  // clang-format off
+  return o;
+}
+#endif // USE_OPENVR
+
 class Sample_D3D11Scene : public Object, public ISample {
 private:
   std::function<void()> m_fnRender;
@@ -36,14 +64,48 @@ public:
       Vector3 Normal;
     };
     ////////////////////////////////////////////////////////////////////////////////
+    // The depth buffer size can vary between the swapchain and VR cases.
+    uint32_t viewwidth = RENDERTARGET_WIDTH;
+    uint32_t viewheight = RENDERTARGET_HEIGHT;
+#ifdef USE_OPENVR
+    ////////////////////////////////////////////////////////////////////////////////
+    // Initialize the VR system.
+    vr::IVRSystem *vrsystem = vr::VR_Init(
+        nullptr, vr::EVRApplicationType::VRApplication_Scene, nullptr);
+    vr::IVRCompositor *vrcompositor = vr::VRCompositor();
+    vrsystem->GetRecommendedRenderTargetSize(&viewwidth, &viewheight);
+    CComPtr<ID3D11Texture2D> textureVR;
+    {
+      D3D11_TEXTURE2D_DESC desc = {};
+      desc.Width = viewwidth;
+      desc.Height = viewheight;
+      desc.MipLevels = 1;
+      desc.ArraySize = 1;
+      desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+      desc.SampleDesc.Count = 1;
+      desc.Usage = D3D11_USAGE_DEFAULT;
+      desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+      TRYD3D(m_pDevice->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
+                                                           &textureVR.p));
+    }
+    CComPtr<ID3D11RenderTargetView> rtvVR;
+    {
+      D3D11_RENDER_TARGET_VIEW_DESC desc = {};
+      desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+      TRYD3D(m_pDevice->GetID3D11Device()->CreateRenderTargetView(
+          textureVR, &desc, &rtvVR));
+    }
+#endif // USE_OPENVR
+
+    ////////////////////////////////////////////////////////////////////////////////
     // Create an appropriately sized depth buffer and its view.
     CComPtr<ID3D11DepthStencilView> srvDepth;
     {
       CComPtr<ID3D11Texture2D> textureDepth;
       {
         D3D11_TEXTURE2D_DESC desc = {};
-        desc.Width = RENDERTARGET_WIDTH;
-        desc.Height = RENDERTARGET_HEIGHT;
+        desc.Width = viewwidth;
+        desc.Height = viewheight;
         desc.ArraySize = 1;
         desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
         desc.SampleDesc.Count = 1;
@@ -164,7 +226,6 @@ float4 mainPS(VertexPS vin) : SV_Target
             bytesIndex.get()));
       }
     }
-
     ////////////////////////////////////////////////////////////////////////////////
     // Capture all of the above into the rendering function for every frame.
     //
@@ -173,68 +234,126 @@ float4 mainPS(VertexPS vin) : SV_Target
     // members to carry this state. This should make it easier to offload
     // processing into construction without changing things too much (you should
     // just move the code out of the lambda).
+    std::function<void(ID3D11RenderTargetView *, const Matrix44 &)>
+        fnRenderInto = [=](ID3D11RenderTargetView *rtv,
+                           const Matrix44 &transform) {
+          ////////////////////////////////////////////////////////////////////////////////
+          // Build all instance constant buffers for the scene.
+          std::vector<CComPtr<ID3D11Buffer>> bufferInstanceConstants;
+          for (int instanceIndex = 0;
+               instanceIndex < theScene->Instances.size(); ++instanceIndex) {
+            const Instance &instance = theScene->Instances[instanceIndex];
+            // Create the constant buffer.
+            {
+              Constants constants = {};
+              constants.TransformWorldToClip =
+                  instance.TransformObjectToWorld * transform;
+              constants.TransformObjectToWorld =
+                  instance.TransformObjectToWorld;
+              bufferInstanceConstants.push_back(D3D11_Create_Buffer(
+                  m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
+                  sizeof(Constants), &constants));
+            }
+          }
+          ////////////////////////////////////////////////////////////////////////
+          // Render everything.
+          m_pDevice->GetID3D11DeviceContext()->ClearState();
+          m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(
+              rtv, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
+          m_pDevice->GetID3D11DeviceContext()->ClearDepthStencilView(
+              srvDepth, D3D10_CLEAR_DEPTH, 1.0f, 0);
+          m_pDevice->GetID3D11DeviceContext()->RSSetViewports(
+              1, &Make_D3D11_VIEWPORT(viewwidth, viewheight));
+          m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtv,
+                                                                  srvDepth);
+          m_pDevice->GetID3D11DeviceContext()->VSSetShader(shaderVertex,
+                                                           nullptr, 0);
+          m_pDevice->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr,
+                                                           0);
+          m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(
+              D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+          m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
+          for (int instanceIndex = 0;
+               instanceIndex < theScene->Instances.size(); ++instanceIndex) {
+            const Instance &instance = theScene->Instances[instanceIndex];
+            m_pDevice->GetID3D11DeviceContext()->VSSetConstantBuffers(
+                0, 1, &bufferInstanceConstants[instanceIndex].p);
+            {
+              const UINT vertexStride[] = {sizeof(VertexFormat)};
+              const UINT vertexOffset[] = {0};
+              m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(
+                  0, 1, &bufferMeshVertex[instance.GeometryIndex].p,
+                  vertexStride, vertexOffset);
+            }
+            m_pDevice->GetID3D11DeviceContext()->IASetIndexBuffer(
+                bufferMeshIndex[instance.GeometryIndex].p, DXGI_FORMAT_R32_UINT,
+                0);
+            m_pDevice->GetID3D11DeviceContext()->DrawIndexed(
+                theScene->Meshes[instance.GeometryIndex]->getIndexCount(), 0,
+                0);
+          }
+          m_pDevice->GetID3D11DeviceContext()->ClearState();
+          m_pDevice->GetID3D11DeviceContext()->Flush();
+        };
+
+#ifdef USE_OPENVR
     m_fnRender = [=]() {
-      ////////////////////////////////////////////////////////////////////////////////
-      // Build all instance constant buffers for the scene.
-      std::vector<CComPtr<ID3D11Buffer>> bufferInstanceConstants;
-      for (int instanceIndex = 0; instanceIndex < theScene->Instances.size();
-           ++instanceIndex) {
-        const Instance &instance = theScene->Instances[instanceIndex];
-        // Create the constant buffer.
+      std::array<vr::TrackedDevicePose_t, vr::k_unMaxTrackedDeviceCount>
+          poseSystem = {};
+      std::array<vr::TrackedDevicePose_t, vr::k_unMaxTrackedDeviceCount>
+          poseGame = {};
+      while (true) {
+        if (vr::VRCompositorError_None !=
+            vrcompositor->WaitGetPoses(&poseSystem[0], poseSystem.size(),
+                                       &poseGame[0], poseGame.size()))
+          continue;
+        if (!poseSystem[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
+          continue;
+
+        Matrix44 world = CreateMatrixScale(Vector3{0.5f, 0.5f, -0.5f});
+        Matrix44 head =
+            Invert(ConvertMatrix(poseSystem[vr::k_unTrackedDeviceIndex_Hmd]
+                                     .mDeviceToAbsoluteTracking));
+        Matrix44 transformHeadToLeftEye = Invert(
+            ConvertMatrix(vrsystem->GetEyeToHeadTransform(vr::Eye_Left)));
+        Matrix44 transformHeadToRightEye = Invert(
+            ConvertMatrix(vrsystem->GetEyeToHeadTransform(vr::Eye_Right)));
+        Matrix44 projectionLeftEye = ConvertMatrix(
+            vrsystem->GetProjectionMatrix(vr::Eye_Left, 0.001f, 100.0f));
+        Matrix44 projectionRightEye = ConvertMatrix(
+            vrsystem->GetProjectionMatrix(vr::Eye_Right, 0.001f, 100.0f));
+
+        fnRenderInto(rtvVR,
+                     world * head * transformHeadToLeftEye * projectionLeftEye);
         {
-          Constants constants = {};
-          constants.TransformWorldToClip =
-              instance.TransformObjectToWorld * GetCameraWorldToClip();
-          constants.TransformObjectToWorld = instance.TransformObjectToWorld;
-          bufferInstanceConstants.push_back(D3D11_Create_Buffer(
-              m_pDevice->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
-              sizeof(Constants), &constants));
+          vr::Texture_t texture = {};
+          texture.handle = textureVR.p;
+          texture.eColorSpace = vr::ColorSpace_Auto;
+          texture.eType = vr::TextureType_DirectX;
+          vrcompositor->Submit(vr::Eye_Left, &texture);
+        }
+        fnRenderInto(rtvVR, world * head * transformHeadToRightEye *
+                                projectionRightEye);
+        {
+          vr::Texture_t texture = {};
+          texture.handle = textureVR.p;
+          texture.eColorSpace = vr::ColorSpace_Auto;
+          texture.eType = vr::TextureType_DirectX;
+          vrcompositor->Submit(vr::Eye_Right, &texture);
         }
       }
+    };
+#else
+    m_fnRender = [=]() {
       ////////////////////////////////////////////////////////////////////////////////
       // Get the backbuffer and create a render target from it.
       CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
           D3D11_Create_RTV_From_SwapChain(m_pDevice->GetID3D11Device(),
                                           m_pSwapChain->GetIDXGISwapChain());
-      ////////////////////////////////////////////////////////////////////////////////
-      // Beginning of rendering.
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(
-          rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
-      m_pDevice->GetID3D11DeviceContext()->ClearDepthStencilView(
-          srvDepth, D3D10_CLEAR_DEPTH, 1.0f, 0);
-      m_pDevice->GetID3D11DeviceContext()->RSSetViewports(
-          1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-      m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(
-          1, &rtvBackbuffer.p, srvDepth);
-      m_pDevice->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr,
-                                                       0);
-      m_pDevice->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr, 0);
-      m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(
-          D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
-      for (int instanceIndex = 0; instanceIndex < theScene->Instances.size();
-           ++instanceIndex) {
-        const Instance &instance = theScene->Instances[instanceIndex];
-        m_pDevice->GetID3D11DeviceContext()->VSSetConstantBuffers(
-            0, 1, &bufferInstanceConstants[instanceIndex].p);
-        {
-          const UINT vertexStride[] = {sizeof(VertexFormat)};
-          const UINT vertexOffset[] = {0};
-          m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(
-              0, 1, &bufferMeshVertex[instance.GeometryIndex].p, vertexStride,
-              vertexOffset);
-        }
-        m_pDevice->GetID3D11DeviceContext()->IASetIndexBuffer(
-            bufferMeshIndex[instance.GeometryIndex].p, DXGI_FORMAT_R32_UINT, 0);
-        m_pDevice->GetID3D11DeviceContext()->DrawIndexed(
-            theScene->Meshes[instance.GeometryIndex]->getIndexCount(), 0, 0);
-      }
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      m_pDevice->GetID3D11DeviceContext()->Flush();
-      // End of rendering; send to display.
+      fnRenderInto(rtvBackbuffer, GetCameraWorldToClip());
       m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
     };
+#endif // USE_OPENVR
   }
   void Render() override { m_fnRender(); }
 };
