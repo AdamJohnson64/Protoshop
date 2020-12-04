@@ -7,8 +7,8 @@
 #include "Core_Object.h"
 #include "Core_Util.h"
 #include "Scene_Camera.h"
-#include <d3d11.h>
 #include <Windows.h>
+#include <d3d11.h>
 #include <functional>
 #include <memory>
 
@@ -148,27 +148,25 @@ private:
   }
 };
 
-
 class WindowAndSwapChain : public WindowSimple {
 protected:
   std::shared_ptr<Direct3D11Device> m_Device;
   std::shared_ptr<DXGISwapChain> m_SwapChain;
 
 public:
-  WindowAndSwapChain(std::shared_ptr<Direct3D11Device> device)
-      {
+  WindowAndSwapChain(std::shared_ptr<Direct3D11Device> device) {
     m_Device = device;
     m_SwapChain = CreateDXGISwapChain(device, m_hWindow);
   }
 };
 
 class WindowWithSwapChain : public WindowAndSwapChain {
-  std::function<void(IDXGISwapChain*)> m_fnRender;
+  std::function<void(IDXGISwapChain *)> m_fnRender;
 
 public:
   WindowWithSwapChain(std::shared_ptr<Direct3D11Device> device,
-                      std::function<void(IDXGISwapChain *)> fnRender) : WindowAndSwapChain(device)
-      {
+                      std::function<void(IDXGISwapChain *)> fnRender)
+      : WindowAndSwapChain(device) {
     m_fnRender = fnRender;
   }
   void OnPaint() override {
@@ -178,19 +176,39 @@ public:
 };
 
 class WindowWithRTV : public WindowAndSwapChain {
-  std::function<void(ID3D11RenderTargetView*)> m_fnRender;
+  std::function<void(ID3D11RenderTargetView *)> m_fnRender;
 
 public:
   WindowWithRTV(std::shared_ptr<Direct3D11Device> device,
-                      std::function<void(ID3D11RenderTargetView *)> fnRender) : WindowAndSwapChain(device)
-      {
+                std::function<void(ID3D11RenderTargetView *)> fnRender)
+      : WindowAndSwapChain(device) {
     m_fnRender = fnRender;
   }
   void OnPaint() override {
     // Get the backbuffer and create a render target from it.
-    CComPtr<ID3D11RenderTargetView> pD3D11RenderTargetView =
-        D3D11_Create_RTV_From_SwapChain(m_Device->GetID3D11Device(), m_SwapChain->GetIDXGISwapChain());
-    m_fnRender(pD3D11RenderTargetView);
+    CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
+        D3D11_Create_RTV_From_SwapChain(m_Device->GetID3D11Device(),
+                                        m_SwapChain->GetIDXGISwapChain());
+    m_fnRender(rtvBackbuffer);
+    m_SwapChain->GetIDXGISwapChain()->Present(0, 0);
+  }
+};
+
+class WindowWithUAV : public WindowAndSwapChain {
+  std::function<void(ID3D11UnorderedAccessView *)> m_fnRender;
+
+public:
+  WindowWithUAV(std::shared_ptr<Direct3D11Device> device,
+                std::function<void(ID3D11UnorderedAccessView *)> fnRender)
+      : WindowAndSwapChain(device) {
+    m_fnRender = fnRender;
+  }
+  void OnPaint() override {
+    // Get the backbuffer and create a render target from it.
+    CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
+        D3D11_Create_UAV_From_SwapChain(m_Device->GetID3D11Device(),
+                                        m_SwapChain->GetIDXGISwapChain());
+    m_fnRender(uavBackbuffer);
     m_SwapChain->GetIDXGISwapChain()->Present(0, 0);
   }
 };
@@ -199,12 +217,20 @@ std::shared_ptr<IWindow> CreateNewWindow() {
   return std::shared_ptr<IWindow>(new WindowSimple());
 }
 
-std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(IDXGISwapChain*)> fnRender)
-{
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
+                std::function<void(IDXGISwapChain *)> fnRender) {
   return std::shared_ptr<Object>(new WindowWithSwapChain(device, fnRender));
 }
 
-std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(ID3D11RenderTargetView*)> fnRender)
-{
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
+                std::function<void(ID3D11RenderTargetView *)> fnRender) {
   return std::shared_ptr<Object>(new WindowWithRTV(device, fnRender));
+}
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
+                std::function<void(ID3D11UnorderedAccessView *)> fnRender) {
+  return std::shared_ptr<Object>(new WindowWithUAV(device, fnRender));
 }

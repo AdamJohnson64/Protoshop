@@ -15,44 +15,38 @@ class VKDevice;
 std::function<void(ID3D11RenderTargetView *)>
 CreateSample_D3D11Basic(std::shared_ptr<Direct3D11Device> device);
 
-std::shared_ptr<ISample>
-CreateSample_D3D11ComputeCanvas(std::shared_ptr<DXGISwapChain> swapchain,
-                                std::shared_ptr<Direct3D11Device> device);
-std::shared_ptr<ISample>
-CreateSample_D3D11DrawingContext(std::shared_ptr<DXGISwapChain> swapchain,
-                                 std::shared_ptr<Direct3D11Device> device);
-std::shared_ptr<ISample>
-CreateSample_D3D11LightProbe(std::shared_ptr<DXGISwapChain> swapchain,
-                             std::shared_ptr<Direct3D11Device> device);
-std::shared_ptr<ISample>
-CreateSample_D3D11Mesh(std::shared_ptr<DXGISwapChain> swapchain,
-                       std::shared_ptr<Direct3D11Device> device);
+std::function<void(ID3D11UnorderedAccessView *)>
+CreateSample_D3D11ComputeCanvas(std::shared_ptr<Direct3D11Device> device);
 
-std::shared_ptr<ISample>
-CreateSample_D3D11NormalMap(std::shared_ptr<DXGISwapChain> swapchain,
-                            std::shared_ptr<Direct3D11Device> device);
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11DrawingContext(std::shared_ptr<Direct3D11Device> device);
 
-std::shared_ptr<ISample>
-CreateSample_D3D11ParallaxMap(std::shared_ptr<DXGISwapChain> swapchain,
-                              std::shared_ptr<Direct3D11Device> device);
+std::function<void(ID3D11UnorderedAccessView *)>
+CreateSample_D3D11LightProbe(std::shared_ptr<Direct3D11Device> device);
 
-std::shared_ptr<ISample>
-CreateSample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> swapchain,
-                           std::shared_ptr<Direct3D11Device> device);
-std::shared_ptr<ISample>
-CreateSample_D3D11Scene(std::shared_ptr<DXGISwapChain> swapchain,
-                        std::shared_ptr<Direct3D11Device> device);
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11Mesh(std::shared_ptr<Direct3D11Device> device);
 
-std::shared_ptr<ISample>
-CreateSample_D3D11ShowTexture(std::shared_ptr<DXGISwapChain> swapchain,
-                              std::shared_ptr<Direct3D11Device> device);
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device);
 
-std::shared_ptr<ISample>
-CreateSample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> swapchain,
-                               std::shared_ptr<Direct3D11Device> device);
-std::shared_ptr<ISample>
-CreateSample_D3D11Voxel(std::shared_ptr<DXGISwapChain> swapchain,
-                        std::shared_ptr<Direct3D11Device> device);
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device);
+
+std::function<void(ID3D11UnorderedAccessView *)>
+CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device);
+
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device);
+
+std::function<void(ID3D11UnorderedAccessView *)>
+CreateSample_D3D11ShowTexture(std::shared_ptr<Direct3D11Device> device);
+
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11Tessellation(std::shared_ptr<Direct3D11Device> device);
+
+std::function<void(ID3D11UnorderedAccessView *)>
+CreateSample_D3D11Voxel(std::shared_ptr<Direct3D11Device> device);
 
 std::shared_ptr<Object>
 CreateSample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device);
@@ -70,18 +64,23 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<DXGISwapChain> swapchain,
 std::shared_ptr<ISample>
 CreateSample_DXRBasic(std::shared_ptr<DXGISwapChain> swapchain,
                       std::shared_ptr<Direct3D12Device> device);
+
 std::shared_ptr<ISample>
 CreateSample_DXRMesh(std::shared_ptr<DXGISwapChain> swapchain,
                      std::shared_ptr<Direct3D12Device> device);
+
 std::shared_ptr<ISample>
 CreateSample_DXRPathTrace(std::shared_ptr<DXGISwapChain> swapchain,
                           std::shared_ptr<Direct3D12Device> device);
+
 std::shared_ptr<ISample>
 CreateSample_DXRScene(std::shared_ptr<DXGISwapChain> swapchain,
                       std::shared_ptr<Direct3D12Device> device);
+
 std::shared_ptr<ISample>
 CreateSample_DXRTexture(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D12Device> device);
+
 std::shared_ptr<ISample>
 CreateSample_DXRWhitted(std::shared_ptr<DXGISwapChain> swapchain,
                         std::shared_ptr<Direct3D12Device> device);

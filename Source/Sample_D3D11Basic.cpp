@@ -17,8 +17,8 @@ CreateSample_D3D11Basic(std::shared_ptr<Direct3D11Device> device) {
   return [=](ID3D11RenderTargetView *rtvBackbuffer) {
     {
       float color[4] = {0.5f, 0.1f, 0.1f, 1.0f};
-      device->GetID3D11DeviceContext()->ClearRenderTargetView(
-          rtvBackbuffer, color);
+      device->GetID3D11DeviceContext()->ClearRenderTargetView(rtvBackbuffer,
+                                                              color);
     }
     device->GetID3D11DeviceContext()->Flush();
   };

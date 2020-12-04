@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Sample - Direct3D 11 Scene
+// Sample - Direct3D 11 Tessellation
 ///////////////////////////////////////////////////////////////////////////////
 // This sample demonstrates a basic tessellator setup and renders a tesselation
 // amplified triangle.
@@ -10,36 +10,28 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
-#include "Core_ISample.h"
 #include "Core_Math.h"
-#include "Core_Object.h"
 #include "Core_Util.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>
 
-class Sample_D3D11Tessellation : public Object, public ISample {
-private:
-  std::function<void()> m_fnRender;
-
-public:
-  Sample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> m_pSwapChain,
-                           std::shared_ptr<Direct3D11Device> m_pDevice) {
-    CComPtr<ID3D11RasterizerState> rasterizerState;
-    {
-      D3D11_RASTERIZER_DESC desc = {};
-      desc.CullMode = D3D11_CULL_NONE;
-      desc.FillMode = D3D11_FILL_WIREFRAME;
-      m_pDevice->GetID3D11Device()->CreateRasterizerState(&desc,
-                                                          &rasterizerState);
-    }
-    CComPtr<ID3D11VertexShader> shaderVertex;
-    CComPtr<ID3D11HullShader> shaderHull;
-    CComPtr<ID3D11DomainShader> shaderDomain;
-    CComPtr<ID3D11PixelShader> shaderPixel;
-    CComPtr<ID3D11InputLayout> inputLayout;
-    {
-      const char *szShaderCode = R"SHADER(
+std::function<void(ID3D11RenderTargetView *)>
+CreateSample_D3D11Tessellation(std::shared_ptr<Direct3D11Device> device) {
+  CComPtr<ID3D11RasterizerState> rasterizerState;
+  {
+    D3D11_RASTERIZER_DESC desc = {};
+    desc.CullMode = D3D11_CULL_NONE;
+    desc.FillMode = D3D11_FILL_WIREFRAME;
+    device->GetID3D11Device()->CreateRasterizerState(&desc, &rasterizerState);
+  }
+  CComPtr<ID3D11VertexShader> shaderVertex;
+  CComPtr<ID3D11HullShader> shaderHull;
+  CComPtr<ID3D11DomainShader> shaderDomain;
+  CComPtr<ID3D11PixelShader> shaderPixel;
+  CComPtr<ID3D11InputLayout> inputLayout;
+  {
+    const char *szShaderCode = R"SHADER(
 struct ControlPoint
 {
     float2 vPosition : CONTROLPOINT;
@@ -94,89 +86,68 @@ float4 mainPS() : SV_Target
 {
         return float4(1, 1, 1, 1);
 })SHADER";
-      CComPtr<ID3DBlob> blobVS =
-          CompileShader("vs_5_0", "mainVS", szShaderCode);
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateVertexShader(
-          blobVS->GetBufferPointer(), blobVS->GetBufferSize(), nullptr,
-          &shaderVertex));
-      CComPtr<ID3DBlob> blobHS =
-          CompileShader("hs_5_0", "mainHS", szShaderCode);
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateHullShader(
-          blobHS->GetBufferPointer(), blobHS->GetBufferSize(), nullptr,
-          &shaderHull));
-      CComPtr<ID3DBlob> blobDS =
-          CompileShader("ds_5_0", "mainDS", szShaderCode);
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateDomainShader(
-          blobDS->GetBufferPointer(), blobDS->GetBufferSize(), nullptr,
-          &shaderDomain));
-      CComPtr<ID3DBlob> blobPS =
-          CompileShader("ps_5_0", "mainPS", szShaderCode);
-      TRYD3D(m_pDevice->GetID3D11Device()->CreatePixelShader(
-          blobPS->GetBufferPointer(), blobPS->GetBufferSize(), nullptr,
-          &shaderPixel));
-      ////////////////////////////////////////////////////////////////////////////////
-      // Create an input layout.
-      {
-        D3D11_INPUT_ELEMENT_DESC desc = {};
-        desc.SemanticName = "CONTROLPOINT";
-        desc.Format = DXGI_FORMAT_R32G32_FLOAT;
-        desc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-        TRYD3D(m_pDevice->GetID3D11Device()->CreateInputLayout(
-            &desc, 1, blobVS->GetBufferPointer(), blobVS->GetBufferSize(),
-            &inputLayout));
-      }
-    }
+    CComPtr<ID3DBlob> blobVS = CompileShader("vs_5_0", "mainVS", szShaderCode);
+    TRYD3D(device->GetID3D11Device()->CreateVertexShader(
+        blobVS->GetBufferPointer(), blobVS->GetBufferSize(), nullptr,
+        &shaderVertex));
+    CComPtr<ID3DBlob> blobHS = CompileShader("hs_5_0", "mainHS", szShaderCode);
+    TRYD3D(device->GetID3D11Device()->CreateHullShader(
+        blobHS->GetBufferPointer(), blobHS->GetBufferSize(), nullptr,
+        &shaderHull));
+    CComPtr<ID3DBlob> blobDS = CompileShader("ds_5_0", "mainDS", szShaderCode);
+    TRYD3D(device->GetID3D11Device()->CreateDomainShader(
+        blobDS->GetBufferPointer(), blobDS->GetBufferSize(), nullptr,
+        &shaderDomain));
+    CComPtr<ID3DBlob> blobPS = CompileShader("ps_5_0", "mainPS", szShaderCode);
+    TRYD3D(device->GetID3D11Device()->CreatePixelShader(
+        blobPS->GetBufferPointer(), blobPS->GetBufferSize(), nullptr,
+        &shaderPixel));
     ////////////////////////////////////////////////////////////////////////////////
-    // Create a vertex buffer.
-    CComPtr<ID3D11Buffer> bufferVertex;
+    // Create an input layout.
     {
-      Vector2 vertices[] = {{0, 0}, {0, 1}, {1, 0}};
-      bufferVertex = D3D11_Create_Buffer(m_pDevice->GetID3D11Device(),
-                                         D3D11_BIND_VERTEX_BUFFER,
-                                         sizeof(vertices), vertices);
+      D3D11_INPUT_ELEMENT_DESC desc = {};
+      desc.SemanticName = "CONTROLPOINT";
+      desc.Format = DXGI_FORMAT_R32G32_FLOAT;
+      desc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+      TRYD3D(device->GetID3D11Device()->CreateInputLayout(
+          &desc, 1, blobVS->GetBufferPointer(), blobVS->GetBufferSize(),
+          &inputLayout));
     }
-    m_fnRender = [=]() {
-      // Get the backbuffer and create a render target from it.
-      CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
-          D3D11_Create_RTV_From_SwapChain(m_pDevice->GetID3D11Device(),
-                                          m_pSwapChain->GetIDXGISwapChain());
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      // Beginning of rendering.
-      m_pDevice->GetID3D11DeviceContext()->ClearRenderTargetView(
-          rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
-      m_pDevice->GetID3D11DeviceContext()->RSSetViewports(
-          1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
-      m_pDevice->GetID3D11DeviceContext()->OMSetRenderTargets(
-          1, &rtvBackbuffer.p, nullptr);
-      m_pDevice->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr,
-                                                       0);
-      m_pDevice->GetID3D11DeviceContext()->HSSetShader(shaderHull, nullptr, 0);
-      m_pDevice->GetID3D11DeviceContext()->DSSetShader(shaderDomain, nullptr,
-                                                       0);
-      m_pDevice->GetID3D11DeviceContext()->RSSetState(rasterizerState);
-      m_pDevice->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr, 0);
-      m_pDevice->GetID3D11DeviceContext()->IASetPrimitiveTopology(
-          D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
-      m_pDevice->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
-      {
-        UINT uStrides[] = {sizeof(Vector2)};
-        UINT uOffsets[] = {0};
-        m_pDevice->GetID3D11DeviceContext()->IASetVertexBuffers(
-            0, 1, &bufferVertex.p, uStrides, uOffsets);
-      }
-      m_pDevice->GetID3D11DeviceContext()->Draw(3, 0);
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      m_pDevice->GetID3D11DeviceContext()->Flush();
-      // End of rendering; send to display.
-      m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
-    };
   }
-  void Render() { m_fnRender(); }
-};
-
-std::shared_ptr<ISample>
-CreateSample_D3D11Tessellation(std::shared_ptr<DXGISwapChain> swapchain,
-                               std::shared_ptr<Direct3D11Device> device) {
-  return std::shared_ptr<ISample>(
-      new Sample_D3D11Tessellation(swapchain, device));
+  ////////////////////////////////////////////////////////////////////////////////
+  // Create a vertex buffer.
+  CComPtr<ID3D11Buffer> bufferVertex;
+  {
+    Vector2 vertices[] = {{0, 0}, {0, 1}, {1, 0}};
+    bufferVertex =
+        D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER,
+                            sizeof(vertices), vertices);
+  }
+  return [=](ID3D11RenderTargetView *rtvBackbuffer) {
+    device->GetID3D11DeviceContext()->ClearState();
+    // Beginning of rendering.
+    device->GetID3D11DeviceContext()->ClearRenderTargetView(
+        rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
+    device->GetID3D11DeviceContext()->RSSetViewports(
+        1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer,
+                                                         nullptr);
+    device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr, 0);
+    device->GetID3D11DeviceContext()->HSSetShader(shaderHull, nullptr, 0);
+    device->GetID3D11DeviceContext()->DSSetShader(shaderDomain, nullptr, 0);
+    device->GetID3D11DeviceContext()->RSSetState(rasterizerState);
+    device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr, 0);
+    device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
+    device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
+    {
+      UINT uStrides[] = {sizeof(Vector2)};
+      UINT uOffsets[] = {0};
+      device->GetID3D11DeviceContext()->IASetVertexBuffers(
+          0, 1, &bufferVertex.p, uStrides, uOffsets);
+    }
+    device->GetID3D11DeviceContext()->Draw(3, 0);
+    device->GetID3D11DeviceContext()->ClearState();
+    device->GetID3D11DeviceContext()->Flush();
+  };
 }

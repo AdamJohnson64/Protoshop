@@ -10,9 +10,7 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
-#include "Core_ISample.h"
 #include "Core_Math.h"
-#include "Core_Object.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
 #include "Scene_Camera.h"
@@ -21,17 +19,12 @@
 #include <functional>
 #include <memory>
 
-class Sample_D3D11RayMarch : public Object, public ISample {
-private:
-  std::function<void()> m_fnRender;
-
-public:
-  Sample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> m_pSwapChain,
-                       std::shared_ptr<Direct3D11Device> m_pDevice) {
-    // Create a compute shader.
-    CComPtr<ID3D11ComputeShader> shaderCompute;
-    {
-      CComPtr<ID3DBlob> blobCS = CompileShader("cs_5_0", "main", R"SHADER(
+std::function<void(ID3D11UnorderedAccessView *)>
+CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device) {
+  // Create a compute shader.
+  CComPtr<ID3D11ComputeShader> shaderCompute;
+  {
+    CComPtr<ID3DBlob> blobCS = CompileShader("cs_5_0", "main", R"SHADER(
 cbuffer Constants
 {
     float4x4 TransformClipToWorld;
@@ -136,53 +129,37 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     renderTarget[dispatchThreadId.xy] = float4(0.4, 0.2, 0.8, 1);
 })SHADER");
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(
-          blobCS->GetBufferPointer(), blobCS->GetBufferSize(), nullptr,
-          &shaderCompute));
-    }
-    __declspec(align(16)) struct Constants {
-      Matrix44 TransformClipToWorld;
-      float Time;
-    };
-    CComPtr<ID3D11Buffer> bufferConstants =
-        D3D11_Create_Buffer(m_pDevice->GetID3D11Device(),
-                            D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
-    m_fnRender = [=]() {
-      // Get the backbuffer and create a render target from it.
-      CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
-          D3D11_Create_UAV_From_SwapChain(m_pDevice->GetID3D11Device(),
-                                          m_pSwapChain->GetIDXGISwapChain());
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      // Upload the constant buffer.
-      {
-        static float t = 0;
-        Constants constants;
-        constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
-        constants.Time = t;
-        m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
-            bufferConstants, 0, nullptr, &constants, 0, 0);
-        t += 0.01;
-      }
-      // Beginning of rendering.
-      m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
-          0, 1, &uavBackbuffer.p, nullptr);
-      m_pDevice->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr,
-                                                       0);
-      m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(
-          0, 1, &bufferConstants.p);
-      m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
-                                                    RENDERTARGET_HEIGHT, 1);
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      m_pDevice->GetID3D11DeviceContext()->Flush();
-      // End of rendering; send to display.
-      m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
-    };
+    TRYD3D(device->GetID3D11Device()->CreateComputeShader(
+        blobCS->GetBufferPointer(), blobCS->GetBufferSize(), nullptr,
+        &shaderCompute));
   }
-  void Render() { m_fnRender(); }
-};
-
-std::shared_ptr<ISample>
-CreateSample_D3D11RayMarch(std::shared_ptr<DXGISwapChain> swapchain,
-                           std::shared_ptr<Direct3D11Device> device) {
-  return std::shared_ptr<ISample>(new Sample_D3D11RayMarch(swapchain, device));
+  __declspec(align(16)) struct Constants {
+    Matrix44 TransformClipToWorld;
+    float Time;
+  };
+  CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
+      device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
+  return [=](ID3D11UnorderedAccessView *uavBackbuffer) {
+    device->GetID3D11DeviceContext()->ClearState();
+    // Upload the constant buffer.
+    {
+      static float t = 0;
+      Constants constants;
+      constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
+      constants.Time = t;
+      device->GetID3D11DeviceContext()->UpdateSubresource(
+          bufferConstants, 0, nullptr, &constants, 0, 0);
+      t += 0.01;
+    }
+    // Beginning of rendering.
+    device->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
+        0, 1, &uavBackbuffer, nullptr);
+    device->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr, 0);
+    device->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1,
+                                                           &bufferConstants.p);
+    device->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
+                                               RENDERTARGET_HEIGHT, 1);
+    device->GetID3D11DeviceContext()->ClearState();
+    device->GetID3D11DeviceContext()->Flush();
+  };
 }

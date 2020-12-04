@@ -34,17 +34,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     // Direct3D 11 Samples
     std::shared_ptr<Direct3D11Device> deviceD3D11 = CreateDirect3D11Device();
     std::shared_ptr<Object> D3D11Basic = CreateNewWindow(deviceD3D11, CreateSample_D3D11Basic(deviceD3D11));
-    std::shared_ptr<IWindow> D3D11ComputeCanvas = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11ComputeCanvas(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11DrawingContext = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11DrawingContext(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    //std::shared_ptr<IWindow> D3D11LightProbe = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11LightProbe(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11Mesh = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Mesh(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11NormalMap = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11NormalMap(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11ParallaxMap = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11ParallaxMap(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11RayMarch = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11RayMarch(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11Scene = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Scene(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11ShowTexture = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11ShowTexture(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    std::shared_ptr<IWindow> D3D11Tessellation = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Tessellation(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
-    //std::shared_ptr<IWindow> D3D11Voxel = CreateSampleInWindow([&](HWND hwnd) { return CreateSample_D3D11Voxel(CreateDXGISwapChain(deviceD3D11, hwnd), deviceD3D11); });
+    std::shared_ptr<Object> D3D11ComputeCanvas = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeCanvas(deviceD3D11));
+    std::shared_ptr<Object> D3D11DrawingContext = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContext(deviceD3D11));
+    //std::shared_ptr<Object> D3D11LightProbe = CreateNewWindow(deviceD3D11, CreateSample_D3D11LightProbe(deviceD3D11));
+    std::shared_ptr<Object> D3D11Mesh = CreateNewWindow(deviceD3D11, CreateSample_D3D11Mesh(deviceD3D11));
+    std::shared_ptr<Object> D3D11NormalMap = CreateNewWindow(deviceD3D11, CreateSample_D3D11NormalMap(deviceD3D11));
+    std::shared_ptr<Object> D3D11ParallaxMap = CreateNewWindow(deviceD3D11, CreateSample_D3D11ParallaxMap(deviceD3D11));
+    std::shared_ptr<Object> D3D11RayMarch = CreateNewWindow(deviceD3D11, CreateSample_D3D11RayMarch(deviceD3D11));
+    std::shared_ptr<Object> D3D11Scene = CreateNewWindow(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11));
+    std::shared_ptr<Object> D3D11ShowTexture = CreateNewWindow(deviceD3D11, CreateSample_D3D11ShowTexture(deviceD3D11));
+    std::shared_ptr<Object> D3D11Tessellation = CreateNewWindow(deviceD3D11, CreateSample_D3D11Tessellation(deviceD3D11));
+    //std::shared_ptr<Object> D3D11Voxel = CreateNewWindow(deviceD3D11, CreateSample_D3D11Voxel(deviceD3D11));
     //std::shared_ptr<Object> D3DShaderToy = CreateSample_D3D11ShaderToy(deviceD3D11);
     ////////////////////////////////////////////////////////////////////////////////
     // Direct3D 12 Samples

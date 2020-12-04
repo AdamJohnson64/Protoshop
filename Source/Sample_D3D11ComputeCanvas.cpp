@@ -12,9 +12,7 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
-#include "Core_ISample.h"
 #include "Core_Math.h"
-#include "Core_Object.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
 #include <atlbase.h>
@@ -25,20 +23,15 @@
 const int IMAGE_WIDTH = 320;
 const int IMAGE_HEIGHT = 200;
 
-class Sample_D3D11ComputeCanvas : public Object, public ISample {
-private:
-  std::function<void()> m_fnRender;
+std::function<void(ID3D11UnorderedAccessView *)>
+CreateSample_D3D11ComputeCanvas(std::shared_ptr<Direct3D11Device> device) {
 
-public:
-  Sample_D3D11ComputeCanvas(std::shared_ptr<DXGISwapChain> m_pSwapChain,
-                            std::shared_ptr<Direct3D11Device> m_pDevice) {
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // Create a compute shader.
-    CComPtr<ID3D11ComputeShader> shaderCompute;
-    {
-      CComPtr<ID3DBlob> pD3DBlobCodeCS =
-          CompileShader("cs_5_0", "main", R"SHADER(
+  ////////////////////////////////////////////////////////////////////////////////
+  // Create a compute shader.
+  CComPtr<ID3D11ComputeShader> shaderCompute;
+  {
+    CComPtr<ID3DBlob> pD3DBlobCodeCS =
+        CompileShader("cs_5_0", "main", R"SHADER(
 cbuffer Constants
 {
     float4x4 TransformPixelToImage;
@@ -98,84 +91,63 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     accumulateSamples /= superCountX * superCountY;
     renderTarget[dispatchThreadId.xy] = accumulateSamples;
 })SHADER");
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateComputeShader(
-          pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(),
-          nullptr, &shaderCompute));
-    }
-    ////////////////////////////////////////////////////////////////////////////////
-    // Create constant buffer.
-    CComPtr<ID3D11Buffer> bufferConstants =
-        D3D11_Create_Buffer(m_pDevice->GetID3D11Device(),
-                            D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
-    ////////////////////////////////////////////////////////////////////////////////
-    // Create an image to be used as the canvas.
-    CComPtr<ID3D11ShaderResourceView> srvCanvasImage;
-    {
-      CComPtr<ID3D11Texture2D> textureCanvasImage;
-      {
-        struct Pixel {
-          uint8_t B, G, R, A;
-        };
-        const uint32_t imageStride = sizeof(Pixel) * IMAGE_WIDTH;
-        Pixel imageRaw[IMAGE_WIDTH * IMAGE_HEIGHT];
-        Image_Fill_Commodore64(imageRaw, IMAGE_WIDTH, IMAGE_HEIGHT,
-                               imageStride);
-        textureCanvasImage = D3D11_Create_Texture2D(
-            m_pDevice->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM,
-            IMAGE_WIDTH, IMAGE_HEIGHT, imageRaw);
-      }
-      TRYD3D(m_pDevice->GetID3D11Device()->CreateShaderResourceView(
-          textureCanvasImage,
-          &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
-              DXGI_FORMAT_B8G8R8A8_UNORM),
-          &srvCanvasImage.p));
-    }
-    m_fnRender = [=]() {
-      ////////////////////////////////////////////////////////////////////////////////
-      // Grab the next backbuffer from the swapchain.
-      CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
-          D3D11_Create_UAV_From_SwapChain(m_pDevice->GetID3D11Device(),
-                                          m_pSwapChain->GetIDXGISwapChain());
-      ////////////////////////////////////////////////////////////////////////////////
-      // Start rendering.
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      // Upload the constant buffer.
-      static float angle = 0;
-      const float zoom = 2 + Cos(angle);
-      Matrix44 transformImageToPixel =
-          CreateMatrixTranslate(
-              Vector3{-IMAGE_WIDTH / 2, -IMAGE_HEIGHT / 2, 0}) *
-          CreateMatrixScale(Vector3{zoom, zoom, 1}) *
-          CreateMatrixRotationZ(angle) *
-          CreateMatrixTranslate(
-              Vector3{RENDERTARGET_WIDTH / 2, RENDERTARGET_HEIGHT / 2, 0});
-      angle += 0.01f;
-      m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
-          bufferConstants, 0, nullptr, &Invert(transformImageToPixel), 0, 0);
-      // Beginning of draw.
-      m_pDevice->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
-          0, 1, &uavBackbuffer.p, nullptr);
-      m_pDevice->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr,
-                                                       0);
-      m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(
-          0, 1, &bufferConstants.p);
-      m_pDevice->GetID3D11DeviceContext()->CSSetShaderResources(
-          0, 1, &srvCanvasImage.p);
-      m_pDevice->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
-                                                    RENDERTARGET_HEIGHT, 1);
-      m_pDevice->GetID3D11DeviceContext()->ClearState();
-      m_pDevice->GetID3D11DeviceContext()->Flush();
-      ////////////////////////////////////////////////////////////////////////////////
-      // End of rendering; send to display.
-      m_pSwapChain->GetIDXGISwapChain()->Present(0, 0);
-    };
+    TRYD3D(device->GetID3D11Device()->CreateComputeShader(
+        pD3DBlobCodeCS->GetBufferPointer(), pD3DBlobCodeCS->GetBufferSize(),
+        nullptr, &shaderCompute));
   }
-  void Render() { m_fnRender(); }
-};
-
-std::shared_ptr<ISample>
-CreateSample_D3D11ComputeCanvas(std::shared_ptr<DXGISwapChain> swapchain,
-                                std::shared_ptr<Direct3D11Device> device) {
-  return std::shared_ptr<ISample>(
-      new Sample_D3D11ComputeCanvas(swapchain, device));
+  ////////////////////////////////////////////////////////////////////////////////
+  // Create constant buffer.
+  CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
+      device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
+  ////////////////////////////////////////////////////////////////////////////////
+  // Create an image to be used as the canvas.
+  CComPtr<ID3D11ShaderResourceView> srvCanvasImage;
+  {
+    CComPtr<ID3D11Texture2D> textureCanvasImage;
+    {
+      struct Pixel {
+        uint8_t B, G, R, A;
+      };
+      const uint32_t imageStride = sizeof(Pixel) * IMAGE_WIDTH;
+      Pixel imageRaw[IMAGE_WIDTH * IMAGE_HEIGHT];
+      Image_Fill_Commodore64(imageRaw, IMAGE_WIDTH, IMAGE_HEIGHT, imageStride);
+      textureCanvasImage = D3D11_Create_Texture2D(
+          device->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, IMAGE_WIDTH,
+          IMAGE_HEIGHT, imageRaw);
+    }
+    TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
+        textureCanvasImage,
+        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
+            DXGI_FORMAT_B8G8R8A8_UNORM),
+        &srvCanvasImage.p));
+  }
+  return [=](ID3D11UnorderedAccessView *uavBackbuffer) {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Start rendering.
+    device->GetID3D11DeviceContext()->ClearState();
+    // Upload the constant buffer.
+    static float angle = 0;
+    const float zoom = 2 + Cos(angle);
+    Matrix44 transformImageToPixel =
+        CreateMatrixTranslate(Vector3{-IMAGE_WIDTH / 2, -IMAGE_HEIGHT / 2, 0}) *
+        CreateMatrixScale(Vector3{zoom, zoom, 1}) *
+        CreateMatrixRotationZ(angle) *
+        CreateMatrixTranslate(
+            Vector3{RENDERTARGET_WIDTH / 2, RENDERTARGET_HEIGHT / 2, 0});
+    angle += 0.01f;
+    device->GetID3D11DeviceContext()->UpdateSubresource(
+        bufferConstants, 0, nullptr, &Invert(transformImageToPixel), 0, 0);
+    // Beginning of draw.
+    device->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
+        0, 1, &uavBackbuffer, nullptr);
+    device->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr, 0);
+    device->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1,
+                                                           &bufferConstants.p);
+    device->GetID3D11DeviceContext()->CSSetShaderResources(0, 1,
+                                                           &srvCanvasImage.p);
+    device->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
+                                               RENDERTARGET_HEIGHT, 1);
+    device->GetID3D11DeviceContext()->ClearState();
+    device->GetID3D11DeviceContext()->Flush();
+  };
 }

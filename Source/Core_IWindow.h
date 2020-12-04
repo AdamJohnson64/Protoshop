@@ -18,3 +18,4 @@ public:
 std::shared_ptr<IWindow> CreateNewWindow();
 std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(IDXGISwapChain*)> fnRender);
 std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(ID3D11RenderTargetView*)> fnRender);
+std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<Direct3D11Device> device, std::function<void(ID3D11UnorderedAccessView*)> fnRender);
