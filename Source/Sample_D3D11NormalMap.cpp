@@ -8,9 +8,10 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
+#include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
-#include "Scene_Camera.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>
@@ -191,7 +192,7 @@ float4 mainPS(Vertex vin) : SV_Target
     {
       static float angle = 0;
       Constants constants = {};
-      constants.TransformWorldToClip = GetCameraWorldToClip();
+      constants.TransformWorldToClip = GetTransformSource()->GetTransformWorldToClip();
       constants.Light = Normalize(Vector3{sinf(angle), 1, -cosf(angle)});
       angle += 0.05f;
       device->GetID3D11DeviceContext()->UpdateSubresource(

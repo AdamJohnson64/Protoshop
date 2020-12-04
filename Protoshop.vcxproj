@@ -26,7 +26,7 @@
     <ClInclude Include="Source\Scene_Material.h" />
     <ClInclude Include="Source\Sample_DXR_RayRecurse.inc" />
     <ClInclude Include="Source\Sample_Manifest.h" />
-    <ClInclude Include="Source\Scene_Camera.h" />
+    <ClInclude Include="Source\Core_ITransformSource.h" />
     <ClInclude Include="Source\Scene_InstanceTable.h" />
     <ClInclude Include="Source\Scene_Mesh.h" />
     <ClInclude Include="Source\Scene_MeshOBJ.h" />
@@ -76,7 +76,6 @@
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ShaderToy.cpp" />
     <ClCompile Include="Source\Sample_VKBasic.cpp" />
-    <ClCompile Include="Source\Scene_Camera.cpp" />
     <ClCompile Include="Source\Scene_InstanceTable.cpp" />
     <ClCompile Include="Source\Scene_MeshOBJ.cpp" />
     <ClCompile Include="Source\Scene_MeshPLY.cpp" />

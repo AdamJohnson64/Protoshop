@@ -11,9 +11,9 @@
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
+#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
-#include "Scene_Camera.h"
 #include "generated.Sample_DXRTexture.dxr.h"
 #include <array>
 #include <atlbase.h>
@@ -128,9 +128,9 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     descStateObject.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
     descStateObject.NumSubobjects = setupSubobject;
     descStateObject.pSubobjects = &descSubobject[0];
-    TRYD3D(device->m_pDevice->CreateStateObject(
-        &descStateObject, __uuidof(ID3D12StateObject),
-        (void **)&pipelineStateObject));
+    TRYD3D(device->m_pDevice->CreateStateObject(&descStateObject,
+                                                __uuidof(ID3D12StateObject),
+                                                (void **)&pipelineStateObject));
     pipelineStateObject->SetName(L"DXR Pipeline State");
   }
   ////////////////////////////////////////////////////////////////////////////////
@@ -242,8 +242,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
         descRaytracingPrebuild.ResultDataMaxSizeInBytes);
     // Build the acceleration structure.
     D3D12_Run_Synchronously(
-        device.get(),
-        [&](ID3D12GraphicsCommandList5 *UploadBLASCommandList) {
+        device.get(), [&](ID3D12GraphicsCommandList5 *UploadBLASCommandList) {
           D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
           descBuild.DestAccelerationStructureData =
               resourceBLAS->GetGPUVirtualAddress();
@@ -286,7 +285,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     CComPtr<ID3D12Resource> resourceConstants = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44),
-        &Invert(GetCameraWorldToClip()));
+        &Invert(GetTransformSource()->GetTransformWorldToClip()));
     ////////////////////////////////////////////////////////////////////////////////
     // Establish resource views.
     {

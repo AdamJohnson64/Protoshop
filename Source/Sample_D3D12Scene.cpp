@@ -12,8 +12,9 @@
 #include "Core_D3D12Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
+#include "Core_Math.h"
 #include "Core_Util.h"
-#include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include "Scene_Mesh.h"
 #include <atlbase.h>
@@ -104,7 +105,7 @@ float4 main() : SV_Target
           D3D12_Create_Buffer(device.get(), D3D12_RESOURCE_FLAG_NONE,
                               D3D12_RESOURCE_STATE_COMMON, 256, 256,
                               &(theScene->Instances[i].TransformObjectToWorld *
-                                GetCameraWorldToClip())));
+                                GetTransformSource()->GetTransformWorldToClip())));
       {
         D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
         desc.BufferLocation = resourceConstants[i]->GetGPUVirtualAddress();

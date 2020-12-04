@@ -9,8 +9,9 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
+#include "Core_Math.h"
 #include "Core_Util.h"
-#include "Scene_Camera.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>
@@ -79,7 +80,7 @@ float4 mainPS() : SV_Target
     // Update constant buffer.
     {
       char constants[1024];
-      memcpy(constants, &GetCameraWorldToClip(), sizeof(Matrix44));
+      memcpy(constants, &GetTransformSource()->GetTransformWorldToClip(), sizeof(Matrix44));
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, constants, 0, 0);
     }

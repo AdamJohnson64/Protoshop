@@ -11,9 +11,9 @@
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
+#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
-#include "Scene_Camera.h"
 #include "generated.Sample_DXRWhitted.dxr.h"
 #include <array>
 #include <atlbase.h>
@@ -303,7 +303,7 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
     CComPtr<ID3D12Resource> resourceConstants = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44),
-        &Invert(GetCameraWorldToClip()));
+        &Invert(GetTransformSource()->GetTransformWorldToClip()));
     // Establish resource views.
     {
       D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =

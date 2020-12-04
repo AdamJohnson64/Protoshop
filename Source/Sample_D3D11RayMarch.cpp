@@ -10,10 +10,10 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
-#include "Scene_Camera.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <functional>
@@ -145,7 +145,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     {
       static float t = 0;
       Constants constants;
-      constants.TransformClipToWorld = Invert(GetCameraWorldToClip());
+      constants.TransformClipToWorld = Invert(GetTransformSource()->GetTransformWorldToClip());
       constants.Time = t;
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, &constants, 0, 0);

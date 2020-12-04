@@ -8,8 +8,9 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
+#include "Core_Math.h"
 #include "Core_Util.h"
-#include "Scene_Camera.h"
 #include "Scene_InstanceTable.h"
 #include "Scene_Mesh.h"
 #include <array>
@@ -330,7 +331,7 @@ float4 mainPS(VertexPS vin) : SV_Target
   };
 #else
   return [=](ID3D11RenderTargetView *rtvBackbuffer) {
-    fnRenderInto(rtvBackbuffer, GetCameraWorldToClip());
+    fnRenderInto(rtvBackbuffer, GetTransformSource()->GetTransformWorldToClip());
   };
 #endif // USE_OPENVR
 }

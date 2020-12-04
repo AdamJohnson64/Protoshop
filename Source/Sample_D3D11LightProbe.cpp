@@ -10,10 +10,10 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
-#include "Scene_Camera.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <functional>
@@ -91,7 +91,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     device->GetID3D11DeviceContext()->ClearState();
     // Upload the constant buffer.
     device->GetID3D11DeviceContext()->UpdateSubresource(
-        bufferConstants, 0, nullptr, &Invert(GetCameraWorldToClip()), 0, 0);
+        bufferConstants, 0, nullptr, &Invert(GetTransformSource()->GetTransformWorldToClip()), 0, 0);
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
         0, 1, &uavBackbuffer, nullptr);

@@ -8,9 +8,10 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
+#include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
-#include "Scene_Camera.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>
@@ -218,9 +219,9 @@ float4 mainPS(VertexPS vin) : SV_Target
     // Update constant buffer.
     {
       Constants constants = {};
-      constants.TransformWorldToClip = GetCameraWorldToClip();
-      constants.TransformWorldToView = GetCameraWorldToView();
-      Matrix44 t = Invert(GetCameraWorldToView());
+      constants.TransformWorldToClip = GetTransformSource()->GetTransformWorldToClip();
+      constants.TransformWorldToView = GetTransformSource()->GetTransformWorldToView();
+      Matrix44 t = Invert(GetTransformSource()->GetTransformWorldToView());
       constants.CameraPosition = Vector3{t.M41, t.M42, t.M43};
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, &constants, 0, 0);

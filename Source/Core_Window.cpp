@@ -4,12 +4,12 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Object.h"
 #include "Core_OpenGL.h"
 #include "Core_Util.h"
 #include "Core_VK.h"
-#include "Scene_Camera.h"
 #include <Windows.h>
 #include <d3d11.h>
 #include <functional>
@@ -21,6 +21,32 @@ static int g_MouseY = 0;
 
 static Vector3 g_CameraPos = {0, 1, -5};
 static Quaternion g_CameraRot = {0, 0, 0, 1};
+
+static Matrix44 TransformWorldToView = {
+    // clang-format off
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, -1, 5, 1
+    // clang-format on
+};
+
+static Matrix44 TransformViewToClip = CreateProjection<float>(
+    0.01f, 100.0f, 45 * (Pi<float> / 180), 45 * (Pi<float> / 180));
+
+class TransformSource : public ITransformSource {
+public:
+  virtual Matrix44 GetTransformWorldToClip() {
+    return TransformWorldToView * TransformViewToClip;
+  }
+  virtual Matrix44 GetTransformWorldToView() { return TransformWorldToView; }
+} g_TransformSource;
+
+ITransformSource *GetTransformSource() { return &g_TransformSource; }
+
+void SetCameraWorldToView(const Matrix44 &transformWorldToView) {
+  TransformWorldToView = transformWorldToView;
+}
 
 class WindowBase : public Object {
 protected:
@@ -110,7 +136,7 @@ private:
           if (mouseDeltaY != 0)
             g_CameraRot = Multiply<float>(
                 g_CameraRot, CreateQuaternionRotation<float>(
-                               {1, 0, 0}, mouseDeltaY / (2 * Pi<float>)));
+                                 {1, 0, 0}, mouseDeltaY / (2 * Pi<float>)));
         }
         // Camera Dolly
         if (modifierShift && modifierCtrl) {
