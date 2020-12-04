@@ -219,11 +219,6 @@ public:
       TRYD3D(swapchain->GetIDXGISwapChain()->GetBuffer(
           swapchain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
           __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
-      resourceBackbuffer->SetName(L"D3D12Resource (Backbuffer)");
-      device->m_pDevice->CreateRenderTargetView(
-          resourceBackbuffer,
-          &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
-          device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
       ////////////////////////////////////////////////////////////////////////////////
       // RAYTRACE - Finally call the raytracer and generate the frame.
       D3D12_Run_Synchronously(
