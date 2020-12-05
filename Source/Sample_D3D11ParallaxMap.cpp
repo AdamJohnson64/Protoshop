@@ -16,7 +16,8 @@
 #include <atlbase.h>
 #include <functional>
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
+                   const Matrix44 &)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device) {
   __declspec(align(16)) struct Constants {
     Matrix44 TransformWorldToClip;
@@ -205,7 +206,9 @@ float4 mainPS(VertexPS vin) : SV_Target
             DXGI_FORMAT_B8G8R8A8_UNORM),
         &srvDepthMap.p));
   }
-  return [=](ID3D11Texture2D *textureBackbuffer) {
+  return [=](ID3D11Texture2D *textureBackbuffer,
+             ID3D11DepthStencilView *dsvDepth,
+             const Matrix44 &transformWorldToClip) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
     textureBackbuffer->GetDesc(&descBackbuffer);
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
@@ -216,16 +219,17 @@ float4 mainPS(VertexPS vin) : SV_Target
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
+    device->GetID3D11DeviceContext()->ClearDepthStencilView(
+        dsvDepth, D3D11_CLEAR_DEPTH, 1.0f, 0);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
     device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
-                                                         nullptr);
+                                                         dsvDepth);
     ////////////////////////////////////////////////////////////////////////////////
     // Update constant buffer.
     {
       Constants constants = {};
-      constants.TransformWorldToClip =
-          GetTransformSource()->GetTransformWorldToClip();
+      constants.TransformWorldToClip = transformWorldToClip;
       constants.TransformWorldToView =
           GetTransformSource()->GetTransformWorldToView();
       Matrix44 t = Invert(GetTransformSource()->GetTransformWorldToView());

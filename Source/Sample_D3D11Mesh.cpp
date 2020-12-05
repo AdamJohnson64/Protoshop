@@ -16,7 +16,8 @@
 #include <atlbase.h>
 #include <functional>
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
+                   const Matrix44 &)>
 CreateSample_D3D11Mesh(std::shared_ptr<Direct3D11Device> device) {
   const char *szShaderCode = R"SHADER(
 cbuffer Constants
@@ -68,7 +69,9 @@ float4 mainPS() : SV_Target
         D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER,
                             sizeof(vertices), vertices);
   }
-  return [=](ID3D11Texture2D *textureBackbuffer) {
+  return [=](ID3D11Texture2D *textureBackbuffer,
+             ID3D11DepthStencilView *dsvDepth,
+             const Matrix44 &transformWorldToClip) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
     textureBackbuffer->GetDesc(&descBackbuffer);
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
@@ -78,15 +81,16 @@ float4 mainPS() : SV_Target
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
+    device->GetID3D11DeviceContext()->ClearDepthStencilView(
+        dsvDepth, D3D11_CLEAR_DEPTH, 1.0f, 0);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
     device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
-                                                         nullptr);
+                                                         dsvDepth);
     // Update constant buffer.
     {
       char constants[1024];
-      memcpy(constants, &GetTransformSource()->GetTransformWorldToClip(),
-             sizeof(Matrix44));
+      memcpy(constants, &transformWorldToClip, sizeof(Matrix44));
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, constants, 0, 0);
     }

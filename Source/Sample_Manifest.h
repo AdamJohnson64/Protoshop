@@ -25,13 +25,16 @@ CreateSample_D3D11DrawingContext(std::shared_ptr<Direct3D11Device> device);
 std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11LightProbe(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
+                   const Matrix44 &)>
 CreateSample_D3D11Mesh(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
+                   const Matrix44 &)>
 CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
+                   const Matrix44 &)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(ID3D11Texture2D *)>

@@ -171,7 +171,7 @@ float4 mainPS(VertexPS vin) : SV_Target
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->ClearDepthStencilView(
-        dsvDepth, D3D10_CLEAR_DEPTH, 1.0f, 0);
+        dsvDepth, D3D11_CLEAR_DEPTH, 1.0f, 0);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
     device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
