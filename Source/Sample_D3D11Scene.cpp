@@ -56,10 +56,6 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device) {
     Vector3 Position;
     Vector3 Normal;
   };
-  ////////////////////////////////////////////////////////////////////////////////
-  // The depth buffer size can vary between the swapchain and VR cases.
-  uint32_t viewwidth = RENDERTARGET_WIDTH;
-  uint32_t viewheight = RENDERTARGET_HEIGHT;
 #ifdef USE_OPENVR
   ////////////////////////////////////////////////////////////////////////////////
   // Initialize the VR system.
@@ -90,30 +86,6 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device) {
   }
 #endif // USE_OPENVR
 
-  ////////////////////////////////////////////////////////////////////////////////
-  // Create an appropriately sized depth buffer and its view.
-  CComPtr<ID3D11DepthStencilView> srvDepth;
-  {
-    CComPtr<ID3D11Texture2D> textureDepth;
-    {
-      D3D11_TEXTURE2D_DESC desc = {};
-      desc.Width = viewwidth;
-      desc.Height = viewheight;
-      desc.ArraySize = 1;
-      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-      desc.SampleDesc.Count = 1;
-      desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-      TRYD3D(device->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
-                                                        &textureDepth));
-    }
-    {
-      D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
-      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-      desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-      TRYD3D(device->GetID3D11Device()->CreateDepthStencilView(
-          textureDepth, &desc, &srvDepth));
-    }
-  }
   ////////////////////////////////////////////////////////////////////////////////
   // Create all the shaders that we might need.
   const char *szShaderCode = R"SHADER(
@@ -226,8 +198,23 @@ float4 mainPS(VertexPS vin) : SV_Target
   // members to carry this state. This should make it easier to offload
   // processing into construction without changing things too much (you should
   // just move the code out of the lambda).
-  std::function<void(ID3D11RenderTargetView *, const Matrix44 &)> fnRenderInto =
-      [=](ID3D11RenderTargetView *rtv, const Matrix44 &transform) {
+  std::function<void(ID3D11Texture2D *, ID3D11Texture2D *, const Matrix44 &)>
+      fnRenderInto = [=](ID3D11Texture2D *textureBackbuffer,
+                         ID3D11Texture2D *textureDepth,
+                         const Matrix44 &transform) {
+        D3D11_TEXTURE2D_DESC descBackbuffer = {};
+        textureBackbuffer->GetDesc(&descBackbuffer);
+        CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
+            D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
+                                            textureBackbuffer);
+        CComPtr<ID3D11DepthStencilView> dsvDepth;
+        {
+          D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
+          desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+          desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+          TRYD3D(device->GetID3D11Device()->CreateDepthStencilView(
+              textureDepth, &desc, &dsvDepth));
+        }
         ////////////////////////////////////////////////////////////////////////////////
         // Build all instance constant buffers for the scene.
         std::vector<CComPtr<ID3D11Buffer>> bufferInstanceConstants;
@@ -249,12 +236,14 @@ float4 mainPS(VertexPS vin) : SV_Target
         // Render everything.
         device->GetID3D11DeviceContext()->ClearState();
         device->GetID3D11DeviceContext()->ClearRenderTargetView(
-            rtv, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
+            rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
         device->GetID3D11DeviceContext()->ClearDepthStencilView(
-            srvDepth, D3D10_CLEAR_DEPTH, 1.0f, 0);
+            dsvDepth, D3D10_CLEAR_DEPTH, 1.0f, 0);
         device->GetID3D11DeviceContext()->RSSetViewports(
-            1, &Make_D3D11_VIEWPORT(viewwidth, viewheight));
-        device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtv, srvDepth);
+            1,
+            &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
+        device->GetID3D11DeviceContext()->OMSetRenderTargets(
+            1, &rtvBackbuffer.p, dsvDepth);
         device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr, 0);
         device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr, 0);
         device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
@@ -331,10 +320,23 @@ float4 mainPS(VertexPS vin) : SV_Target
   };
 #else
   return [=](ID3D11Texture2D *textureBackbuffer) {
-    CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
-        D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
-                                        textureBackbuffer);
-    fnRenderInto(rtvBackbuffer,
+    D3D11_TEXTURE2D_DESC descBackbuffer = {};
+    textureBackbuffer->GetDesc(&descBackbuffer);
+    ////////////////////////////////////////////////////////////////////////////////
+    // Create an appropriately sized depth buffer and its view.
+    CComPtr<ID3D11Texture2D> textureDepth;
+    {
+      D3D11_TEXTURE2D_DESC desc = {};
+      desc.Width = descBackbuffer.Width;
+      desc.Height = descBackbuffer.Height;
+      desc.ArraySize = 1;
+      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+      desc.SampleDesc.Count = 1;
+      desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+      TRYD3D(device->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
+                                                        &textureDepth));
+    }
+    fnRenderInto(textureBackbuffer, textureDepth,
                  GetTransformSource()->GetTransformWorldToClip());
   };
 #endif // USE_OPENVR
