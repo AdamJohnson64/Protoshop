@@ -56,36 +56,6 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device) {
     Vector3 Position;
     Vector3 Normal;
   };
-#ifdef USE_OPENVR
-  ////////////////////////////////////////////////////////////////////////////////
-  // Initialize the VR system.
-  vr::IVRSystem *vrsystem = vr::VR_Init(
-      nullptr, vr::EVRApplicationType::VRApplication_Scene, nullptr);
-  vr::IVRCompositor *vrcompositor = vr::VRCompositor();
-  vrsystem->GetRecommendedRenderTargetSize(&viewwidth, &viewheight);
-  CComPtr<ID3D11Texture2D> textureVR;
-  {
-    D3D11_TEXTURE2D_DESC desc = {};
-    desc.Width = viewwidth;
-    desc.Height = viewheight;
-    desc.MipLevels = 1;
-    desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    TRYD3D(m_pDevice->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
-                                                         &textureVR.p));
-  }
-  CComPtr<ID3D11RenderTargetView> rtvVR;
-  {
-    D3D11_RENDER_TARGET_VIEW_DESC desc = {};
-    desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-    TRYD3D(m_pDevice->GetID3D11Device()->CreateRenderTargetView(textureVR,
-                                                                &desc, &rtvVR));
-  }
-#endif // USE_OPENVR
-
   ////////////////////////////////////////////////////////////////////////////////
   // Create all the shaders that we might need.
   const char *szShaderCode = R"SHADER(
@@ -272,7 +242,40 @@ float4 mainPS(VertexPS vin) : SV_Target
       };
 
 #ifdef USE_OPENVR
-  m_fnRender = [=]() {
+  {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Initialize the VR system.
+    vr::IVRSystem *vrsystem = vr::VR_Init(
+        nullptr, vr::EVRApplicationType::VRApplication_Scene, nullptr);
+    vr::IVRCompositor *vrcompositor = vr::VRCompositor();
+    uint32_t viewwidth, viewheight;
+    vrsystem->GetRecommendedRenderTargetSize(&viewwidth, &viewheight);
+    CComPtr<ID3D11Texture2D> textureVR;
+    {
+      D3D11_TEXTURE2D_DESC desc = {};
+      desc.Width = viewwidth;
+      desc.Height = viewheight;
+      desc.MipLevels = 1;
+      desc.ArraySize = 1;
+      desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+      desc.SampleDesc.Count = 1;
+      desc.Usage = D3D11_USAGE_DEFAULT;
+      desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+      TRYD3D(device->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
+                                                        &textureVR.p));
+    }
+    CComPtr<ID3D11Texture2D> textureDepth;
+    {
+      D3D11_TEXTURE2D_DESC desc = {};
+      desc.Width = viewwidth;
+      desc.Height = viewheight;
+      desc.ArraySize = 1;
+      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+      desc.SampleDesc.Count = 1;
+      desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+      TRYD3D(device->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
+                                                        &textureDepth));
+    }
     std::array<vr::TrackedDevicePose_t, vr::k_unMaxTrackedDeviceCount>
         poseSystem = {};
     std::array<vr::TrackedDevicePose_t, vr::k_unMaxTrackedDeviceCount>
@@ -298,7 +301,7 @@ float4 mainPS(VertexPS vin) : SV_Target
       Matrix44 projectionRightEye = ConvertMatrix(
           vrsystem->GetProjectionMatrix(vr::Eye_Right, 0.001f, 100.0f));
 
-      fnRenderInto(rtvVR,
+      fnRenderInto(textureVR, textureDepth,
                    world * head * transformHeadToLeftEye * projectionLeftEye);
       {
         vr::Texture_t texture = {};
@@ -307,7 +310,7 @@ float4 mainPS(VertexPS vin) : SV_Target
         texture.eType = vr::TextureType_DirectX;
         vrcompositor->Submit(vr::Eye_Left, &texture);
       }
-      fnRenderInto(rtvVR,
+      fnRenderInto(textureVR, textureDepth,
                    world * head * transformHeadToRightEye * projectionRightEye);
       {
         vr::Texture_t texture = {};
@@ -317,7 +320,7 @@ float4 mainPS(VertexPS vin) : SV_Target
         vrcompositor->Submit(vr::Eye_Right, &texture);
       }
     }
-  };
+  }
 #else
   return [=](ID3D11Texture2D *textureBackbuffer) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
