@@ -20,8 +20,6 @@
 
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
-  CComPtr<ID3D12Resource1> resourceTarget =
-      DXR_Create_Output_UAV(device->m_pDevice);
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
       D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
   CComPtr<ID3D12RootSignature> rootSignatureGLOBAL =
@@ -285,8 +283,8 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
     resourceTLAS =
         DXRCreateTLAS(device.get(), &DxrInstance[0], DxrInstance.size());
   }
-  return [=](ID3D12Resource *resourceBackbuffer) {
-    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
+  return [=](ID3D12Resource *resourceUAV) {
+    D3D12_RESOURCE_DESC descUAV = resourceUAV->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -316,7 +314,7 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
       {
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        device->m_pDevice->CreateUnorderedAccessView(resourceTarget, nullptr,
+        device->m_pDevice->CreateUnorderedAccessView(resourceUAV, nullptr,
                                                      &desc, descriptorBase);
         descriptorBase.ptr += descriptorElementSize;
       }
@@ -346,49 +344,35 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
     ////////////////////////////////////////////////////////////////////////////////
     // RAYTRACE - Finally call the raytracer and generate the frame.
     ////////////////////////////////////////////////////////////////////////////////
-    D3D12_Run_Synchronously(device.get(), [&](ID3D12GraphicsCommandList5
-                                                  *commandList) {
-      // Attach the GLOBAL signature and descriptors to the compute root.
-      commandList->SetComputeRootSignature(rootSignatureGLOBAL);
-      commandList->SetDescriptorHeaps(1, &descriptorHeapCBVSRVUAV.p);
-      commandList->SetComputeRootDescriptorTable(
-          0, descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
-      // Prepare the pipeline for raytracing.
-      commandList->SetPipelineState1(pipelineStateObject);
-      {
-        D3D12_DISPATCH_RAYS_DESC desc = {};
-        desc.RayGenerationShaderRecord.StartAddress =
-            resourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 0;
-        desc.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
-        desc.MissShaderTable.StartAddress =
-            resourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 1;
-        desc.MissShaderTable.SizeInBytes = shaderEntrySize;
-        desc.HitGroupTable.StartAddress =
-            resourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 2;
-        desc.HitGroupTable.SizeInBytes = shaderEntrySize;
-        desc.HitGroupTable.StrideInBytes = shaderEntrySize;
-        desc.Width = descBackbuffer.Width;
-        desc.Height = descBackbuffer.Height;
-        desc.Depth = 1;
-        commandList->DispatchRays(&desc);
-        commandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(resourceTarget,
-                                            D3D12_RESOURCE_STATE_COMMON,
-                                            D3D12_RESOURCE_STATE_COPY_SOURCE));
-        commandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
-                                            D3D12_RESOURCE_STATE_COMMON,
-                                            D3D12_RESOURCE_STATE_COPY_DEST));
-        commandList->CopyResource(resourceBackbuffer, resourceTarget);
-        commandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(resourceTarget,
-                                            D3D12_RESOURCE_STATE_COPY_SOURCE,
-                                            D3D12_RESOURCE_STATE_COMMON));
-        commandList->ResourceBarrier(
-            1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
-                                            D3D12_RESOURCE_STATE_COPY_DEST,
-                                            D3D12_RESOURCE_STATE_COMMON));
-      }
-    });
+    D3D12_Run_Synchronously(
+        device.get(), [&](ID3D12GraphicsCommandList5 *commandList) {
+          // Attach the GLOBAL signature and descriptors to the compute root.
+          commandList->SetComputeRootSignature(rootSignatureGLOBAL);
+          commandList->SetDescriptorHeaps(1, &descriptorHeapCBVSRVUAV.p);
+          commandList->SetComputeRootDescriptorTable(
+              0, descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
+          // Prepare the pipeline for raytracing.
+          commandList->SetPipelineState1(pipelineStateObject);
+          {
+            D3D12_DISPATCH_RAYS_DESC desc = {};
+            desc.RayGenerationShaderRecord.StartAddress =
+                resourceShaderTable->GetGPUVirtualAddress() +
+                shaderEntrySize * 0;
+            desc.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
+            desc.MissShaderTable.StartAddress =
+                resourceShaderTable->GetGPUVirtualAddress() +
+                shaderEntrySize * 1;
+            desc.MissShaderTable.SizeInBytes = shaderEntrySize;
+            desc.HitGroupTable.StartAddress =
+                resourceShaderTable->GetGPUVirtualAddress() +
+                shaderEntrySize * 2;
+            desc.HitGroupTable.SizeInBytes = shaderEntrySize;
+            desc.HitGroupTable.StrideInBytes = shaderEntrySize;
+            desc.Width = descUAV.Width;
+            desc.Height = descUAV.Height;
+            desc.Depth = 1;
+            commandList->DispatchRays(&desc);
+          }
+        });
   };
 }

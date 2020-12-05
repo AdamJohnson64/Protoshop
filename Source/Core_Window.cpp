@@ -231,6 +231,66 @@ public:
   }
 };
 
+class WindowRenderToD3D12UAV : public WindowWithSwapChainD3D12 {
+  std::function<void(ID3D12Resource *)> m_fnRender;
+
+public:
+  WindowRenderToD3D12UAV(std::shared_ptr<Direct3D12Device> device,
+                         std::function<void(ID3D12Resource *)> fnRender)
+      : WindowWithSwapChainD3D12(device) {
+    m_fnRender = fnRender;
+  }
+  void OnPaint() override {
+    CComPtr<ID3D12Resource> resourceBackbuffer;
+    CComPtr<ID3D12Resource1> resourceTarget;
+    {
+      D3D12_HEAP_PROPERTIES descHeapProperties = {};
+      descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+      D3D12_RESOURCE_DESC descResource = {};
+      descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+      descResource.Width = RENDERTARGET_WIDTH;
+      descResource.Height = RENDERTARGET_HEIGHT;
+      descResource.DepthOrArraySize = 1;
+      descResource.MipLevels = 1;
+      descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+      descResource.SampleDesc.Count = 1;
+      descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+      TRYD3D(m_Direct3D12Device->m_pDevice->CreateCommittedResource(
+          &descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
+          &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr,
+          __uuidof(ID3D12Resource1), (void **)&resourceTarget.p));
+      resourceTarget->SetName(L"Direct3D 12 Interposing UAV");
+    }
+    m_fnRender(resourceTarget);
+    TRYD3D(m_DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
+        m_DXGISwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
+        __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
+    ////////////////////////////////////////////////////////////////////////////////
+    // Copy the interposing UAV to the backbuffer texture.
+    D3D12_Run_Synchronously(
+        m_Direct3D12Device.get(), [&](ID3D12GraphicsCommandList4 *commandList) {
+          commandList->ResourceBarrier(
+              1, &Make_D3D12_RESOURCE_BARRIER(
+                     resourceTarget, D3D12_RESOURCE_STATE_COMMON,
+                     D3D12_RESOURCE_STATE_COPY_SOURCE));
+          commandList->ResourceBarrier(
+              1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
+                                              D3D12_RESOURCE_STATE_COMMON,
+                                              D3D12_RESOURCE_STATE_COPY_DEST));
+          commandList->CopyResource(resourceBackbuffer, resourceTarget);
+          commandList->ResourceBarrier(
+              1, &Make_D3D12_RESOURCE_BARRIER(resourceTarget,
+                                              D3D12_RESOURCE_STATE_COPY_SOURCE,
+                                              D3D12_RESOURCE_STATE_COMMON));
+          commandList->ResourceBarrier(
+              1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
+                                              D3D12_RESOURCE_STATE_COPY_DEST,
+                                              D3D12_RESOURCE_STATE_COMMON));
+        });
+    m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
+  }
+};
+
 class WindowRenderToOpenGL : public WindowBase {
   std::shared_ptr<OpenGLDevice> m_OpenGLDevice;
   std::function<void()> m_fnRender;
@@ -449,10 +509,17 @@ CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
 }
 
 std::shared_ptr<Object>
-CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
-                std::function<void(ID3D12Resource *rt)> fnRender) {
+CreateNewWindowRTV(std::shared_ptr<Direct3D12Device> deviceD3D12,
+                   std::function<void(ID3D12Resource *rt)> fnRender) {
   return std::shared_ptr<Object>(
       new WindowRenderToD3D12RTV(deviceD3D12, fnRender));
+}
+
+std::shared_ptr<Object>
+CreateNewWindowUAV(std::shared_ptr<Direct3D12Device> deviceD3D12,
+                   std::function<void(ID3D12Resource *rt)> fnRender) {
+  return std::shared_ptr<Object>(
+      new WindowRenderToD3D12UAV(deviceD3D12, fnRender));
 }
 
 std::shared_ptr<Object>

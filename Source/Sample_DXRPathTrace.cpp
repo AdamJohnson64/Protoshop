@@ -22,8 +22,6 @@
 
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
-  CComPtr<ID3D12Resource1> resourceTarget =
-      DXR_Create_Output_UAV(device->m_pDevice);
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
       D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
   // Our GLOBAL signature contains the output UAV, acceleration SRV, and some
@@ -280,8 +278,8 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
               &descBuild, 0, nullptr);
         });
   }
-  return [=](ID3D12Resource *resourceBackbuffer) {
-    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
+  return [=](ID3D12Resource *resourceTarget) {
+    D3D12_RESOURCE_DESC descTarget = resourceTarget->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -393,27 +391,10 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
                 descriptorOffsetHitGroup;
             desc.HitGroupTable.SizeInBytes = shaderEntrySize;
             desc.HitGroupTable.StrideInBytes = shaderEntrySize;
-            desc.Width = descBackbuffer.Width;
-            desc.Height = descBackbuffer.Height;
+            desc.Width = descTarget.Width;
+            desc.Height = descTarget.Height;
             desc.Depth = 1;
             commandList->DispatchRays(&desc);
-            commandList->ResourceBarrier(
-                1, &Make_D3D12_RESOURCE_BARRIER(
-                       resourceTarget, D3D12_RESOURCE_STATE_COMMON,
-                       D3D12_RESOURCE_STATE_COPY_SOURCE));
-            commandList->ResourceBarrier(
-                1, &Make_D3D12_RESOURCE_BARRIER(
-                       resourceBackbuffer, D3D12_RESOURCE_STATE_COMMON,
-                       D3D12_RESOURCE_STATE_COPY_DEST));
-            commandList->CopyResource(resourceBackbuffer, resourceTarget);
-            commandList->ResourceBarrier(
-                1, &Make_D3D12_RESOURCE_BARRIER(
-                       resourceTarget, D3D12_RESOURCE_STATE_COPY_SOURCE,
-                       D3D12_RESOURCE_STATE_COMMON));
-            commandList->ResourceBarrier(
-                1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
-                                                D3D12_RESOURCE_STATE_COPY_DEST,
-                                                D3D12_RESOURCE_STATE_COMMON));
           }
         });
   };

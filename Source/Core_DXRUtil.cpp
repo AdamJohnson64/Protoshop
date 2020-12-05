@@ -128,29 +128,6 @@ DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12Device *device) {
   return DXR_Create_Signature(device, descSignature);
 }
 
-// Create a standard output UAV of the correct pixel format and sized to our
-// default resolution.
-CComPtr<ID3D12Resource1> DXR_Create_Output_UAV(ID3D12Device *device) {
-  D3D12_HEAP_PROPERTIES descHeapProperties = {};
-  descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-  D3D12_RESOURCE_DESC descResource = {};
-  descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-  descResource.Width = RENDERTARGET_WIDTH;
-  descResource.Height = RENDERTARGET_HEIGHT;
-  descResource.DepthOrArraySize = 1;
-  descResource.MipLevels = 1;
-  descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-  descResource.SampleDesc.Count = 1;
-  descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-  CComPtr<ID3D12Resource1> pResource;
-  TRYD3D(device->CreateCommittedResource(
-      &descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
-      &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr,
-      __uuidof(ID3D12Resource1), (void **)&pResource));
-  pResource->SetName(L"DXR Output Texture2D UAV");
-  return pResource;
-}
-
 D3D12_RAYTRACING_INSTANCE_DESC
 Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transformObjectToWorld,
                                     int hitgroup,
@@ -209,7 +186,7 @@ CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device *device,
   CComPtr<ID3D12Resource1> ResourceBLAS;
   {
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO
-        descRaytracingPrebuild = {};
+    descRaytracingPrebuild = {};
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs =
         {};
     descRaytracingInputs.Type =
@@ -275,7 +252,7 @@ DXRCreateTLAS(Direct3D12Device *device,
   CComPtr<ID3D12Resource1> ResourceTLAS;
   {
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO
-        descRaytracingPrebuild = {};
+    descRaytracingPrebuild = {};
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs =
         {};
     descRaytracingInputs.Type =

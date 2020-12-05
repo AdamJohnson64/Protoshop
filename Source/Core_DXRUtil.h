@@ -27,10 +27,6 @@ DXR_Create_Signature_LOCAL_1SRV(ID3D12Device *device);
 CComPtr<ID3D12RootSignature>
 DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12Device *device);
 
-// Create a standard output UAV of the correct pixel format and sized to our
-// default resolution.
-CComPtr<ID3D12Resource1> DXR_Create_Output_UAV(ID3D12Device *device);
-
 D3D12_RAYTRACING_INSTANCE_DESC
 Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transform, int hitgroup,
                                     D3D12_GPU_VIRTUAL_ADDRESS tlas);

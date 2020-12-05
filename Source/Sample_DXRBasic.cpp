@@ -23,8 +23,6 @@
 
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
-  CComPtr<ID3D12Resource1> resourceTarget =
-      DXR_Create_Output_UAV(device->m_pDevice);
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
       D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
   CComPtr<ID3D12RootSignature> rootSignatureGLOBAL =
@@ -146,8 +144,7 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
   CComPtr<ID3D12Resource1> resourceBLAS;
   {
     // Create some simple geometry.
-    Vector2 vertices[] = {
-        {0, 0}, {0, 100}, {100, 0}};
+    Vector2 vertices[] = {{0, 0}, {0, 100}, {100, 0}};
     uint32_t indices[] = {0, 1, 2};
     resourceBLAS =
         DXRCreateBLAS(device.get(), vertices, 3, DXGI_FORMAT_R32G32_FLOAT,
@@ -162,38 +159,8 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
             Identity<float>, 0, resourceBLAS->GetGPUVirtualAddress());
     resourceTLAS = DXRCreateTLAS(device.get(), &DxrInstance, 1);
   }
-  ////////////////////////////////////////////////////////////////////////////////
-  // Establish resource views.
-  {
-    D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =
-        descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
-    UINT descriptorElementSize =
-        device->m_pDevice->GetDescriptorHandleIncrementSize(
-            D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    // Create the UAV for the raytracer output.
-    {
-      D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-      desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-      device->m_pDevice->CreateUnorderedAccessView(resourceTarget, nullptr,
-                                                   &desc, descriptorBase);
-      descriptorBase.ptr += descriptorElementSize;
-    }
-    // Create the SRV for the acceleration structure.
-    {
-      D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-      desc.Format = DXGI_FORMAT_UNKNOWN;
-      desc.ViewDimension =
-          D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-      desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-      desc.RaytracingAccelerationStructure.Location =
-          resourceTLAS->GetGPUVirtualAddress();
-      device->m_pDevice->CreateShaderResourceView(nullptr, &desc,
-                                                  descriptorBase);
-      descriptorBase.ptr += descriptorElementSize;
-    }
-  }
-  return [=](ID3D12Resource *resourceBackbuffer) {
-    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
+  return [=](ID3D12Resource *resourceTarget) {
+    D3D12_RESOURCE_DESC descTarget = resourceTarget->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -207,6 +174,36 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     auto persistBLAS = resourceBLAS;
     auto persistTLAS = resourceTLAS;
+    ////////////////////////////////////////////////////////////////////////////////
+    // Establish resource views.
+    {
+      D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =
+          descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
+      UINT descriptorElementSize =
+          device->m_pDevice->GetDescriptorHandleIncrementSize(
+              D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+      // Create the UAV for the raytracer output.
+      {
+        D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+        desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+        device->m_pDevice->CreateUnorderedAccessView(resourceTarget, nullptr,
+                                                     &desc, descriptorBase);
+        descriptorBase.ptr += descriptorElementSize;
+      }
+      // Create the SRV for the acceleration structure.
+      {
+        D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+        desc.Format = DXGI_FORMAT_UNKNOWN;
+        desc.ViewDimension =
+            D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+        desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        desc.RaytracingAccelerationStructure.Location =
+            resourceTLAS->GetGPUVirtualAddress();
+        device->m_pDevice->CreateShaderResourceView(nullptr, &desc,
+                                                    descriptorBase);
+        descriptorBase.ptr += descriptorElementSize;
+      }
+    }
     ////////////////////////////////////////////////////////////////////////////////
     // RAYTRACE - Finally call the raytracer and generate the frame.
     D3D12_Run_Synchronously(
@@ -233,28 +230,11 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
                 descriptorOffsetHitGroup;
             desc.HitGroupTable.SizeInBytes = shaderEntrySize;
             desc.HitGroupTable.StrideInBytes = shaderEntrySize;
-            desc.Width = descBackbuffer.Width;
-            desc.Height = descBackbuffer.Height;
+            desc.Width = descTarget.Width;
+            desc.Height = descTarget.Height;
             desc.Depth = 1;
             commandList->DispatchRays(&desc);
           }
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(
-                     resourceTarget, D3D12_RESOURCE_STATE_COMMON,
-                     D3D12_RESOURCE_STATE_COPY_SOURCE));
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
-                                              D3D12_RESOURCE_STATE_COMMON,
-                                              D3D12_RESOURCE_STATE_COPY_DEST));
-          commandList->CopyResource(resourceBackbuffer, resourceTarget);
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(resourceTarget,
-                                              D3D12_RESOURCE_STATE_COPY_SOURCE,
-                                              D3D12_RESOURCE_STATE_COMMON));
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
-                                              D3D12_RESOURCE_STATE_COPY_DEST,
-                                              D3D12_RESOURCE_STATE_COMMON));
         });
   };
 }
