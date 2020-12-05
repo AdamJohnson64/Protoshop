@@ -122,6 +122,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         &srvCanvasImage.p));
   }
   return [=](ID3D11Texture2D *textureBackbuffer) {
+    D3D11_TEXTURE2D_DESC descBackbuffer = {};
+    textureBackbuffer->GetDesc(&descBackbuffer);
     CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
         D3D11_Create_UAV_From_Texture2D(device->GetID3D11Device(),
                                         textureBackbuffer);
@@ -135,8 +137,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         CreateMatrixTranslate(Vector3{-IMAGE_WIDTH / 2, -IMAGE_HEIGHT / 2, 0}) *
         CreateMatrixScale(Vector3{zoom, zoom, 1}) *
         CreateMatrixRotationZ(angle) *
-        CreateMatrixTranslate(
-            Vector3{RENDERTARGET_WIDTH / 2, RENDERTARGET_HEIGHT / 2, 0});
+        CreateMatrixTranslate(Vector3{descBackbuffer.Width / 2.0f,
+                                      descBackbuffer.Height / 2.0f, 0});
     angle += 0.01f;
     device->GetID3D11DeviceContext()->UpdateSubresource(
         bufferConstants, 0, nullptr, &Invert(transformImageToPixel), 0, 0);
@@ -148,8 +150,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
                                                            &bufferConstants.p);
     device->GetID3D11DeviceContext()->CSSetShaderResources(0, 1,
                                                            &srvCanvasImage.p);
-    device->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
-                                               RENDERTARGET_HEIGHT, 1);
+    device->GetID3D11DeviceContext()->Dispatch(descBackbuffer.Width,
+                                               descBackbuffer.Height, 1);
     device->GetID3D11DeviceContext()->ClearState();
     device->GetID3D11DeviceContext()->Flush();
   };

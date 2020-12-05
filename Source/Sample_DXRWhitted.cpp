@@ -286,6 +286,7 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
         DXRCreateTLAS(device.get(), &DxrInstance[0], DxrInstance.size());
   }
   return [=](ID3D12Resource *resourceBackbuffer) {
+    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -366,8 +367,8 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
             resourceShaderTable->GetGPUVirtualAddress() + shaderEntrySize * 2;
         desc.HitGroupTable.SizeInBytes = shaderEntrySize;
         desc.HitGroupTable.StrideInBytes = shaderEntrySize;
-        desc.Width = RENDERTARGET_WIDTH;
-        desc.Height = RENDERTARGET_HEIGHT;
+        desc.Width = descBackbuffer.Width;
+        desc.Height = descBackbuffer.Height;
         desc.Depth = 1;
         commandList->DispatchRays(&desc);
         commandList->ResourceBarrier(

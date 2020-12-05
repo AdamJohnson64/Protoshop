@@ -140,6 +140,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
   CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
       device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
   return [=](ID3D11Texture2D *textureBackbuffer) {
+    D3D11_TEXTURE2D_DESC descBackbuffer = {};
+    textureBackbuffer->GetDesc(&descBackbuffer);
     CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
         D3D11_Create_UAV_From_Texture2D(device->GetID3D11Device(),
                                         textureBackbuffer);
@@ -161,8 +163,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     device->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr, 0);
     device->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1,
                                                            &bufferConstants.p);
-    device->GetID3D11DeviceContext()->Dispatch(RENDERTARGET_WIDTH,
-                                               RENDERTARGET_HEIGHT, 1);
+    device->GetID3D11DeviceContext()->Dispatch(descBackbuffer.Width,
+                                               descBackbuffer.Height, 1);
     device->GetID3D11DeviceContext()->ClearState();
     device->GetID3D11DeviceContext()->Flush();
   };

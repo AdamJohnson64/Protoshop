@@ -22,8 +22,10 @@
 
 class Sample_D3D11ShaderToy : public Object {
 private:
-  const int SHADERTOY_CODE_WIDTH = 512;
-  const int SHADERTOY_ERROR_HEIGHT = 64;
+  const int defaultRenderWidth = 640;
+  const int defaultRenderHeight = 480;
+  const int defaultCodeWidth = 512;
+  const int defaultErrorHeight = 64;
   HWND m_hWindowHost;
   HWND m_hWindowRender;
   HWND m_hWindowCode;
@@ -65,8 +67,8 @@ public:
     ////////////////////////////////////////////////////////////////////////////////
     // Create a window of this class.
     {
-      RECT rect = {64, 64, 64 + RENDERTARGET_WIDTH + SHADERTOY_CODE_WIDTH,
-                   64 + RENDERTARGET_HEIGHT};
+      RECT rect = {64, 64, 64 + defaultRenderWidth + defaultCodeWidth,
+                   64 + defaultRenderHeight};
       AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
       m_hWindowHost = CreateWindow(
           L"ProtoshopShaderToyHost", L"Protoshop Shader Toy (Win32)",
@@ -76,7 +78,7 @@ public:
     }
     m_hWindowRender = CreateWindow(L"ProtoshopShaderToyRender",
                                    L"Render Window", WS_CHILD | WS_VISIBLE, 0,
-                                   0, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT,
+                                   0, defaultRenderWidth, defaultRenderHeight,
                                    m_hWindowHost, nullptr, nullptr, this);
     m_pSwapChain = CreateDXGISwapChain(m_pDevice, m_hWindowRender);
     std::string strShaderCode =
@@ -196,14 +198,14 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         CreateWindowA("EDIT", strShaderCode.c_str(),
                       WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL |
                           ES_AUTOHSCROLL | ES_WANTRETURN,
-                      RENDERTARGET_WIDTH, 0, SHADERTOY_CODE_WIDTH,
-                      RENDERTARGET_HEIGHT - SHADERTOY_ERROR_HEIGHT,
-                      m_hWindowHost, nullptr, nullptr, nullptr);
+                      defaultRenderWidth, 0, defaultCodeWidth,
+                      defaultRenderHeight - defaultErrorHeight, m_hWindowHost,
+                      nullptr, nullptr, nullptr);
     m_hWindowError = CreateWindowA(
         "EDIT", "Compilation successful.", WS_CHILD | WS_VISIBLE | ES_MULTILINE,
-        RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT - SHADERTOY_ERROR_HEIGHT,
-        SHADERTOY_CODE_WIDTH, SHADERTOY_ERROR_HEIGHT, m_hWindowHost, nullptr,
-        nullptr, nullptr);
+        defaultRenderWidth, defaultRenderHeight - defaultErrorHeight,
+        defaultCodeWidth, defaultErrorHeight, m_hWindowHost, nullptr, nullptr,
+        nullptr);
     ////////////////////////////////////////////////////////////////////////////////
     // Create a constant buffer.
     m_pBufferConstants =
@@ -279,6 +281,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       CComPtr<ID3D11Texture2D> textureBackbuffer;
       TRYD3D(window->m_pSwapChain->GetIDXGISwapChain()->GetBuffer(
           0, __uuidof(ID3D11Texture2D), (void **)&textureBackbuffer.p));
+      D3D11_TEXTURE2D_DESC descBackbuffer = {};
+      textureBackbuffer->GetDesc(&descBackbuffer);
       CComPtr<ID3D11UnorderedAccessView> pUAVTarget =
           D3D11_Create_UAV_From_Texture2D(window->m_pDevice->GetID3D11Device(),
                                           textureBackbuffer);
@@ -303,7 +307,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         window->m_pDevice->GetID3D11DeviceContext()->CSSetConstantBuffers(
             0, 1, &window->m_pBufferConstants.p);
         window->m_pDevice->GetID3D11DeviceContext()->Dispatch(
-            RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT, 1);
+            descBackbuffer.Width, descBackbuffer.Height, 1);
         window->m_pDevice->GetID3D11DeviceContext()->ClearState();
         window->m_pDevice->GetID3D11DeviceContext()->Flush();
       }

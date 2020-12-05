@@ -206,6 +206,8 @@ float4 mainPS(VertexPS vin) : SV_Target
         &srvDepthMap.p));
   }
   return [=](ID3D11Texture2D *textureBackbuffer) {
+    D3D11_TEXTURE2D_DESC descBackbuffer = {};
+    textureBackbuffer->GetDesc(&descBackbuffer);
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
         D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
                                         textureBackbuffer);
@@ -215,7 +217,7 @@ float4 mainPS(VertexPS vin) : SV_Target
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->RSSetViewports(
-        1, &Make_D3D11_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+        1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
     device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
                                                          nullptr);
     ////////////////////////////////////////////////////////////////////////////////

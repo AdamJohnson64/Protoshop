@@ -147,7 +147,7 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
   {
     // Create some simple geometry.
     Vector2 vertices[] = {
-        {0, 0}, {0, RENDERTARGET_HEIGHT}, {RENDERTARGET_WIDTH, 0}};
+        {0, 0}, {0, 100}, {100, 0}};
     uint32_t indices[] = {0, 1, 2};
     resourceBLAS =
         DXRCreateBLAS(device.get(), vertices, 3, DXGI_FORMAT_R32G32_FLOAT,
@@ -193,6 +193,7 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
     }
   }
   return [=](ID3D12Resource *resourceBackbuffer) {
+    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -232,8 +233,8 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
                 descriptorOffsetHitGroup;
             desc.HitGroupTable.SizeInBytes = shaderEntrySize;
             desc.HitGroupTable.StrideInBytes = shaderEntrySize;
-            desc.Width = RENDERTARGET_WIDTH;
-            desc.Height = RENDERTARGET_HEIGHT;
+            desc.Width = descBackbuffer.Width;
+            desc.Height = descBackbuffer.Height;
             desc.Depth = 1;
             commandList->DispatchRays(&desc);
           }

@@ -99,13 +99,14 @@ float4 main() : SV_Target
     }
   }
   return [=](ID3D12Resource *resourceBackbuffer) {
+    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
     std::vector<CComPtr<ID3D12Resource1>> resourceConstants;
     for (int i = 0; i < theScene->Instances.size(); ++i) {
-      resourceConstants.push_back(
-          D3D12_Create_Buffer(device.get(), D3D12_RESOURCE_FLAG_NONE,
-                              D3D12_RESOURCE_STATE_COMMON, 256, 256,
-                              &(theScene->Instances[i].TransformObjectToWorld *
-                                GetTransformSource()->GetTransformWorldToClip())));
+      resourceConstants.push_back(D3D12_Create_Buffer(
+          device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+          256, 256,
+          &(theScene->Instances[i].TransformObjectToWorld *
+            GetTransformSource()->GetTransformWorldToClip())));
       {
         D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
         desc.BufferLocation = resourceConstants[i]->GetGPUVirtualAddress();
@@ -143,9 +144,9 @@ float4 main() : SV_Target
       commandList->IASetPrimitiveTopology(
           D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
       commandList->RSSetViewports(
-          1, &Make_D3D12_VIEWPORT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+          1, &Make_D3D12_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
       commandList->RSSetScissorRects(
-          1, &Make_D3D12_RECT(RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT));
+          1, &Make_D3D12_RECT(descBackbuffer.Width, descBackbuffer.Height));
       commandList->OMSetRenderTargets(
           1,
           &device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(),

@@ -281,6 +281,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
         });
   }
   return [=](ID3D12Resource *resourceBackbuffer) {
+    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -392,8 +393,8 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
                 descriptorOffsetHitGroup;
             desc.HitGroupTable.SizeInBytes = shaderEntrySize;
             desc.HitGroupTable.StrideInBytes = shaderEntrySize;
-            desc.Width = RENDERTARGET_WIDTH;
-            desc.Height = RENDERTARGET_HEIGHT;
+            desc.Width = descBackbuffer.Width;
+            desc.Height = descBackbuffer.Height;
             desc.Depth = 1;
             commandList->DispatchRays(&desc);
             commandList->ResourceBarrier(
