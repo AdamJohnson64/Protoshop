@@ -4,6 +4,7 @@
 #include "Core_DXGI.h"
 #include "Core_Object.h"
 #include "Core_OpenGL.h"
+#include "Core_OpenVR.h"
 #include "Core_VK.h"
 #include "Core_Window.h"
 #include "Sample_Manifest.h"
@@ -18,6 +19,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     ////////////////////////////////////////////////////////////////////////////////
     // Direct3D 11 Samples
     std::shared_ptr<Direct3D11Device> deviceD3D11 = CreateDirect3D11Device();
+    //CreateNewOpenVRSession(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11));
     std::shared_ptr<Object> D3D11Basic = CreateNewWindow(deviceD3D11, CreateSample_D3D11Basic(deviceD3D11));
     std::shared_ptr<Object> D3D11ComputeCanvas = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeCanvas(deviceD3D11));
     std::shared_ptr<Object> D3D11DrawingContext = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContext(deviceD3D11));

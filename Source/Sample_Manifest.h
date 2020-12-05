@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core_D3D11.h"
+#include "Core_Math.h"
 #include <d3d11.h>
 #include <functional>
 
@@ -36,7 +37,8 @@ CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device);
 std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
+                   const Matrix44 &)>
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(ID3D11Texture2D *)>
