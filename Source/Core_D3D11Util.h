@@ -25,3 +25,6 @@ D3D11_Create_RTV_From_Texture2D(ID3D11Device *device, ID3D11Texture2D *texture);
 
 CComPtr<ID3D11UnorderedAccessView>
 D3D11_Create_UAV_From_Texture2D(ID3D11Device *device, ID3D11Texture2D *texture);
+
+CComPtr<ID3D11Texture2D> D3D11_Load_HDR(ID3D11Device *device,
+                                        const char *filename);
