@@ -88,7 +88,6 @@ CComPtr<ID3D11UnorderedAccessView>
 D3D11_Create_UAV_From_Texture2D(ID3D11Device *device,
                                 ID3D11Texture2D *texture) {
   D3D11_UNORDERED_ACCESS_VIEW_DESC desc = {};
-  desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
   desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
   CComPtr<ID3D11UnorderedAccessView> uav;
   TRYD3D(device->CreateUnorderedAccessView(texture, &desc, &uav));
