@@ -48,7 +48,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     float4 back = mul(TransformClipToWorld, float4(Normalized.xy, 1, 1));
     back /= back.w;
     float3 origin = front.xyz;
-    float3 direction = normalize(back.xyz - front.xyz);
+    float3 direction = back.xyz - front.xyz;
     ////////////////////////////////////////////////////////////////////////////////
     // Project the direction onto the unit cube (Chebyshev Norm).
     ////////////////////////////////////////////////////////////////////////////////
