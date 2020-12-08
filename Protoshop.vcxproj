@@ -16,6 +16,7 @@
     <ClInclude Include="Source\Core_DXGI.h" />
     <ClInclude Include="Source\Core_DXGIUtil.h" />
     <ClInclude Include="Source\Core_DXRUtil.h" />
+    <ClInclude Include="Source\Core_IImage.h" />
     <ClInclude Include="Source\Core_Math.h" />
     <ClInclude Include="Source\Core_Object.h" />
     <ClInclude Include="Source\Core_OpenGL.h" />
@@ -24,6 +25,7 @@
     <ClInclude Include="Source\Core_VK.h" />
     <ClInclude Include="Source\Core_Window.h" />
     <ClInclude Include="Source\ImageUtil.h" />
+    <ClInclude Include="Source\Image_HDR.h" />
     <ClInclude Include="Source\Scene_Material.h" />
     <ClInclude Include="Source\Sample_DXR_RayRecurse.inc" />
     <ClInclude Include="Source\Sample_Manifest.h" />
@@ -46,6 +48,7 @@
     <ClCompile Include="Source\Core_DXGI.cpp" />
     <ClCompile Include="Source\Core_DXGIUtil.cpp" />
     <ClCompile Include="Source\Core_DXRUtil.cpp" />
+    <ClCompile Include="Source\Core_IImage.cpp" />
     <ClCompile Include="Source\Core_Math.cpp" />
     <ClCompile Include="Source\Core_OpenGL.cpp" />
     <ClCompile Include="Source\Core_OpenVR.cpp" />
@@ -53,6 +56,7 @@
     <ClCompile Include="Source\Core_VK.cpp" />
     <ClCompile Include="Source\Core_Window.cpp" />
     <ClCompile Include="Source\ImageUtil.cpp" />
+    <ClCompile Include="Source\Image_HDR.cpp" />
     <ClCompile Include="Source\Protoshop.cpp" />
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />

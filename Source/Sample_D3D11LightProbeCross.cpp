@@ -14,6 +14,7 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
+#include "Image_HDR.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <functional>
@@ -117,10 +118,11 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
   CComPtr<ID3D11ShaderResourceView> srvLightProbe;
   {
-    CComPtr<ID3D11Texture2D> textureLightProbe = D3D11_Load_HDR(
-        device->GetID3D11Device(),
+    const char *hdr =
         "C:\\_\\RenderToy\\ThirdParty\\RenderToyAssets\\Environments\\grace_"
-        "cross.hdr");
+        "cross.hdr";
+    CComPtr<ID3D11Texture2D> textureLightProbe =
+        D3D11_Create_Texture(device->GetID3D11Device(), &Load_HDR(hdr));
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
         textureLightProbe,
         &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
