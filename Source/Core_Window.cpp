@@ -111,11 +111,11 @@ private:
       return 0;
     }
     if (uMsg == WM_MOUSEMOVE) {
+      int mouseXNow = static_cast<int16_t>(LOWORD(lParam));
+      int mouseYNow = static_cast<int16_t>(HIWORD(lParam));
       if (g_MouseDown) {
         bool modifierShift = (wParam & MK_SHIFT) == MK_SHIFT;
         bool modifierCtrl = (wParam & MK_CONTROL) == MK_CONTROL;
-        int mouseXNow = LOWORD(lParam);
-        int mouseYNow = HIWORD(lParam);
         int mouseDeltaX = mouseXNow - g_MouseX;
         int mouseDeltaY = mouseYNow - g_MouseY;
         Matrix44 transformWorldToView = CreateMatrixRotation(g_CameraRot);
@@ -152,8 +152,8 @@ private:
         SetCameraWorldToView(Invert(transformWorldToView));
         InvalidateRect(hWnd, nullptr, FALSE);
       }
-      g_MouseX = LOWORD(lParam);
-      g_MouseY = HIWORD(lParam);
+      g_MouseX = mouseXNow;
+      g_MouseY = mouseYNow;
       return 0;
     }
     if (uMsg == WM_LBUTTONDOWN) {
