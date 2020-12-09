@@ -1,9 +1,10 @@
 #include "Scene_MeshOBJ.h"
 #include "Core_Math.h"
 #include <fstream>
-#include <regex>
+#include <map>
 #include <string>
 #include <string_view>
+#include <vector>
 
 std::vector<std::string_view> split(const std::string_view &input,
                                     char delim = ' ') {
@@ -24,11 +25,39 @@ std::vector<std::string_view> split(const std::string_view &input,
   return o;
 }
 
+struct MaterialDefinition {
+  std::string AlbedoMap;
+};
+
+std::map<std::string, MaterialDefinition> LoadMTL(const char *filename) {
+  std::map<std::string, MaterialDefinition> materials;
+  {
+    std::ifstream mtl(
+        std::string("Submodules\\RenderToyAssets\\Models\\Sponza\\") +
+        filename);
+    std::string line;
+    std::string currentMaterial;
+    while (std::getline(mtl, line)) {
+      if (line.size() == 0 || line[0] == '#') {
+      } else if (line.substr(0, 7) == "newmtl ") {
+        currentMaterial = line.substr(7);
+        materials[currentMaterial] = MaterialDefinition();
+      } else if (line.substr(0, 8) == "\tmap_Ka ") {
+        if (currentMaterial == "")
+          throw std::exception("No material name specified.");
+        materials[currentMaterial].AlbedoMap = line.substr(8);
+      }
+    }
+  }
+  return materials;
+}
+
 MeshOBJ::MeshOBJ(const char *filename) {
   std::vector<Vector3> vertices, normals, uvs;
   std::vector<TVector3<int>> facesVertex, facesNormal, facesUV;
   std::ifstream model(filename);
   std::string line;
+  std::map<std::string, MaterialDefinition> materials;
   while (std::getline(model, line)) {
     if (false) {
     } else if (line.size() == 0 || line[0] == '#') {
@@ -36,6 +65,7 @@ MeshOBJ::MeshOBJ(const char *filename) {
     } else if (line.substr(0, 7) == "mtllib ") {
       // Filename of the material definition file (mtllib)
       std::string materialName = line.substr(7);
+      materials = LoadMTL(materialName.c_str());
     } else if (line.substr(0, 2) == "v ") {
       // Vertex Position (v)
       auto bits = split(line);
@@ -71,6 +101,10 @@ MeshOBJ::MeshOBJ(const char *filename) {
       std::string groupName = line.substr(2);
     } else if (line.substr(0, 7) == "usemtl ") {
       std::string materialName = line.substr(7);
+      if (materials.size() > 0 &&
+          materials.find(materialName) == materials.end()) {
+        throw std::exception("Requested material is undefined.");
+      }
     } else if (line.substr(0, 2) == "s ") {
 
     } else if (line.substr(0, 2) == "f ") {
