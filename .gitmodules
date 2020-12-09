@@ -4,3 +4,6 @@
 [submodule "Submodules/openvr"]
 	path = Submodules/openvr
 	url = https://github.com/ValveSoftware/openvr
+[submodule "Submodules/RenderToyAssets"]
+	path = Submodules/RenderToyAssets
+	url = https://github.com/AdamJohnson64/RenderToyAssets.git

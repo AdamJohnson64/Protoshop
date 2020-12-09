@@ -18,7 +18,6 @@ public:
 
 class InstanceTable {
 public:
-  static std::shared_ptr<InstanceTable> Default();
   uint32_t addMaterial(std::shared_ptr<Material> material);
   uint32_t addMesh(std::shared_ptr<Mesh> mesh);
   uint32_t addInstance(const Matrix44 &transformObjectToWorld,
@@ -29,3 +28,7 @@ public:
   std::vector<std::shared_ptr<Mesh>> Meshes;
   std::vector<Instance> Instances;
 };
+
+std::shared_ptr<InstanceTable> Scene_Default();
+
+std::shared_ptr<InstanceTable> Scene_Sponza();

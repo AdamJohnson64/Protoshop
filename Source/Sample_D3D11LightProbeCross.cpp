@@ -119,8 +119,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
   CComPtr<ID3D11ShaderResourceView> srvLightProbe;
   {
     const char *hdr =
-        "C:\\_\\RenderToy\\ThirdParty\\RenderToyAssets\\Environments\\grace_"
-        "cross.hdr";
+        "Submodules\\RenderToyAssets\\Environments\\grace_cross.hdr";
     CComPtr<ID3D11Texture2D> textureLightProbe =
         D3D11_Create_Texture(device->GetID3D11Device(), &Load_HDR(hdr));
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(

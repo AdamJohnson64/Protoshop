@@ -20,7 +20,8 @@
 
 std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
                    const Matrix44 &)>
-CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device) {
+CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
+                        std::shared_ptr<InstanceTable> scene) {
   struct Constants {
     Matrix44 TransformWorldToClip;
     Matrix44 TransformObjectToWorld;
@@ -99,22 +100,19 @@ float4 mainPS(VertexPS vin) : SV_Target
         blobShaderVertex->GetBufferSize(), &inputLayout));
   }
   ////////////////////////////////////////////////////////////////////////////////
-  // Choose the scene.
-  std::shared_ptr<InstanceTable> theScene(InstanceTable::Default());
-  ////////////////////////////////////////////////////////////////////////////////
   // Build all vertex/index buffer resources for the scene.
   std::vector<CComPtr<ID3D11Buffer>> bufferMeshVertex;
   std::vector<CComPtr<ID3D11Buffer>> bufferMeshIndex;
-  for (int meshIndex = 0; meshIndex < theScene->Meshes.size(); ++meshIndex) {
+  for (int meshIndex = 0; meshIndex < scene->Meshes.size(); ++meshIndex) {
 
     {
       // Create the vertex buffer.
       int sizeVertex =
-          sizeof(VertexFormat) * theScene->Meshes[meshIndex]->getVertexCount();
+          sizeof(VertexFormat) * scene->Meshes[meshIndex]->getVertexCount();
       std::unique_ptr<int8_t[]> bytesVertex(new int8_t[sizeVertex]);
-      theScene->Meshes[meshIndex]->copyVertices(
+      scene->Meshes[meshIndex]->copyVertices(
           reinterpret_cast<Vector3 *>(bytesVertex.get()), sizeof(VertexFormat));
-      theScene->Meshes[meshIndex]->copyNormals(
+      scene->Meshes[meshIndex]->copyNormals(
           reinterpret_cast<Vector3 *>(bytesVertex.get() + sizeof(Vector3)),
           sizeof(VertexFormat));
       bufferMeshVertex.push_back(D3D11_Create_Buffer(
@@ -124,9 +122,9 @@ float4 mainPS(VertexPS vin) : SV_Target
     {
       // Create the index buffer.
       int sizeIndices =
-          sizeof(int32_t) * theScene->Meshes[meshIndex]->getIndexCount();
+          sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
       std::unique_ptr<int8_t[]> bytesIndex(new int8_t[sizeIndices]);
-      theScene->Meshes[meshIndex]->copyIndices(
+      scene->Meshes[meshIndex]->copyIndices(
           reinterpret_cast<uint32_t *>(bytesIndex.get()), sizeof(uint32_t));
       bufferMeshIndex.push_back(D3D11_Create_Buffer(
           device->GetID3D11Device(), D3D11_BIND_INDEX_BUFFER, sizeIndices,
@@ -151,9 +149,9 @@ float4 mainPS(VertexPS vin) : SV_Target
     ////////////////////////////////////////////////////////////////////////////////
     // Build all instance constant buffers for the scene.
     std::vector<CComPtr<ID3D11Buffer>> bufferInstanceConstants;
-    for (int instanceIndex = 0; instanceIndex < theScene->Instances.size();
+    for (int instanceIndex = 0; instanceIndex < scene->Instances.size();
          ++instanceIndex) {
-      const Instance &instance = theScene->Instances[instanceIndex];
+      const Instance &instance = scene->Instances[instanceIndex];
       // Create the constant buffer.
       {
         Constants constants = {};
@@ -181,9 +179,9 @@ float4 mainPS(VertexPS vin) : SV_Target
     device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
-    for (int instanceIndex = 0; instanceIndex < theScene->Instances.size();
+    for (int instanceIndex = 0; instanceIndex < scene->Instances.size();
          ++instanceIndex) {
-      const Instance &instance = theScene->Instances[instanceIndex];
+      const Instance &instance = scene->Instances[instanceIndex];
       device->GetID3D11DeviceContext()->VSSetConstantBuffers(
           0, 1, &bufferInstanceConstants[instanceIndex].p);
       {
@@ -196,7 +194,7 @@ float4 mainPS(VertexPS vin) : SV_Target
       device->GetID3D11DeviceContext()->IASetIndexBuffer(
           bufferMeshIndex[instance.GeometryIndex].p, DXGI_FORMAT_R32_UINT, 0);
       device->GetID3D11DeviceContext()->DrawIndexed(
-          theScene->Meshes[instance.GeometryIndex]->getIndexCount(), 0, 0);
+          scene->Meshes[instance.GeometryIndex]->getIndexCount(), 0, 0);
     }
     device->GetID3D11DeviceContext()->ClearState();
     device->GetID3D11DeviceContext()->Flush();

@@ -6,7 +6,27 @@
 #include "Scene_Plane.h"
 #include "Scene_Sphere.h"
 
-static std::shared_ptr<InstanceTable> CreateSimple() {
+uint32_t InstanceTable::addMaterial(std::shared_ptr<Material> material) {
+  uint32_t index = Materials.size();
+  Materials.push_back(material);
+  return index;
+}
+
+uint32_t InstanceTable::addMesh(std::shared_ptr<Mesh> mesh) {
+  uint32_t index = Meshes.size();
+  Meshes.push_back(mesh);
+  return index;
+}
+
+uint32_t InstanceTable::addInstance(const Matrix44 &transformObjectToWorld,
+                                    uint32_t geometryIndex,
+                                    uint32_t materialIndex) {
+  uint32_t index = Instances.size();
+  Instances.push_back({transformObjectToWorld, geometryIndex, materialIndex});
+  return index;
+}
+
+std::shared_ptr<InstanceTable> Scene_Default() {
   static std::shared_ptr<InstanceTable> scene(new InstanceTable());
   static bool initialized = false;
   if (!initialized) {
@@ -45,7 +65,7 @@ static std::shared_ptr<InstanceTable> CreateSimple() {
   return scene;
 }
 
-static std::shared_ptr<InstanceTable> CreateSponza() {
+std::shared_ptr<InstanceTable> Scene_Sponza() {
   static std::shared_ptr<InstanceTable> scene(new InstanceTable());
   static bool initialized = false;
   if (!initialized) {
@@ -55,36 +75,13 @@ static std::shared_ptr<InstanceTable> CreateSponza() {
     std::shared_ptr<Material> _plastic(new RedPlastic());
     uint32_t hPlastic = scene->addMaterial(_plastic);
     // Create Geometry.
-    std::shared_ptr<Mesh> _mesh(new MeshOBJ("C:\\_\\RenderToy\\ThirdParty\\RenderToyAssets\\Models\\Sponza\\sponza.obj"));
+    std::shared_ptr<Mesh> _mesh(
+        new MeshOBJ("Submodules\\RenderToyAssets\\Models\\Sponza\\sponza.obj"));
     uint32_t hSponza = scene->addMesh(_mesh);
     // Create Instances.
-    Matrix44 transformObjectToWorld = CreateMatrixScale(Vector3 {1, 1, 1});
+    Matrix44 transformObjectToWorld = CreateMatrixScale(Vector3{1, 1, 1});
     scene->addInstance(transformObjectToWorld, hSponza, hPlastic);
     initialized = true;
   }
   return scene;
-}
-
-std::shared_ptr<InstanceTable> InstanceTable::Default() {
-  return CreateSimple();
-}
-
-uint32_t InstanceTable::addMaterial(std::shared_ptr<Material> material) {
-  uint32_t index = Materials.size();
-  Materials.push_back(material);
-  return index;
-}
-
-uint32_t InstanceTable::addMesh(std::shared_ptr<Mesh> mesh) {
-  uint32_t index = Meshes.size();
-  Meshes.push_back(mesh);
-  return index;
-}
-
-uint32_t InstanceTable::addInstance(const Matrix44 &transformObjectToWorld,
-                                    uint32_t geometryIndex,
-                                    uint32_t materialIndex) {
-  uint32_t index = Instances.size();
-  Instances.push_back({transformObjectToWorld, geometryIndex, materialIndex});
-  return index;
 }
