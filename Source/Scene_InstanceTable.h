@@ -1,10 +1,10 @@
 #pragma once
 
-class InstanceTable;
 class Material;
 class Mesh;
 
 #include "Core_Math.h"
+#include <map>
 #include <memory>
 #include <stdint.h>
 #include <vector>
@@ -12,23 +12,26 @@ class Mesh;
 class Instance {
 public:
   Matrix44 TransformObjectToWorld;
-  uint32_t GeometryIndex;
-  uint32_t MaterialIndex;
+  std::shared_ptr<Mesh> Mesh;
+  std::shared_ptr<Material> Material;
 };
 
-class InstanceTable {
-public:
-  uint32_t addMaterial(std::shared_ptr<Material> material);
-  uint32_t addMesh(std::shared_ptr<Mesh> mesh);
-  uint32_t addInstance(const Matrix44 &transformObjectToWorld,
-                       uint32_t geometryIndex, uint32_t materialIndex);
+typedef std::vector<Instance> InstanceTable;
 
-public:
-  std::vector<std::shared_ptr<Material>> Materials;
-  std::vector<std::shared_ptr<Mesh>> Meshes;
-  std::vector<Instance> Instances;
+struct InstanceFlat {
+  Matrix44 TransformObjectToWorld;
+  uint32_t MeshID;
+  uint32_t MaterialID;
 };
 
-std::shared_ptr<InstanceTable> Scene_Default();
+class SceneCollector {
+public:
+  SceneCollector(const std::vector<Instance> &scene);
+  std::vector<InstanceFlat> InstanceTable;
+  std::vector<const Mesh *> MeshTable;
+  std::vector<const Material *> MaterialTable;
+};
 
-std::shared_ptr<InstanceTable> Scene_Sponza();
+const std::vector<Instance> &Scene_Default();
+
+const std::vector<Instance> &Scene_Sponza();

@@ -6,81 +6,103 @@
 #include "Scene_Plane.h"
 #include "Scene_Sphere.h"
 
-uint32_t InstanceTable::addMaterial(std::shared_ptr<Material> material) {
-  uint32_t index = Materials.size();
-  Materials.push_back(material);
-  return index;
+SceneCollector::SceneCollector(const std::vector<Instance> &scene) {
+  std::map<const Mesh *, uint32_t> MeshToIndex;
+  std::map<const Material *, uint32_t> MaterialToIndex;
+  for (int instanceIndex = 0; instanceIndex < scene.size(); ++instanceIndex) {
+    // Convert the pointer-based instance (DOM) into a tabular form.
+    // Rewrite pointers as indices into other tables.
+    InstanceFlat rewrite = {};
+    rewrite.TransformObjectToWorld =
+        scene[instanceIndex].TransformObjectToWorld;
+    // Look up the mesh in our map; if we don't have it then allocate a new
+    // index and append.
+    {
+      if (MeshToIndex.find(scene[instanceIndex].Mesh.get()) ==
+          MeshToIndex.end()) {
+        MeshToIndex[scene[instanceIndex].Mesh.get()] = rewrite.MeshID =
+            MeshTable.size();
+        MeshTable.push_back(scene[instanceIndex].Mesh.get());
+      } else {
+        rewrite.MeshID = MeshToIndex[scene[instanceIndex].Mesh.get()];
+      }
+    }
+    // Look up the material in our map; if we don't have it then allocate a new
+    // index and append.
+    {
+      if (MaterialToIndex.find(scene[instanceIndex].Material.get()) ==
+          MaterialToIndex.end()) {
+        MaterialToIndex[scene[instanceIndex].Material.get()] =
+            rewrite.MaterialID = MaterialTable.size();
+        MaterialTable.push_back(scene[instanceIndex].Material.get());
+      } else {
+        rewrite.MaterialID =
+            MaterialToIndex[scene[instanceIndex].Material.get()];
+      }
+    }
+    // Add this complete instance to our instance table.
+    InstanceTable.push_back(rewrite);
+  }
 }
 
-uint32_t InstanceTable::addMesh(std::shared_ptr<Mesh> mesh) {
-  uint32_t index = Meshes.size();
-  Meshes.push_back(mesh);
-  return index;
-}
-
-uint32_t InstanceTable::addInstance(const Matrix44 &transformObjectToWorld,
-                                    uint32_t geometryIndex,
-                                    uint32_t materialIndex) {
-  uint32_t index = Instances.size();
-  Instances.push_back({transformObjectToWorld, geometryIndex, materialIndex});
-  return index;
-}
-
-std::shared_ptr<InstanceTable> Scene_Default() {
-  static std::shared_ptr<InstanceTable> scene(new InstanceTable());
+const std::vector<Instance> &Scene_Default() {
+  static std::vector<Instance> scene;
   static bool initialized = false;
   if (!initialized) {
     // Create Materials.
     std::shared_ptr<Material> _checkerboard(new Checkerboard());
-    uint32_t hCheckerboard = scene->addMaterial(_checkerboard);
     std::shared_ptr<Material> _plastic(new RedPlastic());
-    uint32_t hPlastic = scene->addMaterial(_plastic);
     // Create Geometry.
     std::shared_ptr<ParametricUV> _plane(new Plane());
     std::shared_ptr<Mesh> _mesh(new ParametricUVToMesh(_plane, 1, 1));
-    uint32_t hPlane = scene->addMesh(_mesh);
     std::shared_ptr<ParametricUV> _sphere(new Sphere());
     std::shared_ptr<Mesh> _mesh2(new ParametricUVToMesh(_sphere, 100, 100));
-    uint32_t hSphere = scene->addMesh(_mesh2);
     // Create Instances.
-    Matrix44 transformObjectToWorld = {};
-    transformObjectToWorld.M11 = 10;
-    transformObjectToWorld.M22 = 0.25f;
-    transformObjectToWorld.M33 = 10;
-    transformObjectToWorld.M44 = 1;
-    scene->addInstance(transformObjectToWorld, hPlane, hCheckerboard);
-    transformObjectToWorld.M11 = 1;
-    transformObjectToWorld.M22 = 1;
-    transformObjectToWorld.M33 = 1;
-    transformObjectToWorld.M44 = 1;
-    transformObjectToWorld.M42 = 1;
-    transformObjectToWorld.M41 = -2;
-    scene->addInstance(transformObjectToWorld, hSphere, hPlastic);
-    transformObjectToWorld.M41 = 0;
-    scene->addInstance(transformObjectToWorld, hSphere, hPlastic);
-    transformObjectToWorld.M41 = 2;
-    scene->addInstance(transformObjectToWorld, hSphere, hPlastic);
+    {
+      Instance instance = {};
+      instance.TransformObjectToWorld =
+          CreateMatrixScale(Vector3{10, 0.25f, 10});
+      instance.Mesh = _mesh;
+      instance.Material = _checkerboard;
+      scene.push_back(instance);
+    }
+    {
+      Instance instance = {};
+      instance.TransformObjectToWorld =
+          CreateMatrixTranslate(Vector3{-2, 1, 0});
+      instance.Mesh = _mesh2;
+      instance.Material = _plastic;
+      scene.push_back(instance);
+    }
+    {
+      Instance instance = {};
+      instance.TransformObjectToWorld = CreateMatrixTranslate(Vector3{0, 1, 0});
+      instance.Mesh = _mesh2;
+      instance.Material = _plastic;
+      scene.push_back(instance);
+    }
+    {
+      Instance instance = {};
+      instance.TransformObjectToWorld = CreateMatrixTranslate(Vector3{2, 1, 0});
+      instance.Mesh = _mesh2;
+      instance.Material = _plastic;
+      scene.push_back(instance);
+    }
     initialized = true;
   }
   return scene;
 }
 
-std::shared_ptr<InstanceTable> Scene_Sponza() {
-  static std::shared_ptr<InstanceTable> scene(new InstanceTable());
+const std::vector<Instance> &Scene_Sponza() {
+  static std::vector<Instance> scene;
   static bool initialized = false;
   if (!initialized) {
-    // Create Materials.
-    std::shared_ptr<Material> _checkerboard(new Checkerboard());
-    uint32_t hCheckerboard = scene->addMaterial(_checkerboard);
-    std::shared_ptr<Material> _plastic(new RedPlastic());
-    uint32_t hPlastic = scene->addMaterial(_plastic);
-    // Create Geometry.
-    std::shared_ptr<Mesh> _mesh(
+    Instance instance = {};
+    instance.TransformObjectToWorld = CreateMatrixScale(Vector3{1, 1, 1});
+    instance.Mesh.reset(
         new MeshOBJ("Submodules\\RenderToyAssets\\Models\\Sponza\\sponza.obj"));
-    uint32_t hSponza = scene->addMesh(_mesh);
-    // Create Instances.
-    Matrix44 transformObjectToWorld = CreateMatrixScale(Vector3{1, 1, 1});
-    scene->addInstance(transformObjectToWorld, hSponza, hPlastic);
+    instance.Material.reset(new RedPlastic());
+    scene.push_back(instance);
     initialized = true;
   }
   return scene;

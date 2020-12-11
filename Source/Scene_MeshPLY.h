@@ -12,10 +12,10 @@
 class MeshPLY : public Object, public Mesh {
 public:
   MeshPLY(const char *filename);
-  uint32_t getVertexCount() override;
-  uint32_t getIndexCount() override;
-  void copyVertices(void *to, uint32_t stride) override;
-  void copyIndices(void *to, uint32_t stride) override;
+  uint32_t getVertexCount() const override;
+  uint32_t getIndexCount() const override;
+  void copyVertices(void *to, uint32_t stride) const override;
+  void copyIndices(void *to, uint32_t stride) const override;
 
 private:
   int m_vertexCount;

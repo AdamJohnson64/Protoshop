@@ -92,11 +92,11 @@ ANOTHERPROPERTY:
   }
 }
 
-uint32_t MeshPLY::getVertexCount() { return m_vertexCount; }
+uint32_t MeshPLY::getVertexCount() const { return m_vertexCount; }
 
-uint32_t MeshPLY::getIndexCount() { return 3 * m_faceCount; }
+uint32_t MeshPLY::getIndexCount() const { return 3 * m_faceCount; }
 
-void MeshPLY::copyVertices(void *to, uint32_t stride) {
+void MeshPLY::copyVertices(void *to, uint32_t stride) const {
   void *begin = to;
   for (int i = 0; i < m_vertexCount; ++i) {
     *reinterpret_cast<TVector3<float> *>(to) = m_vertices[i];
@@ -105,7 +105,7 @@ void MeshPLY::copyVertices(void *to, uint32_t stride) {
   int test = 0;
 }
 
-void MeshPLY::copyIndices(void *to, uint32_t stride) {
+void MeshPLY::copyIndices(void *to, uint32_t stride) const {
   uint32_t *from = reinterpret_cast<uint32_t *>(&m_faces[0]);
   for (int i = 0; i < m_faceCount * 3; ++i) {
     *reinterpret_cast<uint32_t *>(to) = *from;

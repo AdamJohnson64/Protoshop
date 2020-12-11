@@ -30,7 +30,7 @@
 
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
-                      std::shared_ptr<InstanceTable> scene) {
+                      const std::vector<Instance> &scene) {
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
       D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
   CComPtr<ID3D12RootSignature> rootSignatureGLOBAL =
@@ -166,35 +166,40 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     resourceShaderTable->SetName(L"DXR Shader Table");
   }
   ////////////////////////////////////////////////////////////////////////////////
+  // Collect the scene instances and meshes.
+  SceneCollector collect(scene);
+  ////////////////////////////////////////////////////////////////////////////////
   // BLAS - Build the bottom level acceleration structures.
   std::vector<CComPtr<ID3D12Resource1>> resourceBLAS;
-  resourceBLAS.resize(scene->Meshes.size());
-  for (int i = 0; i < scene->Meshes.size(); ++i) {
-    int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+  resourceBLAS.resize(collect.MeshTable.size());
+  for (int i = 0; i < collect.MeshTable.size(); ++i) {
+    const Mesh &mesh = *collect.MeshTable[i];
+    int sizeVertex = sizeof(float[3]) * mesh.getVertexCount();
     std::unique_ptr<int8_t[]> dataVertex(new int8_t[sizeVertex]);
-    scene->Meshes[i]->copyVertices(
-        reinterpret_cast<Vector3 *>(dataVertex.get()), sizeof(Vector3));
-    int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+    mesh.copyVertices(reinterpret_cast<Vector3 *>(dataVertex.get()),
+                      sizeof(Vector3));
+    int sizeIndices = sizeof(int32_t) * mesh.getIndexCount();
     std::unique_ptr<int8_t[]> dataIndex(new int8_t[sizeIndices]);
-    scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t *>(dataIndex.get()),
-                                  sizeof(uint32_t));
-    resourceBLAS[i] = DXRCreateBLAS(
-        device.get(), dataVertex.get(), scene->Meshes[i]->getVertexCount(),
-        DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
-        scene->Meshes[i]->getIndexCount(), DXGI_FORMAT_R32_UINT);
+    mesh.copyIndices(reinterpret_cast<uint32_t *>(dataIndex.get()),
+                     sizeof(uint32_t));
+    resourceBLAS[i] =
+        DXRCreateBLAS(device.get(), dataVertex.get(), mesh.getVertexCount(),
+                      DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
+                      mesh.getIndexCount(), DXGI_FORMAT_R32_UINT);
   }
   ////////////////////////////////////////////////////////////////////////////////
   // TLAS - Build the top level acceleration structure.
   CComPtr<ID3D12Resource1> resourceTLAS;
   {
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDescs;
-    instanceDescs.resize(scene->Instances.size());
-    for (int i = 0; i < scene->Instances.size(); ++i) {
+    instanceDescs.resize(collect.InstanceTable.size());
+    for (int i = 0; i < collect.InstanceTable.size(); ++i) {
+      InstanceFlat &instance = collect.InstanceTable[i];
+      uint32_t materialID =
+          1; // HACK: HARD CODE THE MATERIAL TO INDEX 1 (Barycentric visual)
       instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-          scene->Instances[i].TransformObjectToWorld,
-          scene->Instances[i].MaterialIndex,
-          resourceBLAS[scene->Instances[i].GeometryIndex]
-              ->GetGPUVirtualAddress());
+          instance.TransformObjectToWorld, materialID,
+          resourceBLAS[instance.MeshID]->GetGPUVirtualAddress());
       instanceDescs[i].InstanceID = i;
     }
     resourceTLAS =

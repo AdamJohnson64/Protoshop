@@ -47,7 +47,7 @@ CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device);
 std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
                    const Matrix44 &)>
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
-                        std::shared_ptr<InstanceTable> scene);
+                        const std::vector<Instance> &scene);
 
 std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11ShowTexture(std::shared_ptr<Direct3D11Device> device);
@@ -66,7 +66,7 @@ CreateSample_D3D12Basic(std::shared_ptr<Direct3D12Device> device);
 
 std::function<void(ID3D12Resource *)>
 CreateSample_D3D12Scene(std::shared_ptr<Direct3D12Device> device,
-                        std::shared_ptr<InstanceTable> scene);
+                        const std::vector<Instance> &scene);
 
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device);
@@ -82,7 +82,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device);
 
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
-                      std::shared_ptr<InstanceTable> scene);
+                      const std::vector<Instance> &scene);
 
 std::function<void(ID3D12Resource *)>
 CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device);

@@ -23,7 +23,7 @@
 
 std::function<void(ID3D12Resource *)>
 CreateSample_D3D12Scene(std::shared_ptr<Direct3D12Device> device,
-                        std::shared_ptr<InstanceTable> scene) {
+                        const std::vector<Instance> &scene) {
   CComPtr<ID3D12RootSignature> rootSignature =
       D3D12_Create_Signature_1CBV(device->m_pDevice);
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
@@ -76,23 +76,25 @@ float4 main() : SV_Target
         &descPipeline, __uuidof(ID3D12PipelineState),
         (void **)&pipelineState.p));
   }
+  SceneCollector collect(scene);
   std::vector<CComPtr<ID3D12Resource1>> resourceVertex;
   std::vector<CComPtr<ID3D12Resource1>> resourceIndex;
-  for (int i = 0; i < scene->Meshes.size(); ++i) {
+  for (int i = 0; i < collect.MeshTable.size(); ++i) {
     {
-      int sizeVertex = sizeof(float[3]) * scene->Meshes[i]->getVertexCount();
+      int sizeVertex =
+          sizeof(float[3]) * collect.MeshTable[i]->getVertexCount();
       std::unique_ptr<int8_t[]> vertices(new int8_t[sizeVertex]);
-      scene->Meshes[i]->copyVertices(
+      collect.MeshTable[i]->copyVertices(
           reinterpret_cast<Vector3 *>(vertices.get()), sizeof(Vector3));
       resourceVertex.push_back(D3D12_Create_Buffer(
           device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
           sizeVertex, sizeVertex, vertices.get()));
     }
     {
-      int sizeIndices = sizeof(int32_t) * scene->Meshes[i]->getIndexCount();
+      int sizeIndices = sizeof(int32_t) * collect.MeshTable[i]->getIndexCount();
       std::unique_ptr<int8_t[]> indices(new int8_t[sizeIndices]);
-      scene->Meshes[i]->copyIndices(reinterpret_cast<uint32_t *>(indices.get()),
-                                    sizeof(uint32_t));
+      collect.MeshTable[i]->copyIndices(
+          reinterpret_cast<uint32_t *>(indices.get()), sizeof(uint32_t));
       resourceIndex.push_back(D3D12_Create_Buffer(
           device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
           sizeIndices, sizeIndices, indices.get()));
@@ -101,11 +103,12 @@ float4 main() : SV_Target
   return [=](ID3D12Resource *resourceBackbuffer) {
     D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
     std::vector<CComPtr<ID3D12Resource1>> resourceConstants;
-    for (int i = 0; i < scene->Instances.size(); ++i) {
+    for (int i = 0; i < collect.InstanceTable.size(); ++i) {
+      const InstanceFlat &instance = collect.InstanceTable[i];
       resourceConstants.push_back(D3D12_Create_Buffer(
           device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
           256, 256,
-          &(scene->Instances[i].TransformObjectToWorld *
+          &(instance.TransformObjectToWorld *
             GetTransformSource()->GetTransformWorldToClip())));
       {
         D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
@@ -151,7 +154,8 @@ float4 main() : SV_Target
           1,
           &device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart(),
           FALSE, nullptr);
-      for (int i = 0; i < scene->Instances.size(); ++i) {
+      for (int i = 0; i < collect.InstanceTable.size(); ++i) {
+        const InstanceFlat &instance = collect.InstanceTable[i];
         D3D12_GPU_DESCRIPTOR_HANDLE handle =
             descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();
         handle.ptr =
@@ -159,27 +163,28 @@ float4 main() : SV_Target
                              D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) *
                              i;
         commandList->SetGraphicsRootDescriptorTable(0, handle);
-        int32_t meshIndex = scene->Instances[i].GeometryIndex;
         {
           D3D12_VERTEX_BUFFER_VIEW desc = {};
           desc.BufferLocation =
-              resourceVertex[meshIndex]->GetGPUVirtualAddress();
+              resourceVertex[instance.MeshID]->GetGPUVirtualAddress();
           desc.SizeInBytes =
-              sizeof(float[3]) * scene->Meshes[meshIndex]->getVertexCount();
+              sizeof(float[3]) *
+              collect.MeshTable[instance.MeshID]->getVertexCount();
           desc.StrideInBytes = sizeof(float[3]);
           commandList->IASetVertexBuffers(0, 1, &desc);
         }
         {
           D3D12_INDEX_BUFFER_VIEW desc = {};
           desc.BufferLocation =
-              resourceIndex[meshIndex]->GetGPUVirtualAddress();
+              resourceIndex[instance.MeshID]->GetGPUVirtualAddress();
           desc.SizeInBytes =
-              sizeof(int32_t) * scene->Meshes[meshIndex]->getIndexCount();
+              sizeof(int32_t) *
+              collect.MeshTable[instance.MeshID]->getIndexCount();
           desc.Format = DXGI_FORMAT_R32_UINT;
           commandList->IASetIndexBuffer(&desc);
         }
         commandList->DrawIndexedInstanced(
-            scene->Meshes[meshIndex]->getIndexCount(), 1, 0, 0, 0);
+            collect.MeshTable[instance.MeshID]->getIndexCount(), 1, 0, 0, 0);
       }
       // Transition the render target into presentation state for display.
       commandList->ResourceBarrier(

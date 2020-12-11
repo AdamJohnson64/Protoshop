@@ -6,15 +6,15 @@ ParametricUVToMesh::ParametricUVToMesh(std::shared_ptr<ParametricUV> shape,
                                        uint32_t stepsInU, uint32_t stepsInV)
     : m_shape(shape), m_stepsInU(stepsInU), m_stepsInV(stepsInV) {}
 
-uint32_t ParametricUVToMesh::getVertexCount() {
+uint32_t ParametricUVToMesh::getVertexCount() const {
   return (m_stepsInU + 1) * (m_stepsInV + 1);
 }
 
-uint32_t ParametricUVToMesh::getIndexCount() {
+uint32_t ParametricUVToMesh::getIndexCount() const {
   return 3 * 2 * m_stepsInU * m_stepsInV;
 }
 
-void ParametricUVToMesh::copyVertices(void *to, uint32_t stride) {
+void ParametricUVToMesh::copyVertices(void *to, uint32_t stride) const {
   for (int32_t v = 0; v <= m_stepsInV; ++v) {
     for (int32_t u = 0; u <= m_stepsInU; ++u) {
       *(reinterpret_cast<Vector3 *>(to)) = m_shape->getVertexPosition(
@@ -25,7 +25,7 @@ void ParametricUVToMesh::copyVertices(void *to, uint32_t stride) {
   }
 }
 
-void ParametricUVToMesh::copyNormals(void *to, uint32_t stride) {
+void ParametricUVToMesh::copyNormals(void *to, uint32_t stride) const {
   for (int32_t v = 0; v <= m_stepsInV; ++v) {
     for (int32_t u = 0; u <= m_stepsInU; ++u) {
       *(reinterpret_cast<Vector3 *>(to)) = m_shape->getVertexNormal(
@@ -36,7 +36,7 @@ void ParametricUVToMesh::copyNormals(void *to, uint32_t stride) {
   }
 }
 
-void ParametricUVToMesh::copyIndices(void *to, uint32_t stride) {
+void ParametricUVToMesh::copyIndices(void *to, uint32_t stride) const {
   for (int32_t v = 0; v < m_stepsInV; ++v) {
     for (int32_t u = 0; u < m_stepsInU; ++u) {
       *(reinterpret_cast<uint32_t *>(to)) =
