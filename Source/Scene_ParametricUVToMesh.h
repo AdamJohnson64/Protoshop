@@ -1,13 +1,13 @@
 #pragma once
 
 #include "Core_Object.h"
-#include "Scene_Mesh.h"
+#include "Scene_IMesh.h"
 #include <memory>
 #include <stdint.h>
 
 class ParametricUV;
 
-class ParametricUVToMesh : public Object, public Mesh {
+class ParametricUVToMesh : public Object, public IMesh {
 public:
   ParametricUVToMesh(std::shared_ptr<ParametricUV> shape, uint32_t stepsInU,
                      uint32_t stepsInV);

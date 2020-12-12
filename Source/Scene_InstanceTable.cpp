@@ -1,5 +1,5 @@
 #include "Scene_InstanceTable.h"
-#include "Scene_Material.h"
+#include "Scene_IMaterial.h"
 #include "Scene_MeshOBJ.h"
 #include "Scene_ParametricUV.h"
 #include "Scene_ParametricUVToMesh.h"
@@ -7,8 +7,8 @@
 #include "Scene_Sphere.h"
 
 SceneCollector::SceneCollector(const std::vector<Instance> &scene) {
-  std::map<const Mesh *, uint32_t> MeshToIndex;
-  std::map<const Material *, uint32_t> MaterialToIndex;
+  std::map<const IMesh *, uint32_t> MeshToIndex;
+  std::map<const IMaterial *, uint32_t> MaterialToIndex;
   for (int instanceIndex = 0; instanceIndex < scene.size(); ++instanceIndex) {
     // Convert the pointer-based instance (DOM) into a tabular form.
     // Rewrite pointers as indices into other tables.
@@ -50,13 +50,13 @@ const std::vector<Instance> &Scene_Default() {
   static bool initialized = false;
   if (!initialized) {
     // Create Materials.
-    std::shared_ptr<Material> _checkerboard(new Checkerboard());
-    std::shared_ptr<Material> _plastic(new RedPlastic());
+    std::shared_ptr<IMaterial> _checkerboard(new Checkerboard());
+    std::shared_ptr<IMaterial> _plastic(new RedPlastic());
     // Create Geometry.
     std::shared_ptr<ParametricUV> _plane(new Plane());
-    std::shared_ptr<Mesh> _mesh(new ParametricUVToMesh(_plane, 1, 1));
+    std::shared_ptr<IMesh> _mesh(new ParametricUVToMesh(_plane, 1, 1));
     std::shared_ptr<ParametricUV> _sphere(new Sphere());
-    std::shared_ptr<Mesh> _mesh2(new ParametricUVToMesh(_sphere, 100, 100));
+    std::shared_ptr<IMesh> _mesh2(new ParametricUVToMesh(_sphere, 100, 100));
     // Create Instances.
     {
       Instance instance = {};

@@ -14,7 +14,7 @@
 #include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
-#include "Scene_Mesh.h"
+#include "Scene_IMesh.h"
 #include "Scene_ParametricUV.h"
 #include "Scene_ParametricUVToMesh.h"
 #include "Scene_Plane.h"

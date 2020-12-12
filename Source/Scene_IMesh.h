@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-class Mesh {
+class IMesh {
 public:
   virtual uint32_t getVertexCount() const = 0;
   virtual uint32_t getIndexCount() const = 0;

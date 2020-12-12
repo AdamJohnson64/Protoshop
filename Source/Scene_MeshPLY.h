@@ -2,14 +2,14 @@
 
 #include "Core_Math.h"
 #include "Core_Object.h"
-#include "Scene_Mesh.h"
+#include "Scene_IMesh.h"
 #include <memory>
 
 ////////////////////////////////////////////////////////////////////////////////
 // NOTE: This is an INCREDIBLY limited PLY loader.
 // There's just enough here to read the Stanford Bunny, but that's about it.
 ////////////////////////////////////////////////////////////////////////////////
-class MeshPLY : public Object, public Mesh {
+class MeshPLY : public Object, public IMesh {
 public:
   MeshPLY(const char *filename);
   uint32_t getVertexCount() const override;

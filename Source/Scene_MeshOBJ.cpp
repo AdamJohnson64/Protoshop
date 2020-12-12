@@ -1,8 +1,8 @@
 #include "Scene_MeshOBJ.h"
 #include "Core_Math.h"
+#include "Scene_IMaterial.h"
+#include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
-#include "Scene_Material.h"
-#include "Scene_Mesh.h"
 #include <fstream>
 #include <functional>
 #include <map>
@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-class MeshFromOBJ : public Object, public Mesh {
+class MeshFromOBJ : public Object, public IMesh {
 public:
   uint32_t getVertexCount() const override;
   uint32_t getIndexCount() const override;
@@ -73,8 +73,9 @@ std::vector<std::string_view> split(const std::string_view &input,
   return o;
 }
 
-std::map<std::string, std::shared_ptr<Material>> LoadMTL(const char *filename) {
-  std::map<std::string, std::shared_ptr<Material>> materials;
+std::map<std::string, std::shared_ptr<IMaterial>>
+LoadMTL(const char *filename) {
+  std::map<std::string, std::shared_ptr<IMaterial>> materials;
   {
     ////////////////////////////////////////////////////////////////////////////////
     // Build up a material definition along with its name identity.
@@ -124,7 +125,7 @@ std::vector<Instance> LoadOBJ(const char *filename) {
   std::vector<Vector3> vertices, normals, uvs;
   std::vector<uint32_t> facesVertex, facesNormal, facesUV;
   // Last detected material.
-  std::shared_ptr<Material> currentMaterial;
+  std::shared_ptr<IMaterial> currentMaterial;
   ////////////////////////////////////////////////////////////////////////////////
   // Flush the accumulated geometry and materials to a new instance.
   std::function<void()> FLUSHMESH = [&]() {
@@ -157,7 +158,7 @@ std::vector<Instance> LoadOBJ(const char *filename) {
   // Parse the model definition.
   std::ifstream model(filename);
   std::string line;
-  std::map<std::string, std::shared_ptr<Material>> materials;
+  std::map<std::string, std::shared_ptr<IMaterial>> materials;
   while (std::getline(model, line)) {
     if (false) {
     } else if (line.size() == 0 || line[0] == '#') {

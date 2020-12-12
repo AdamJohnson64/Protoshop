@@ -1,7 +1,7 @@
 #pragma once
 
-class Material;
-class Mesh;
+class IMaterial;
+class IMesh;
 
 #include "Core_Math.h"
 #include <map>
@@ -12,8 +12,8 @@ class Mesh;
 class Instance {
 public:
   Matrix44 TransformObjectToWorld;
-  std::shared_ptr<Mesh> Mesh;
-  std::shared_ptr<Material> Material;
+  std::shared_ptr<IMesh> Mesh;
+  std::shared_ptr<IMaterial> Material;
 };
 
 typedef std::vector<Instance> InstanceTable;
@@ -28,8 +28,8 @@ class SceneCollector {
 public:
   SceneCollector(const std::vector<Instance> &scene);
   std::vector<InstanceFlat> InstanceTable;
-  std::vector<const Mesh *> MeshTable;
-  std::vector<const Material *> MaterialTable;
+  std::vector<const IMesh *> MeshTable;
+  std::vector<const IMaterial *> MaterialTable;
 };
 
 const std::vector<Instance> &Scene_Default();

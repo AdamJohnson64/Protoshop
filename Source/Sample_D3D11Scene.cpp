@@ -11,8 +11,8 @@
 #include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
+#include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
-#include "Scene_Mesh.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>

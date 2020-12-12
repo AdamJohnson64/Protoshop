@@ -14,9 +14,9 @@
 #include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
+#include "Scene_IMaterial.h"
+#include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
-#include "Scene_Material.h"
-#include "Scene_Mesh.h"
 #include "Scene_ParametricUV.h"
 #include "Scene_ParametricUVToMesh.h"
 #include "Scene_Plane.h"
@@ -173,7 +173,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   std::vector<CComPtr<ID3D12Resource1>> resourceBLAS;
   resourceBLAS.resize(collect.MeshTable.size());
   for (int i = 0; i < collect.MeshTable.size(); ++i) {
-    const Mesh &mesh = *collect.MeshTable[i];
+    const IMesh &mesh = *collect.MeshTable[i];
     int sizeVertex = sizeof(float[3]) * mesh.getVertexCount();
     std::unique_ptr<int8_t[]> dataVertex(new int8_t[sizeVertex]);
     mesh.copyVertices(reinterpret_cast<Vector3 *>(dataVertex.get()),
