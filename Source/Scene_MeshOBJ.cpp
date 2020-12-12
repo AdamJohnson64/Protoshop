@@ -1,10 +1,58 @@
 #include "Scene_MeshOBJ.h"
 #include "Core_Math.h"
+#include "Scene_InstanceTable.h"
+#include "Scene_Material.h"
+#include "Scene_Mesh.h"
 #include <fstream>
+#include <functional>
 #include <map>
 #include <string>
 #include <string_view>
 #include <vector>
+
+class MeshFromOBJ : public Object, public Mesh {
+public:
+  uint32_t getVertexCount() const override;
+  uint32_t getIndexCount() const override;
+  void copyVertices(void *to, uint32_t stride) const override;
+  void copyNormals(void *to, uint32_t stride) const override;
+  void copyIndices(void *to, uint32_t stride) const override;
+  int m_vertexCount;
+  int m_indexCount;
+  std::unique_ptr<TVector3<float>[]> m_vertices;
+  std::unique_ptr<TVector3<float>[]> m_normals;
+  std::unique_ptr<uint32_t[]> m_indices;
+};
+
+uint32_t MeshFromOBJ::getVertexCount() const { return m_vertexCount; }
+
+uint32_t MeshFromOBJ::getIndexCount() const { return m_indexCount; }
+
+void MeshFromOBJ::copyVertices(void *to, uint32_t stride) const {
+  void *begin = to;
+  for (int i = 0; i < m_vertexCount; ++i) {
+    *reinterpret_cast<TVector3<float> *>(to) = m_vertices[i];
+    to = reinterpret_cast<uint8_t *>(to) + stride;
+  }
+  int test = 0;
+}
+
+void MeshFromOBJ::copyNormals(void *to, uint32_t stride) const {
+  void *begin = to;
+  for (int i = 0; i < m_vertexCount; ++i) {
+    *reinterpret_cast<TVector3<float> *>(to) = m_normals[i];
+    to = reinterpret_cast<uint8_t *>(to) + stride;
+  }
+  int test = 0;
+}
+
+void MeshFromOBJ::copyIndices(void *to, uint32_t stride) const {
+  void *begin = to;
+  for (int i = 0; i < m_indexCount; ++i) {
+    *reinterpret_cast<uint32_t *>(to) = m_indices[i];
+    to = reinterpret_cast<uint8_t *>(to) + stride;
+  }
+}
 
 std::vector<std::string_view> split(const std::string_view &input,
                                     char delim = ' ') {
@@ -25,39 +73,91 @@ std::vector<std::string_view> split(const std::string_view &input,
   return o;
 }
 
-struct MaterialDefinition {
-  std::string AlbedoMap;
-};
-
-std::map<std::string, MaterialDefinition> LoadMTL(const char *filename) {
-  std::map<std::string, MaterialDefinition> materials;
+std::map<std::string, std::shared_ptr<Material>> LoadMTL(const char *filename) {
+  std::map<std::string, std::shared_ptr<Material>> materials;
   {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Build up a material definition along with its name identity.
+    std::string currentMaterialName;
+    std::shared_ptr<Textured> currentMaterialDefinition;
+    ////////////////////////////////////////////////////////////////////////////////
+    // Take the currently accumulated material definition and emit a material.
+    std::function<void()> FLUSHMATERIAL = [&]() {
+      if (currentMaterialDefinition == nullptr)
+        return;
+      materials[currentMaterialName] = currentMaterialDefinition;
+      currentMaterialName = "";
+      currentMaterialDefinition = nullptr;
+    };
+    ////////////////////////////////////////////////////////////////////////////////
+    // Parse the material file.
     std::ifstream mtl(
         std::string("Submodules\\RenderToyAssets\\Models\\Sponza\\") +
         filename);
     std::string line;
-    std::string currentMaterial;
     while (std::getline(mtl, line)) {
       if (line.size() == 0 || line[0] == '#') {
       } else if (line.substr(0, 7) == "newmtl ") {
-        currentMaterial = line.substr(7);
-        materials[currentMaterial] = MaterialDefinition();
+        // When we find a new material we must flush the old one before
+        // restarting.
+        FLUSHMATERIAL();
+        currentMaterialName = line.substr(7);
+        currentMaterialDefinition.reset(new Textured());
       } else if (line.substr(0, 8) == "\tmap_Ka ") {
-        if (currentMaterial == "")
+        if (currentMaterialName == "")
           throw std::exception("No material name specified.");
-        materials[currentMaterial].AlbedoMap = line.substr(8);
+        currentMaterialDefinition->AlbedoMap = line.substr(8);
       }
     }
+    ////////////////////////////////////////////////////////////////////////////////
+    // Whatever material remains should be flushed.
+    FLUSHMATERIAL();
   }
   return materials;
 }
 
-MeshOBJ::MeshOBJ(const char *filename) {
+std::vector<Instance> LoadOBJ(const char *filename) {
+  ////////////////////////////////////////////////////////////////////////////////
+  // Accumulated instances so far.
+  std::vector<Instance> instances;
+  // Vertices and faces for the accumulated mesh so far.
   std::vector<Vector3> vertices, normals, uvs;
-  std::vector<TVector3<int>> facesVertex, facesNormal, facesUV;
+  std::vector<uint32_t> facesVertex, facesNormal, facesUV;
+  // Last detected material.
+  std::shared_ptr<Material> currentMaterial;
+  ////////////////////////////////////////////////////////////////////////////////
+  // Flush the accumulated geometry and materials to a new instance.
+  std::function<void()> FLUSHMESH = [&]() {
+    if (currentMaterial == nullptr)
+      return;
+    Instance instance = {};
+    instance.TransformObjectToWorld = CreateMatrixScale(Vector3{1, 1, 1});
+    std::shared_ptr<MeshFromOBJ> mesh(new MeshFromOBJ());
+    mesh->m_indexCount = facesVertex.size();
+    mesh->m_vertexCount = facesVertex.size();
+    // Now we're going to be horribly inefficient and fracture all the face
+    // vertices.
+    mesh->m_vertices.reset(new Vector3[mesh->m_vertexCount]);
+    mesh->m_normals.reset(new Vector3[mesh->m_vertexCount]);
+    mesh->m_indices.reset(new uint32_t[mesh->m_indexCount]);
+    for (int f = 0; f < mesh->m_indexCount; ++f) {
+      mesh->m_indices[f] = f;
+      mesh->m_vertices[mesh->m_indices[f]] = vertices[facesVertex[f]] * 0.01f;
+      mesh->m_normals[mesh->m_indices[f]] = normals[facesNormal[f]];
+    }
+    instance.Mesh = mesh;
+    instance.Material = currentMaterial;
+    instances.push_back(instance);
+    facesVertex.clear();
+    facesNormal.clear();
+    facesUV.clear();
+    currentMaterial.reset();
+  };
+  ////////////////////////////////////////////////////////////////////////////////
+  // Parse the model definition.
   std::ifstream model(filename);
   std::string line;
-  std::map<std::string, MaterialDefinition> materials;
+  std::map<std::string, std::shared_ptr<Material>> materials;
   while (std::getline(model, line)) {
     if (false) {
     } else if (line.size() == 0 || line[0] == '#') {
@@ -100,11 +200,13 @@ MeshOBJ::MeshOBJ(const char *filename) {
       // Groups (g?)
       std::string groupName = line.substr(2);
     } else if (line.substr(0, 7) == "usemtl ") {
+      FLUSHMESH();
       std::string materialName = line.substr(7);
       if (materials.size() > 0 &&
           materials.find(materialName) == materials.end()) {
         throw std::exception("Requested material is undefined.");
       }
+      currentMaterial = materials[materialName];
     } else if (line.substr(0, 2) == "s ") {
 
     } else if (line.substr(0, 2) == "f ") {
@@ -145,60 +247,20 @@ MeshOBJ::MeshOBJ(const char *filename) {
         if (vt0 >= uvs.size() || vt1 >= uvs.size() || vt2 >= uvs.size()) {
           throw std::exception("Vertex UV index out of range.");
         }
-        facesVertex.push_back({v0, v1, v2});
-        facesNormal.push_back({vn0, vn1, vn2});
-        facesUV.push_back({vt0, vt1, vt2});
+        facesVertex.push_back(v0);
+        facesVertex.push_back(v1);
+        facesVertex.push_back(v2);
+        facesNormal.push_back(vn0);
+        facesNormal.push_back(vn1);
+        facesNormal.push_back(vn2);
+        facesUV.push_back(vt0);
+        facesUV.push_back(vt1);
+        facesUV.push_back(vt2);
       }
     } else {
       throw std::exception(("Unreadable OBJ file at '" + line + ".").c_str());
     }
   }
-  m_faceCount = facesVertex.size();
-  m_vertexCount = 3 * m_faceCount;
-  // Now we're going to be horribly inefficient and fracture all the face
-  // vertices.
-  m_vertices.reset(new Vector3[m_vertexCount]);
-  m_normals.reset(new Vector3[m_vertexCount]);
-  m_faces.reset(new TVector3<int>[m_faceCount]);
-  for (int f = 0; f < m_faceCount; ++f) {
-    m_faces[f] = {3 * f + 0, 3 * f + 1, 3 * f + 2};
-    m_vertices[m_faces[f].X] = vertices[facesVertex[f].X] * 0.01f;
-    m_vertices[m_faces[f].Y] = vertices[facesVertex[f].Y] * 0.01f;
-    m_vertices[m_faces[f].Z] = vertices[facesVertex[f].Z] * 0.01f;
-    m_normals[m_faces[f].X] = normals[facesNormal[f].X];
-    m_normals[m_faces[f].Y] = normals[facesNormal[f].Y];
-    m_normals[m_faces[f].Z] = normals[facesNormal[f].Z];
-  }
-  int test = 0;
-}
-
-uint32_t MeshOBJ::getVertexCount() const { return m_vertexCount; }
-
-uint32_t MeshOBJ::getIndexCount() const { return 3 * m_faceCount; }
-
-void MeshOBJ::copyVertices(void *to, uint32_t stride) const {
-  void *begin = to;
-  for (int i = 0; i < m_vertexCount; ++i) {
-    *reinterpret_cast<TVector3<float> *>(to) = m_vertices[i];
-    to = reinterpret_cast<uint8_t *>(to) + stride;
-  }
-  int test = 0;
-}
-
-void MeshOBJ::copyNormals(void *to, uint32_t stride) const {
-  void *begin = to;
-  for (int i = 0; i < m_vertexCount; ++i) {
-    *reinterpret_cast<TVector3<float> *>(to) = m_normals[i];
-    to = reinterpret_cast<uint8_t *>(to) + stride;
-  }
-  int test = 0;
-}
-
-void MeshOBJ::copyIndices(void *to, uint32_t stride) const {
-  uint32_t *from = reinterpret_cast<uint32_t *>(&m_faces[0]);
-  for (int i = 0; i < m_faceCount * 3; ++i) {
-    *reinterpret_cast<uint32_t *>(to) = *from;
-    ++from;
-    to = reinterpret_cast<uint8_t *>(to) + stride;
-  }
+  FLUSHMESH();
+  return instances;
 }

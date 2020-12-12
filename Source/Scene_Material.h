@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core_Object.h"
+#include <string>
 
 class Material {
 public:
@@ -10,3 +11,8 @@ public:
 class Checkerboard : public Object, public Material {};
 
 class RedPlastic : public Object, public Material {};
+
+class Textured : public Object, public Material {
+public:
+  std::string AlbedoMap;
+};

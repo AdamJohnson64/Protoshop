@@ -97,12 +97,7 @@ const std::vector<Instance> &Scene_Sponza() {
   static std::vector<Instance> scene;
   static bool initialized = false;
   if (!initialized) {
-    Instance instance = {};
-    instance.TransformObjectToWorld = CreateMatrixScale(Vector3{1, 1, 1});
-    instance.Mesh.reset(
-        new MeshOBJ("Submodules\\RenderToyAssets\\Models\\Sponza\\sponza.obj"));
-    instance.Material.reset(new RedPlastic());
-    scene.push_back(instance);
+    scene = LoadOBJ("Submodules\\RenderToyAssets\\Models\\Sponza\\sponza.obj");
     initialized = true;
   }
   return scene;
