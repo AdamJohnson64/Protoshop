@@ -17,10 +17,6 @@
 #include "Scene_IMaterial.h"
 #include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
-#include "Scene_ParametricUV.h"
-#include "Scene_ParametricUVToMesh.h"
-#include "Scene_Plane.h"
-#include "Scene_Sphere.h"
 #include "generated.Sample_DXRScene.dxr.h"
 #include <array>
 #include <atlbase.h>

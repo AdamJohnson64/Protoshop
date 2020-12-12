@@ -34,7 +34,7 @@
     <ClInclude Include="Source\Scene_IMesh.h" />
     <ClInclude Include="Source\Scene_MeshOBJ.h" />
     <ClInclude Include="Source\Scene_MeshPLY.h" />
-    <ClInclude Include="Source\Scene_ParametricUV.h" />
+    <ClInclude Include="Source\Scene_IParametricUV.h" />
     <ClInclude Include="Source\Scene_ParametricUVToMesh.h" />
     <ClInclude Include="Source\Scene_Plane.h" />
     <ClInclude Include="Source\Scene_Sphere.h" />

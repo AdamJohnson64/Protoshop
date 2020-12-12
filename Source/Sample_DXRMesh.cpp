@@ -15,10 +15,6 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "Scene_IMesh.h"
-#include "Scene_ParametricUV.h"
-#include "Scene_ParametricUVToMesh.h"
-#include "Scene_Plane.h"
-#include "Scene_Sphere.h"
 #include "generated.Sample_DXRMesh.dxr.h"
 #include <array>
 #include <atlbase.h>

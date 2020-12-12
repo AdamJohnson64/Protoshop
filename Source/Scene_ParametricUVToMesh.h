@@ -5,11 +5,11 @@
 #include <memory>
 #include <stdint.h>
 
-class ParametricUV;
+class IParametricUV;
 
 class ParametricUVToMesh : public Object, public IMesh {
 public:
-  ParametricUVToMesh(std::shared_ptr<ParametricUV> shape, uint32_t stepsInU,
+  ParametricUVToMesh(std::shared_ptr<IParametricUV> shape, uint32_t stepsInU,
                      uint32_t stepsInV);
   uint32_t getVertexCount() const override;
   uint32_t getIndexCount() const override;
@@ -18,7 +18,7 @@ public:
   void copyIndices(void *to, uint32_t stride) const override;
 
 private:
-  std::shared_ptr<ParametricUV> m_shape;
+  std::shared_ptr<IParametricUV> m_shape;
   uint32_t m_stepsInU;
   uint32_t m_stepsInV;
 };

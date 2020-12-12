@@ -1,8 +1,8 @@
 #include "Scene_ParametricUVToMesh.h"
 #include "Core_Math.h"
-#include "Scene_ParametricUV.h"
+#include "Scene_IParametricUV.h"
 
-ParametricUVToMesh::ParametricUVToMesh(std::shared_ptr<ParametricUV> shape,
+ParametricUVToMesh::ParametricUVToMesh(std::shared_ptr<IParametricUV> shape,
                                        uint32_t stepsInU, uint32_t stepsInV)
     : m_shape(shape), m_stepsInU(stepsInU), m_stepsInV(stepsInV) {}
 
