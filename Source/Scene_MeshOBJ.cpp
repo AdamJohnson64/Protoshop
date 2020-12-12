@@ -75,7 +75,10 @@ std::vector<std::string_view> split(const std::string_view &input,
 
 std::map<std::string, std::shared_ptr<IMaterial>>
 LoadMTL(const char *filename) {
-  std::map<std::string, std::shared_ptr<IMaterial>> materials;
+  const std::string pathPrefix =
+      "Submodules\\RenderToyAssets\\Models\\Sponza\\";
+  std::map<std::string, std::shared_ptr<IMaterial>> mapNameToMaterial;
+  std::map<std::string, std::shared_ptr<TextureImage>> mapPathToTexture;
   {
     ////////////////////////////////////////////////////////////////////////////////
     // Build up a material definition along with its name identity.
@@ -86,15 +89,13 @@ LoadMTL(const char *filename) {
     std::function<void()> FLUSHMATERIAL = [&]() {
       if (currentMaterialDefinition == nullptr)
         return;
-      materials[currentMaterialName] = currentMaterialDefinition;
+      mapNameToMaterial[currentMaterialName] = currentMaterialDefinition;
       currentMaterialName = "";
       currentMaterialDefinition = nullptr;
     };
     ////////////////////////////////////////////////////////////////////////////////
     // Parse the material file.
-    std::ifstream mtl(
-        std::string("Submodules\\RenderToyAssets\\Models\\Sponza\\") +
-        filename);
+    std::ifstream mtl(pathPrefix + filename);
     std::string line;
     while (std::getline(mtl, line)) {
       if (line.size() == 0 || line[0] == '#') {
@@ -107,14 +108,21 @@ LoadMTL(const char *filename) {
       } else if (line.substr(0, 8) == "\tmap_Ka ") {
         if (currentMaterialName == "")
           throw std::exception("No material name specified.");
-        currentMaterialDefinition->AlbedoMap = line.substr(8);
+        std::string textureFilename = line.substr(8);
+        if (mapPathToTexture.find(textureFilename) == mapPathToTexture.end()) {
+          mapPathToTexture[textureFilename].reset(new TextureImage());
+          mapPathToTexture[textureFilename]->Filename =
+              pathPrefix + textureFilename;
+        }
+        currentMaterialDefinition->AlbedoMap =
+            mapPathToTexture[textureFilename];
       }
     }
     ////////////////////////////////////////////////////////////////////////////////
     // Whatever material remains should be flushed.
     FLUSHMATERIAL();
   }
-  return materials;
+  return mapNameToMaterial;
 }
 
 std::vector<Instance> LoadOBJ(const char *filename) {

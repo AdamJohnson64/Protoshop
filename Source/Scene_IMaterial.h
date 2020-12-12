@@ -5,13 +5,16 @@
 
 class IMaterial {};
 
-class ITexture {};
-
 class Checkerboard : public Object, public IMaterial {};
 
 class RedPlastic : public Object, public IMaterial {};
 
+class TextureImage : public Object {
+public:
+  std::string Filename;
+};
+
 class Textured : public Object, public IMaterial {
 public:
-  std::string AlbedoMap;
+  std::shared_ptr<TextureImage> AlbedoMap;
 };
