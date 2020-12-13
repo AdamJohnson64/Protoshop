@@ -26,6 +26,7 @@
     <ClInclude Include="Source\Core_Window.h" />
     <ClInclude Include="Source\ImageUtil.h" />
     <ClInclude Include="Source\Image_HDR.h" />
+    <ClInclude Include="Source\Image_TGA.h" />
     <ClInclude Include="Source\Scene_IMaterial.h" />
     <ClInclude Include="Source\Sample_DXR_RayRecurse.inc" />
     <ClInclude Include="Source\Sample_Manifest.h" />
@@ -57,6 +58,7 @@
     <ClCompile Include="Source\Core_Window.cpp" />
     <ClCompile Include="Source\ImageUtil.cpp" />
     <ClCompile Include="Source\Image_HDR.cpp" />
+    <ClCompile Include="Source\Image_TGA.cpp" />
     <ClCompile Include="Source\Protoshop.cpp" />
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
