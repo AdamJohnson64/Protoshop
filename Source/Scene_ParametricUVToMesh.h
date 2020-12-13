@@ -15,6 +15,7 @@ public:
   uint32_t getIndexCount() const override;
   void copyVertices(void *to, uint32_t stride) const override;
   void copyNormals(void *to, uint32_t stride) const override;
+  void copyTexcoords(void *to, uint32_t stride) const override;
   void copyIndices(void *to, uint32_t stride) const override;
 
 private:

@@ -36,6 +36,17 @@ void ParametricUVToMesh::copyNormals(void *to, uint32_t stride) const {
   }
 }
 
+void ParametricUVToMesh::copyTexcoords(void *to, uint32_t stride) const {
+  for (int32_t v = 0; v <= m_stepsInV; ++v) {
+    for (int32_t u = 0; u <= m_stepsInU; ++u) {
+      *(reinterpret_cast<Vector2 *>(to)) = {(float)u / m_stepsInU,
+                                            (float)v / m_stepsInV};
+      to =
+          reinterpret_cast<Vector2 *>(reinterpret_cast<uint8_t *>(to) + stride);
+    }
+  }
+}
+
 void ParametricUVToMesh::copyIndices(void *to, uint32_t stride) const {
   for (int32_t v = 0; v < m_stepsInV; ++v) {
     for (int32_t u = 0; u < m_stepsInU; ++u) {

@@ -16,11 +16,13 @@ public:
   uint32_t getIndexCount() const override;
   void copyVertices(void *to, uint32_t stride) const override;
   void copyNormals(void *to, uint32_t stride) const override;
+  void copyTexcoords(void *to, uint32_t stride) const override;
   void copyIndices(void *to, uint32_t stride) const override;
   int m_vertexCount;
   int m_indexCount;
   std::unique_ptr<TVector3<float>[]> m_vertices;
   std::unique_ptr<TVector3<float>[]> m_normals;
+  std::unique_ptr<TVector2<float>[]> m_texcoords;
   std::unique_ptr<uint32_t[]> m_indices;
 };
 
@@ -34,7 +36,6 @@ void MeshFromOBJ::copyVertices(void *to, uint32_t stride) const {
     *reinterpret_cast<TVector3<float> *>(to) = m_vertices[i];
     to = reinterpret_cast<uint8_t *>(to) + stride;
   }
-  int test = 0;
 }
 
 void MeshFromOBJ::copyNormals(void *to, uint32_t stride) const {
@@ -43,7 +44,14 @@ void MeshFromOBJ::copyNormals(void *to, uint32_t stride) const {
     *reinterpret_cast<TVector3<float> *>(to) = m_normals[i];
     to = reinterpret_cast<uint8_t *>(to) + stride;
   }
-  int test = 0;
+}
+
+void MeshFromOBJ::copyTexcoords(void *to, uint32_t stride) const {
+  void *begin = to;
+  for (int i = 0; i < m_vertexCount; ++i) {
+    *reinterpret_cast<TVector2<float> *>(to) = m_texcoords[i];
+    to = reinterpret_cast<uint8_t *>(to) + stride;
+  }
 }
 
 void MeshFromOBJ::copyIndices(void *to, uint32_t stride) const {
@@ -130,7 +138,8 @@ std::vector<Instance> LoadOBJ(const char *filename) {
   // Accumulated instances so far.
   std::vector<Instance> instances;
   // Vertices and faces for the accumulated mesh so far.
-  std::vector<Vector3> vertices, normals, uvs;
+  std::vector<Vector3> vertices, normals;
+  std::vector<Vector2> uvs;
   std::vector<uint32_t> facesVertex, facesNormal, facesUV;
   // Last detected material.
   std::shared_ptr<IMaterial> currentMaterial;
@@ -148,11 +157,13 @@ std::vector<Instance> LoadOBJ(const char *filename) {
     // vertices.
     mesh->m_vertices.reset(new Vector3[mesh->m_vertexCount]);
     mesh->m_normals.reset(new Vector3[mesh->m_vertexCount]);
+    mesh->m_texcoords.reset(new Vector2[mesh->m_vertexCount]);
     mesh->m_indices.reset(new uint32_t[mesh->m_indexCount]);
     for (int f = 0; f < mesh->m_indexCount; ++f) {
       mesh->m_indices[f] = f;
       mesh->m_vertices[mesh->m_indices[f]] = vertices[facesVertex[f]] * 0.01f;
       mesh->m_normals[mesh->m_indices[f]] = normals[facesNormal[f]];
+      mesh->m_texcoords[mesh->m_indices[f]] = uvs[facesUV[f]];
     }
     instance.Mesh = mesh;
     instance.Material = currentMaterial;
@@ -204,7 +215,7 @@ std::vector<Instance> LoadOBJ(const char *filename) {
       float x = std::stof(std::string(bits[1]));
       float y = std::stof(std::string(bits[2]));
       float z = std::stof(std::string(bits[3]));
-      uvs.push_back({x, y, z});
+      uvs.push_back({x, y});
     } else if (line.substr(0, 2) == "g ") {
       // Groups (g?)
       std::string groupName = line.substr(2);
