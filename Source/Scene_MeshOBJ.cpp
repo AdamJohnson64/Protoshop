@@ -215,7 +215,7 @@ std::vector<Instance> LoadOBJ(const char *filename) {
       float x = std::stof(std::string(bits[1]));
       float y = std::stof(std::string(bits[2]));
       float z = std::stof(std::string(bits[3]));
-      uvs.push_back({x, y});
+      uvs.push_back({x, 1 - y}); // Note: Correction for OpenGL flipped V.
     } else if (line.substr(0, 2) == "g ") {
       // Groups (g?)
       std::string groupName = line.substr(2);
