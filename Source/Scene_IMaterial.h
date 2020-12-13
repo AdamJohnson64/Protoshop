@@ -3,7 +3,10 @@
 #include "Core_Object.h"
 #include <string>
 
-class IMaterial {};
+class IMaterial {
+public:
+  virtual ~IMaterial() = default;
+};
 
 class Checkerboard : public Object, public IMaterial {};
 
