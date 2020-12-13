@@ -27,7 +27,7 @@ CreateSample_D3D12Scene(std::shared_ptr<Direct3D12Device> device,
   CComPtr<ID3D12RootSignature> rootSignature =
       D3D12_Create_Signature_1CBV(device->m_pDevice);
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
-      D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 256);
+      D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 4096);
   ////////////////////////////////////////////////////////////////////////////////
   // Create a vertex shader.
   CComPtr<ID3DBlob> pD3DBlobCodeVS = CompileShader("vs_5_0", "main", R"SHADER(
