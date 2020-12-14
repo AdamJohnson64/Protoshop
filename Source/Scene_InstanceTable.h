@@ -11,7 +11,7 @@ class IMesh;
 
 class Instance {
 public:
-  Matrix44 TransformObjectToWorld;
+  std::shared_ptr<Matrix44> TransformObjectToWorld;
   std::shared_ptr<IMesh> Mesh;
   std::shared_ptr<IMaterial> Material;
 };

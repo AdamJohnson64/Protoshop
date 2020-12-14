@@ -106,7 +106,15 @@ float4 main() : SV_Target
         resourceBackbuffer,
         &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
         device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
-    std::vector<CComPtr<ID3D12Resource1>> resourceConstants;
+
+    MutableMap<const Matrix44 *, CComPtr<ID3D12Resource1>> factoryConstants;
+    factoryConstants.fnGenerator = [=](const Matrix44 *transform) {
+      return D3D12_Create_Buffer(
+          device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+          256, 256,
+          &(*transform * GetTransformSource()->GetTransformWorldToClip()));
+    };
+
     D3D12_Run_Synchronously(device.get(), [&](ID3D12GraphicsCommandList5
                                                   *commandList) {
       commandList->SetGraphicsRootSignature(rootSignature);
@@ -136,14 +144,9 @@ float4 main() : SV_Target
           FALSE, nullptr);
       for (int i = 0; i < scene.size(); ++i) {
         const Instance &instance = scene[i];
-        resourceConstants.push_back(D3D12_Create_Buffer(
-            device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
-            256, 256,
-            &(instance.TransformObjectToWorld *
-              GetTransformSource()->GetTransformWorldToClip())));
         {
           D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
-          desc.BufferLocation = resourceConstants[i]->GetGPUVirtualAddress();
+          desc.BufferLocation = factoryConstants.get(instance.TransformObjectToWorld.get())->GetGPUVirtualAddress();
           desc.SizeInBytes = 256;
           D3D12_CPU_DESCRIPTOR_HANDLE handle =
               descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();

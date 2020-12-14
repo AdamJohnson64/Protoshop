@@ -144,12 +144,18 @@ std::vector<Instance> LoadOBJ(const char *filename) {
   // Last detected material.
   std::shared_ptr<IMaterial> currentMaterial;
   ////////////////////////////////////////////////////////////////////////////////
+  // This is a bit cheeky. In order to shared constant buffers we're packing
+  // transforms into objects and sharing them with shared_ptr. This is nasty
+  // but solves our problem of transform constant buffer identity.
+  std::shared_ptr<Matrix44> sharedTransform(
+      new Matrix44{CreateMatrixTranslate(Vector3{0, 0, 0})});
+  ////////////////////////////////////////////////////////////////////////////////
   // Flush the accumulated geometry and materials to a new instance.
   std::function<void()> FLUSHMESH = [&]() {
     if (currentMaterial == nullptr)
       return;
     Instance instance = {};
-    instance.TransformObjectToWorld = CreateMatrixScale(Vector3{1, 1, 1});
+    instance.TransformObjectToWorld = sharedTransform;
     std::shared_ptr<MeshFromOBJ> mesh(new MeshFromOBJ());
     mesh->m_indexCount = facesVertex.size();
     mesh->m_vertexCount = facesVertex.size();

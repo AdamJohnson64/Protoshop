@@ -143,6 +143,12 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   // persist storage between frames. This approach allows us to build render
   // resources on-demand and keep them hanging around for future frames.
 
+  MutableMap<const Matrix44 *, CComPtr<ID3D11Buffer>> factoryConstants;
+  factoryConstants.fnGenerator = [=](const Matrix44 *transform) {
+    return D3D11_Create_Buffer(device->GetID3D11Device(),
+                               D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
+  };
+
   MutableMap<const IMesh *, CComPtr<ID3D11Buffer>> factoryIndex;
   factoryIndex.fnGenerator = [&](const IMesh *mesh) {
     int sizeIndices = sizeof(int32_t) * mesh->getIndexCount();
@@ -218,7 +224,7 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
-    std::vector<CComPtr<ID3D11Buffer>> bufferInstanceConstants;
+
     for (int instanceIndex = 0; instanceIndex < scene.size(); ++instanceIndex) {
       const Instance &instance = scene[instanceIndex];
       ////////////////////////////////////////////////////////////////////////
@@ -241,20 +247,24 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
         }
       };
       ////////////////////////////////////////////////////////////////////////
-      // Setup the constant buffers.
-      {
-        Constants constants = {};
-        constants.TransformWorldToClip =
-            instance.TransformObjectToWorld * transform;
-        constants.TransformObjectToWorld = instance.TransformObjectToWorld;
-        bufferInstanceConstants.push_back(D3D11_Create_Buffer(
-            device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
-            sizeof(Constants), &constants));
-      }
-      ////////////////////////////////////////////////////////////////////////
       // Setup geometry for draw.
-      device->GetID3D11DeviceContext()->VSSetConstantBuffers(
-          0, 1, &bufferInstanceConstants[instanceIndex].p);
+      {
+        auto constantBuffer =
+            factoryConstants.get(instance.TransformObjectToWorld.get());
+        {
+          D3D11_MAPPED_SUBRESOURCE mapped = {};
+          TRYD3D(device->GetID3D11DeviceContext()->Map(
+              constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped));
+          Constants constants = {};
+          constants.TransformWorldToClip =
+              *instance.TransformObjectToWorld * transform;
+          constants.TransformObjectToWorld = *instance.TransformObjectToWorld;
+          memcpy(mapped.pData, &constants, sizeof(Constants));
+          device->GetID3D11DeviceContext()->Unmap(constantBuffer, 0);
+        }
+        device->GetID3D11DeviceContext()->VSSetConstantBuffers(
+            0, 1, &constantBuffer.p);
+      }
       {
         const UINT vertexStride[] = {sizeof(VertexFormat)};
         const UINT vertexOffset[] = {0};

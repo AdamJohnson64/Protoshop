@@ -20,30 +20,32 @@ const std::vector<Instance> &Scene_Default() {
     // Create Instances.
     {
       Instance instance = {};
-      instance.TransformObjectToWorld =
-          CreateMatrixScale(Vector3{10, 0.25f, 10});
+      instance.TransformObjectToWorld.reset(
+          new Matrix44{CreateMatrixScale(Vector3{10, 0.25f, 10})});
       instance.Mesh = _mesh;
       instance.Material = _checkerboard;
       scene.push_back(instance);
     }
     {
       Instance instance = {};
-      instance.TransformObjectToWorld =
-          CreateMatrixTranslate(Vector3{-2, 1, 0});
+      instance.TransformObjectToWorld.reset(
+          new Matrix44{CreateMatrixTranslate(Vector3{-2, 1, 0})});
       instance.Mesh = _mesh2;
       instance.Material = _plastic;
       scene.push_back(instance);
     }
     {
       Instance instance = {};
-      instance.TransformObjectToWorld = CreateMatrixTranslate(Vector3{0, 1, 0});
+      instance.TransformObjectToWorld.reset(
+          new Matrix44{CreateMatrixTranslate(Vector3{0, 1, 0})});
       instance.Mesh = _mesh2;
       instance.Material = _plastic;
       scene.push_back(instance);
     }
     {
       Instance instance = {};
-      instance.TransformObjectToWorld = CreateMatrixTranslate(Vector3{2, 1, 0});
+      instance.TransformObjectToWorld.reset(
+          new Matrix44{CreateMatrixTranslate(Vector3{2, 1, 0})});
       instance.Mesh = _mesh2;
       instance.Material = _plastic;
       scene.push_back(instance);
