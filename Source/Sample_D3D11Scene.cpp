@@ -12,6 +12,7 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "Image_TGA.h"
+#include "MutableMap.h"
 #include "Scene_IMaterial.h"
 #include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
@@ -20,21 +21,6 @@
 #include <functional>
 #include <map>
 #include <vector>
-
-template <class KEY, class VALUE> class MutableMap {
-public:
-  VALUE get(KEY key) const {
-    auto findit = map.find(key);
-    if (findit != map.end()) {
-      return findit->second;
-    }
-    return map[key] = fnGenerator(key);
-  }
-  std::function<VALUE(KEY)> fnGenerator;
-
-private:
-  mutable std::map<KEY, VALUE> map;
-};
 
 std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
                    const Matrix44 &)>

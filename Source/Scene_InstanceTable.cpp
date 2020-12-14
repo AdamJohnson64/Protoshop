@@ -5,45 +5,6 @@
 #include "Scene_Plane.h"
 #include "Scene_Sphere.h"
 
-SceneCollector::SceneCollector(const std::vector<Instance> &scene) {
-  std::map<const IMesh *, uint32_t> MeshToIndex;
-  std::map<const IMaterial *, uint32_t> MaterialToIndex;
-  for (int instanceIndex = 0; instanceIndex < scene.size(); ++instanceIndex) {
-    // Convert the pointer-based instance (DOM) into a tabular form.
-    // Rewrite pointers as indices into other tables.
-    InstanceFlat rewrite = {};
-    rewrite.TransformObjectToWorld =
-        scene[instanceIndex].TransformObjectToWorld;
-    // Look up the mesh in our map; if we don't have it then allocate a new
-    // index and append.
-    {
-      if (MeshToIndex.find(scene[instanceIndex].Mesh.get()) ==
-          MeshToIndex.end()) {
-        MeshToIndex[scene[instanceIndex].Mesh.get()] = rewrite.MeshID =
-            MeshTable.size();
-        MeshTable.push_back(scene[instanceIndex].Mesh.get());
-      } else {
-        rewrite.MeshID = MeshToIndex[scene[instanceIndex].Mesh.get()];
-      }
-    }
-    // Look up the material in our map; if we don't have it then allocate a new
-    // index and append.
-    {
-      if (MaterialToIndex.find(scene[instanceIndex].Material.get()) ==
-          MaterialToIndex.end()) {
-        MaterialToIndex[scene[instanceIndex].Material.get()] =
-            rewrite.MaterialID = MaterialTable.size();
-        MaterialTable.push_back(scene[instanceIndex].Material.get());
-      } else {
-        rewrite.MaterialID =
-            MaterialToIndex[scene[instanceIndex].Material.get()];
-      }
-    }
-    // Add this complete instance to our instance table.
-    InstanceTable.push_back(rewrite);
-  }
-}
-
 const std::vector<Instance> &Scene_Default() {
   static std::vector<Instance> scene;
   static bool initialized = false;
