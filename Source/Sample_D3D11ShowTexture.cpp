@@ -46,11 +46,11 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       const uint32_t imageWidth = 320;
       const uint32_t imageHeight = 200;
       const uint32_t imageStride = sizeof(Pixel) * imageWidth;
-      Pixel imageRaw[imageWidth * imageHeight];
-      Image_Fill_Commodore64(imageRaw, imageWidth, imageHeight, imageStride);
+      std::unique_ptr<Pixel[]> imageRaw(new Pixel[imageWidth * imageHeight]);
+      Image_Fill_Commodore64(imageRaw.get(), imageWidth, imageHeight, imageStride);
       textureImage = D3D11_Create_Texture2D(device->GetID3D11Device(),
                                             DXGI_FORMAT_B8G8R8A8_UNORM,
-                                            imageWidth, imageHeight, imageRaw);
+                                            imageWidth, imageHeight, imageRaw.get());
     }
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
         textureImage,
