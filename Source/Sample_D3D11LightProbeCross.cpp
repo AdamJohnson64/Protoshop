@@ -124,8 +124,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         D3D11_Create_Texture(device->GetID3D11Device(), &Load_HDR(hdr));
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
         textureLightProbe,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
-            DXGI_FORMAT_R32G32B32_FLOAT),
+        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureLightProbe),
         &srvLightProbe.p));
   }
   return [=](ID3D11Texture2D *textureBackbuffer) {

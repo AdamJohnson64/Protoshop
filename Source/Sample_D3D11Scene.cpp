@@ -183,16 +183,9 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   MutableMap<const TextureImage *, CComPtr<ID3D11ShaderResourceView>>
       factoryTexture;
   factoryTexture.fnGenerator = [&](const TextureImage *texture) {
-    auto image =
-        Load_TGA(texture != nullptr ? texture->Filename.c_str() : nullptr);
-    auto texture2D = D3D11_Create_Texture(device->GetID3D11Device(), &image);
-    CComPtr<ID3D11ShaderResourceView> srv;
-    TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
-        texture2D.p,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
-            DXGI_FORMAT_B8G8R8A8_UNORM),
-        &srv.p));
-    return srv;
+    return D3D11_Create_SRV(
+        device->GetID3D11DeviceContext(),
+        &Load_TGA(texture != nullptr ? texture->Filename.c_str() : nullptr));
   };
 
   ////////////////////////////////////////////////////////////////////////////////

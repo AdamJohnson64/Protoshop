@@ -117,8 +117,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
         textureCanvasImage,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
-            DXGI_FORMAT_B8G8R8A8_UNORM),
+        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureCanvasImage),
         &srvCanvasImage.p));
   }
   return [=](ID3D11Texture2D *textureBackbuffer) {

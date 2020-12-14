@@ -134,8 +134,7 @@ float4 mainPS(Vertex vin) : SV_Target
         imageHeight, imageRaw);
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
         textureAlbedoMap,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
-            DXGI_FORMAT_B8G8R8A8_UNORM),
+        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureAlbedoMap),
         &srvAlbedoMap.p));
   }
   ////////////////////////////////////////////////////////////////////////////////
@@ -156,8 +155,7 @@ float4 mainPS(Vertex vin) : SV_Target
         imageHeight, imageRaw);
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
         textureNormalMap,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(
-            DXGI_FORMAT_B8G8R8A8_UNORM),
+        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureNormalMap),
         &srvNormalMap.p));
   }
   ////////////////////////////////////////////////////////////////////////////////
