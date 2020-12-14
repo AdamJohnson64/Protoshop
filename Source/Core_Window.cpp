@@ -387,6 +387,7 @@ public:
   }
 };
 
+#if VULKAN_INSTALLED
 class WindowRenderToVKImage : public WindowWithSwapChainD3D12 {
 private:
   std::shared_ptr<VKDevice> m_VKDevice;
@@ -545,6 +546,7 @@ public:
     TRYD3D(m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0));
   }
 };
+#endif
 
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
@@ -583,6 +585,7 @@ CreateNewWindow(std::shared_ptr<OpenGLDevice> deviceOpenGL,
       new WindowRenderToOpenGL(deviceOpenGL, fnRender));
 }
 
+#if VULKAN_INSTALLED
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
                 std::shared_ptr<Direct3D12Device> deviceD3D12,
@@ -590,3 +593,4 @@ CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
   return std::shared_ptr<Object>(
       new WindowRenderToVKImage(deviceVK, deviceD3D12, fnRender));
 }
+#endif
