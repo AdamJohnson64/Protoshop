@@ -35,9 +35,8 @@ CComPtr<ID3D11Buffer> D3D11_Create_Buffer(ID3D11Device *device, UINT bindflags,
                                           int size) {
   D3D11_BUFFER_DESC desc = {};
   desc.ByteWidth = size;
-  desc.Usage = D3D11_USAGE_DYNAMIC;
+  desc.Usage = D3D11_USAGE_DEFAULT;
   desc.BindFlags = bindflags;
-  desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
   desc.StructureByteStride = size;
   CComPtr<ID3D11Buffer> resource;
   TRYD3D(device->CreateBuffer(&desc, nullptr, &resource.p));

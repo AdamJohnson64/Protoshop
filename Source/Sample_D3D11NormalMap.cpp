@@ -118,46 +118,12 @@ float4 mainPS(Vertex vin) : SV_Target
   }
   ////////////////////////////////////////////////////////////////////////////////
   // Create the albedo map.
-  CComPtr<ID3D11ShaderResourceView> srvAlbedoMap;
-  {
-    CComPtr<ID3D11Texture2D> textureAlbedoMap;
-    struct Pixel {
-      uint8_t B, G, R, A;
-    };
-    const uint32_t imageWidth = 256;
-    const uint32_t imageHeight = 256;
-    const uint32_t imageStride = sizeof(Pixel) * imageWidth;
-    Pixel imageRaw[imageWidth * imageHeight];
-    Image_Fill_BrickAlbedo(imageRaw, imageWidth, imageHeight, imageStride);
-    textureAlbedoMap = D3D11_Create_Texture2D(
-        device->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, imageWidth,
-        imageHeight, imageRaw);
-    TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
-        textureAlbedoMap,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureAlbedoMap),
-        &srvAlbedoMap.p));
-  }
+  CComPtr<ID3D11ShaderResourceView> srvAlbedoMap = D3D11_Create_SRV(
+      device->GetID3D11DeviceContext(), Image_BrickAlbedo(256, 256).get());
   ////////////////////////////////////////////////////////////////////////////////
   // Create the normal map.
-  CComPtr<ID3D11ShaderResourceView> srvNormalMap;
-  {
-    CComPtr<ID3D11Texture2D> textureNormalMap;
-    struct Pixel {
-      uint8_t B, G, R, A;
-    };
-    const uint32_t imageWidth = 256;
-    const uint32_t imageHeight = 256;
-    const uint32_t imageStride = sizeof(Pixel) * imageWidth;
-    Pixel imageRaw[imageWidth * imageHeight];
-    Image_Fill_BrickNormal(imageRaw, imageWidth, imageHeight, imageStride);
-    textureNormalMap = D3D11_Create_Texture2D(
-        device->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, imageWidth,
-        imageHeight, imageRaw);
-    TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
-        textureNormalMap,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureNormalMap),
-        &srvNormalMap.p));
-  }
+  CComPtr<ID3D11ShaderResourceView> srvNormalMap = D3D11_Create_SRV(
+      device->GetID3D11DeviceContext(), Image_BrickNormal(256, 256).get());
   ////////////////////////////////////////////////////////////////////////////////
   // Create a vertex buffer.
   CComPtr<ID3D11Buffer> bufferVertex;

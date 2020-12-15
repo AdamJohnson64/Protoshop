@@ -130,11 +130,6 @@ static void Image_Fill_BrickAlbedo(const ImageBGRA &image) {
   }
 }
 
-void Image_Fill_BrickAlbedo(void *data, uint32_t width, uint32_t height,
-                            uint32_t stride) {
-  Image_Fill_BrickAlbedo(ImageBGRA{data, width, height, stride});
-}
-
 static void Image_Fill_BrickDepth(const ImageBGRA &image) {
   uint8_t *bytes = reinterpret_cast<uint8_t *>(image.data);
   for (int y = 0; y < image.height; ++y) {
@@ -146,11 +141,6 @@ static void Image_Fill_BrickDepth(const ImageBGRA &image) {
                                      image.stride * y) = pixel;
     }
   }
-}
-
-void Image_Fill_BrickDepth(void *data, uint32_t width, uint32_t height,
-                           uint32_t stride) {
-  Image_Fill_BrickDepth(ImageBGRA{data, width, height, stride});
 }
 
 static void Image_Fill_BrickNormal(const ImageBGRA &image) {
@@ -165,11 +155,6 @@ static void Image_Fill_BrickNormal(const ImageBGRA &image) {
                                      image.stride * y) = pixel;
     }
   }
-}
-
-void Image_Fill_BrickNormal(void *data, uint32_t width, uint32_t height,
-                            uint32_t stride) {
-  Image_Fill_BrickNormal(ImageBGRA{data, width, height, stride});
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -608,12 +593,42 @@ void Image_Fill_Sample(ImageBGRA &image) {
   }
 }
 
-void Image_Fill_Commodore64(void *data, uint32_t width, uint32_t height,
-                            uint32_t stride) {
-  Image_Fill_Commodore64(ImageBGRA{data, width, height, stride});
-}
-
 void Image_Fill_Sample(void *data, uint32_t width, uint32_t height,
                        uint32_t stride) {
   Image_Fill_Sample(ImageBGRA{data, width, height, stride});
+}
+
+std::shared_ptr<IImage> Image_BrickAlbedo(uint32_t width, uint32_t height) {
+  void *data = new uint8_t[4 * width * height];
+  Image_Fill_BrickAlbedo(ImageBGRA{data, width, height, 4 * width});
+  return std::shared_ptr<ImageOwned>(new ImageOwned(
+      width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
+}
+
+std::shared_ptr<IImage> Image_BrickDepth(uint32_t width, uint32_t height) {
+  void *data = new uint8_t[4 * width * height];
+  Image_Fill_BrickDepth(ImageBGRA{data, width, height, 4 * width});
+  return std::shared_ptr<ImageOwned>(new ImageOwned(
+      width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
+}
+
+std::shared_ptr<IImage> Image_BrickNormal(uint32_t width, uint32_t height) {
+  void *data = new uint8_t[4 * width * height];
+  Image_Fill_BrickNormal(ImageBGRA{data, width, height, 4 * width});
+  return std::shared_ptr<ImageOwned>(new ImageOwned(
+      width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
+}
+
+std::shared_ptr<IImage> Image_Commodore64(uint32_t width, uint32_t height) {
+  void *data = new uint8_t[4 * width * height];
+  Image_Fill_Commodore64(ImageBGRA{data, width, height, 4 * width});
+  return std::shared_ptr<ImageOwned>(new ImageOwned(
+      width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
+}
+
+std::shared_ptr<IImage> Image_Sample(uint32_t width, uint32_t height) {
+  void *data = new uint8_t[4 * width * height];
+  Image_Fill_Sample(ImageBGRA{data, width, height, 4 * width});
+  return std::shared_ptr<ImageOwned>(new ImageOwned(
+      width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }

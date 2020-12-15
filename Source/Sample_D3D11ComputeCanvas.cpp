@@ -101,25 +101,9 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
   ////////////////////////////////////////////////////////////////////////////////
   // Create an image to be used as the canvas.
-  CComPtr<ID3D11ShaderResourceView> srvCanvasImage;
-  {
-    CComPtr<ID3D11Texture2D> textureCanvasImage;
-    {
-      struct Pixel {
-        uint8_t B, G, R, A;
-      };
-      const uint32_t imageStride = sizeof(Pixel) * IMAGE_WIDTH;
-      Pixel imageRaw[IMAGE_WIDTH * IMAGE_HEIGHT];
-      Image_Fill_Commodore64(imageRaw, IMAGE_WIDTH, IMAGE_HEIGHT, imageStride);
-      textureCanvasImage = D3D11_Create_Texture2D(
-          device->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, IMAGE_WIDTH,
-          IMAGE_HEIGHT, imageRaw);
-    }
-    TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
-        textureCanvasImage,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureCanvasImage),
-        &srvCanvasImage.p));
-  }
+  CComPtr<ID3D11ShaderResourceView> srvCanvasImage =
+      D3D11_Create_SRV(device->GetID3D11DeviceContext(),
+                       Image_Commodore64(IMAGE_WIDTH, IMAGE_HEIGHT).get());
   return [=](ID3D11Texture2D *textureBackbuffer) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
     textureBackbuffer->GetDesc(&descBackbuffer);

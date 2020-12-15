@@ -36,28 +36,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         blobCS->GetBufferPointer(), blobCS->GetBufferSize(), nullptr,
         &shaderCompute));
   }
-  CComPtr<ID3D11ShaderResourceView> srvImage;
-  {
-    CComPtr<ID3D11Texture2D> textureImage;
-    {
-      struct Pixel {
-        uint8_t B, G, R, A;
-      };
-      const uint32_t imageWidth = 320;
-      const uint32_t imageHeight = 200;
-      const uint32_t imageStride = sizeof(Pixel) * imageWidth;
-      std::unique_ptr<Pixel[]> imageRaw(new Pixel[imageWidth * imageHeight]);
-      Image_Fill_Commodore64(imageRaw.get(), imageWidth, imageHeight,
-                             imageStride);
-      textureImage = D3D11_Create_Texture2D(
-          device->GetID3D11Device(), DXGI_FORMAT_B8G8R8A8_UNORM, imageWidth,
-          imageHeight, imageRaw.get());
-    }
-    TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
-        textureImage,
-        &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureImage),
-        &srvImage.p));
-  }
+  CComPtr<ID3D11ShaderResourceView> srvImage = D3D11_Create_SRV(
+      device->GetID3D11DeviceContext(), Image_Commodore64(320, 200).get());
   return [=](ID3D11Texture2D *textureBackbuffer) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
     textureBackbuffer->GetDesc(&descBackbuffer);

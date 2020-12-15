@@ -246,15 +246,12 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
         auto constantBuffer =
             factoryConstants.get(instance.TransformObjectToWorld.get());
         {
-          D3D11_MAPPED_SUBRESOURCE mapped = {};
-          TRYD3D(device->GetID3D11DeviceContext()->Map(
-              constantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped));
           Constants constants = {};
           constants.TransformWorldToClip =
               *instance.TransformObjectToWorld * transform;
           constants.TransformObjectToWorld = *instance.TransformObjectToWorld;
-          memcpy(mapped.pData, &constants, sizeof(Constants));
-          device->GetID3D11DeviceContext()->Unmap(constantBuffer, 0);
+          device->GetID3D11DeviceContext()->UpdateSubresource(
+              constantBuffer, 0, nullptr, &constants, 0, 0);
         }
         device->GetID3D11DeviceContext()->VSSetConstantBuffers(
             0, 1, &constantBuffer.p);
