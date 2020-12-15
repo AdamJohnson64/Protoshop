@@ -185,7 +185,8 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   factoryTexture.fnGenerator = [&](const TextureImage *texture) {
     return D3D11_Create_SRV(
         device->GetID3D11DeviceContext(),
-        &Load_TGA(texture != nullptr ? texture->Filename.c_str() : nullptr));
+        Load_TGA(texture != nullptr ? texture->Filename.c_str() : nullptr)
+            .get());
   };
 
   ////////////////////////////////////////////////////////////////////////////////

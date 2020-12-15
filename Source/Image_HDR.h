@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Core_IImage.h"
+#include <memory>
 
 ////////////////////////////////////////////////////////////////////////////////
 // HDR Loader
 // A very junky HDR loader that barely supports the standard.
 ////////////////////////////////////////////////////////////////////////////////
-ImageOwned Load_HDR(const char *filename);
+std::shared_ptr<IImage> Load_HDR(const char *filename);

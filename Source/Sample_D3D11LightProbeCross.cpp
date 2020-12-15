@@ -121,7 +121,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     const char *hdr =
         "Submodules\\RenderToyAssets\\Environments\\grace_cross.hdr";
     CComPtr<ID3D11Texture2D> textureLightProbe =
-        D3D11_Create_Texture(device->GetID3D11Device(), &Load_HDR(hdr));
+        D3D11_Create_Texture(device->GetID3D11Device(), Load_HDR(hdr).get());
     TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
         textureLightProbe,
         &Make_D3D11_SHADER_RESOURCE_VIEW_DESC_Texture2D(textureLightProbe),

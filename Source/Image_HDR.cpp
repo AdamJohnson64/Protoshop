@@ -34,7 +34,7 @@ static float RGBEComponentToFloat(int mantissa, int exponent) {
   return v * d;
 }
 
-ImageOwned Load_HDR(const char *filename) {
+std::shared_ptr<IImage> Load_HDR(const char *filename) {
   // It's not strictly necessary to define types here but we'll use these to
   // highlight the intermediate data storage.
   struct PixelR8G8B8E8 {
@@ -142,7 +142,7 @@ ImageOwned Load_HDR(const char *filename) {
       }
     }
   }
-  return ImageOwned(imageWidth, imageHeight,
-                    sizeof(PixelR32G32B32F) * imageWidth,
-                    DXGI_FORMAT_R32G32B32_FLOAT, finalImage.release());
+  return std::shared_ptr<IImage>(new ImageOwned(
+      imageWidth, imageHeight, sizeof(PixelR32G32B32F) * imageWidth,
+      DXGI_FORMAT_R32G32B32_FLOAT, finalImage.release()));
 }

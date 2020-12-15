@@ -14,15 +14,17 @@ template <class T> void Expect(std::ifstream &stream, T expect) {
     throw std::exception("Badness.");
 }
 
-ImageOwned Load_TGA(const char *filename) {
+std::shared_ptr<IImage> Load_TGA(const char *filename) {
   if (filename == nullptr) {
-    return ImageOwned(1, 1, sizeof(uint32_t), DXGI_FORMAT_B8G8R8A8_UNORM,
-                      new uint32_t[1]{0xFFFF0000});
+    return std::shared_ptr<IImage>(new ImageOwned(1, 1, sizeof(uint32_t),
+                                                  DXGI_FORMAT_B8G8R8A8_UNORM,
+                                                  new uint32_t[1]{0xFFFF0000}));
   }
   std::ifstream file(filename, std::ios_base::binary);
   if (!file.is_open()) {
-    return ImageOwned(1, 1, sizeof(uint32_t), DXGI_FORMAT_B8G8R8A8_UNORM,
-                      new uint32_t[1]{0xFFFF0000});
+    return std::shared_ptr<IImage>(new ImageOwned(1, 1, sizeof(uint32_t),
+                                                  DXGI_FORMAT_B8G8R8A8_UNORM,
+                                                  new uint32_t[1]{0xFFFF0000}));
   }
   Expect<uint8_t>(file, 0);
   Expect<uint8_t>(file, 0);
@@ -49,8 +51,8 @@ ImageOwned Load_TGA(const char *filename) {
         data[3 + 4 * x + 4 * width * y] = 255;
       }
     }
-    return ImageOwned(width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM,
-                      data.release());
+    return std::shared_ptr<IImage>(new ImageOwned(
+        width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data.release()));
   } else if (bitdepth == 32) {
     if (imagedescriptor != 8)
       throw std::exception("The image descriptor should be 8 for 32-bit "
@@ -64,9 +66,10 @@ ImageOwned Load_TGA(const char *filename) {
         data[3 + 4 * x + 4 * width * y] = Read<uint8_t>(file);
       }
     }
-    return ImageOwned(width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM,
-                      data.release());
+    return std::shared_ptr<IImage>(new ImageOwned(
+        width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data.release()));
   }
-  return ImageOwned(1, 1, sizeof(uint32_t), DXGI_FORMAT_B8G8R8A8_UNORM,
-                    new uint32_t[1]{0xFFFF0000});
+  return std::shared_ptr<IImage>(new ImageOwned(1, 1, sizeof(uint32_t),
+                                                DXGI_FORMAT_B8G8R8A8_UNORM,
+                                                new uint32_t[1]{0xFFFF0000}));
 }
