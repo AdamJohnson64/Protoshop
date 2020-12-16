@@ -48,7 +48,8 @@ cbuffer Constants
     float4x4 TransformObjectToWorld;
 };
 
-Texture2D TextureAlbedoMap;
+Texture2D TextureAlbedoMap : register(t0);
+Texture2D TextureMaskMap : register(t1);
 sampler userSampler;
 
 struct VertexVS
@@ -87,6 +88,8 @@ float4 mainPS(VertexPS vin) : SV_Target
 
 float4 mainPSTextured(VertexPS vin) : SV_Target
 {
+    float4 mask = TextureMaskMap.Sample(userSampler, vin.Texcoord);
+    if (mask.x < 0.5) discard;
     float3 p = vin.WorldPosition;
     float3 n = vin.Normal;
     float3 l = normalize(float3(4, 4, -4) - p);
@@ -185,9 +188,6 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   };
 
 #ifdef LOAD_TEXTURE_ASYNC
-  // Texture to use if all else fails.
-  CComPtr<ID3D11ShaderResourceView> defaultTexture = D3D11_Create_SRV(
-      device->GetID3D11DeviceContext(), Image_BrickAlbedo(16, 16).get());
   // Textures currently being loaded (async).
   std::map<const TextureImage *, std::shared_future<std::shared_ptr<IImage>>>
       mapTexturesLoading;
@@ -212,19 +212,22 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
                                                    : nullptr);
               },
               texture);
-          return defaultTexture;
+          return CComPtr<ID3D11ShaderResourceView>(nullptr);
         }
         // The final result isn't ready (see above).
         // Check on the async generator for a final result.
         if (findGen->second.wait_for(std::chrono::milliseconds(0)) !=
             std::future_status::ready) {
-          return defaultTexture;
+          return CComPtr<ID3D11ShaderResourceView>(nullptr);
         }
         // We have a result pending; construct the SRV in sync.
         // Load the result into the completed map to short out the async
-        // generator.
-        auto result = D3D11_Create_SRV(device->GetID3D11DeviceContext(),
-                                       findGen->second.get().get());
+        // generator. If the texture is null then just fall back to the
+        // default texture.
+        auto result = findGen->second.get().get() != nullptr
+                          ? D3D11_Create_SRV(device->GetID3D11DeviceContext(),
+                                             findGen->second.get().get())
+                          : CComPtr<ID3D11ShaderResourceView>(nullptr);
         mapTexturesReady[texture] = result;
         return result;
       };
@@ -232,12 +235,24 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   MutableMap<const TextureImage *, CComPtr<ID3D11ShaderResourceView>>
       factoryTexture;
   factoryTexture.fnGenerator = [&](const TextureImage *texture) {
-    return D3D11_Create_SRV(
-        device->GetID3D11DeviceContext(),
-        Load_TGA(texture != nullptr ? texture->Filename.c_str() : nullptr)
-            .get());
+    if (texture == nullptr) {
+      return CComPtr<ID3D11ShaderResourceView>(nullptr);
+    }
+    auto image = Load_TGA(texture->Filename.c_str());
+    if (image == nullptr) {
+      return CComPtr<ID3D11ShaderResourceView>(nullptr);
+    }
+    return D3D11_Create_SRV(device->GetID3D11DeviceContext(), image.get());
   };
 #endif
+
+  // Textures to use if all else fails.
+  CComPtr<ID3D11ShaderResourceView> defaultAlbedoMap =
+      D3D11_Create_SRV(device->GetID3D11DeviceContext(),
+                       Image_SolidColor(1, 1, 0xFFFF0000).get());
+  CComPtr<ID3D11ShaderResourceView> defaultMaskMap =
+      D3D11_Create_SRV(device->GetID3D11DeviceContext(),
+                       Image_SolidColor(1, 1, 0xFFFFFFFF).get());
 
   ////////////////////////////////////////////////////////////////////////////////
   // Capture all of the above into the rendering function for every frame.
@@ -275,16 +290,27 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
       // Setup the material; specific shaders and shader parameters.
       {
         device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr, 0);
-        OBJMaterial *textured = dynamic_cast<OBJMaterial *>(instance.Material.get());
+        OBJMaterial *textured =
+            dynamic_cast<OBJMaterial *>(instance.Material.get());
         if (textured != nullptr) {
-          CComPtr<ID3D11ShaderResourceView> albedo =
-              factoryTexture(textured->DiffuseMap.get());
           device->GetID3D11DeviceContext()->PSSetShader(shaderPixelTextured,
                                                         nullptr, 0);
           device->GetID3D11DeviceContext()->PSSetSamplers(0, 1,
                                                           &samplerState.p);
-          device->GetID3D11DeviceContext()->PSSetShaderResources(0, 1,
-                                                                 &albedo.p);
+          CComPtr<ID3D11ShaderResourceView> srvAlbedoMap =
+              factoryTexture(textured->DiffuseMap.get());
+          if (srvAlbedoMap == nullptr) {
+            srvAlbedoMap = defaultAlbedoMap;
+          }
+          device->GetID3D11DeviceContext()->PSSetShaderResources(
+              0, 1, &srvAlbedoMap.p);
+          CComPtr<ID3D11ShaderResourceView> srvMaskMap =
+              factoryTexture(textured->DissolveMap.get());
+          if (srvMaskMap == nullptr) {
+            srvMaskMap = defaultMaskMap;
+          }
+          device->GetID3D11DeviceContext()->PSSetShaderResources(1, 1,
+                                                                 &srvMaskMap.p);
         } else {
           device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr,
                                                         0);

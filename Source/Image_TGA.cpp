@@ -16,15 +16,11 @@ template <class T> void Expect(std::ifstream &stream, T expect) {
 
 std::shared_ptr<IImage> Load_TGA(const char *filename) {
   if (filename == nullptr) {
-    return std::shared_ptr<IImage>(new ImageOwned(1, 1, sizeof(uint32_t),
-                                                  DXGI_FORMAT_B8G8R8A8_UNORM,
-                                                  new uint32_t[1]{0xFFFF0000}));
+    return nullptr;
   }
   std::ifstream file(filename, std::ios_base::binary);
   if (!file.is_open()) {
-    return std::shared_ptr<IImage>(new ImageOwned(1, 1, sizeof(uint32_t),
-                                                  DXGI_FORMAT_B8G8R8A8_UNORM,
-                                                  new uint32_t[1]{0xFFFF0000}));
+    return nullptr;
   }
   Expect<uint8_t>(file, 0);
   Expect<uint8_t>(file, 0);
@@ -69,7 +65,5 @@ std::shared_ptr<IImage> Load_TGA(const char *filename) {
     return std::shared_ptr<IImage>(new ImageOwned(
         width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data.release()));
   }
-  return std::shared_ptr<IImage>(new ImageOwned(1, 1, sizeof(uint32_t),
-                                                DXGI_FORMAT_B8G8R8A8_UNORM,
-                                                new uint32_t[1]{0xFFFF0000}));
+  return nullptr;
 }
