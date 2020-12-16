@@ -3,8 +3,8 @@
 #include <stdint.h>
 
 // Global render target dimensions for simplicity.
-#define RENDERTARGET_WIDTH 640
-#define RENDERTARGET_HEIGHT 480
+extern const int RENDERTARGET_WIDTH;
+extern const int RENDERTARGET_HEIGHT;
 
 // Align a value up to the next multiple of a designated size.
 // e.g. AlignUp(5, 256) == 256

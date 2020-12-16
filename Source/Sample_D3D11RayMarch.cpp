@@ -154,7 +154,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       Constants constants;
       constants.TransformClipToWorld =
           Invert(GetTransformSource()->GetTransformWorldToClip());
-      constants.WindowDimensions = {RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT};
+      constants.WindowDimensions = {static_cast<float>(RENDERTARGET_WIDTH),
+                                    static_cast<float>(RENDERTARGET_HEIGHT)};
       constants.Time = t;
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, &constants, 0, 0);
