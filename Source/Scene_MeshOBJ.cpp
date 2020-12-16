@@ -127,7 +127,7 @@ LoadMTL(const char *filename) {
       } else if (line.substr(0, 7) == "\tmap_d ") {
         if (currentMaterialName == "")
           throw std::exception("No material name specified.");
-        std::string textureFilename = line.substr(8);
+        std::string textureFilename = line.substr(7);
         if (mapPathToTexture.find(textureFilename) == mapPathToTexture.end()) {
           mapPathToTexture[textureFilename].reset(new TextureImage());
           mapPathToTexture[textureFilename]->Filename =
