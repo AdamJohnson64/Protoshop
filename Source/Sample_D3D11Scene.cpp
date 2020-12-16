@@ -275,10 +275,10 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
       // Setup the material; specific shaders and shader parameters.
       {
         device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr, 0);
-        Textured *textured = dynamic_cast<Textured *>(instance.Material.get());
+        OBJMaterial *textured = dynamic_cast<OBJMaterial *>(instance.Material.get());
         if (textured != nullptr) {
           CComPtr<ID3D11ShaderResourceView> albedo =
-              factoryTexture(textured->AlbedoMap.get());
+              factoryTexture(textured->DiffuseMap.get());
           device->GetID3D11DeviceContext()->PSSetShader(shaderPixelTextured,
                                                         nullptr, 0);
           device->GetID3D11DeviceContext()->PSSetSamplers(0, 1,

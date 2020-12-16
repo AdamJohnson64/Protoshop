@@ -17,7 +17,9 @@ public:
   std::string Filename;
 };
 
-class Textured : public Object, public IMaterial {
+class OBJMaterial : public Object, public IMaterial {
 public:
-  std::shared_ptr<TextureImage> AlbedoMap;
+  // Don't blame me for the names here; these names are legacy OBJ standard.
+  std::shared_ptr<TextureImage> DiffuseMap; // This is albedo, not diffuse.
+  std::shared_ptr<TextureImage> DissolveMap; // "Dissolve" is a very strange name for "Alpha Mask".
 };

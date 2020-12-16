@@ -91,7 +91,7 @@ LoadMTL(const char *filename) {
     ////////////////////////////////////////////////////////////////////////////////
     // Build up a material definition along with its name identity.
     std::string currentMaterialName;
-    std::shared_ptr<Textured> currentMaterialDefinition;
+    std::shared_ptr<OBJMaterial> currentMaterialDefinition;
     ////////////////////////////////////////////////////////////////////////////////
     // Take the currently accumulated material definition and emit a material.
     std::function<void()> FLUSHMATERIAL = [&]() {
@@ -112,8 +112,8 @@ LoadMTL(const char *filename) {
         // restarting.
         FLUSHMATERIAL();
         currentMaterialName = line.substr(7);
-        currentMaterialDefinition.reset(new Textured());
-      } else if (line.substr(0, 8) == "\tmap_Ka ") {
+        currentMaterialDefinition.reset(new OBJMaterial());
+      } else if (line.substr(0, 8) == "\tmap_Kd ") {
         if (currentMaterialName == "")
           throw std::exception("No material name specified.");
         std::string textureFilename = line.substr(8);
@@ -122,7 +122,18 @@ LoadMTL(const char *filename) {
           mapPathToTexture[textureFilename]->Filename =
               pathPrefix + textureFilename;
         }
-        currentMaterialDefinition->AlbedoMap =
+        currentMaterialDefinition->DiffuseMap =
+            mapPathToTexture[textureFilename];
+      } else if (line.substr(0, 7) == "\tmap_d ") {
+        if (currentMaterialName == "")
+          throw std::exception("No material name specified.");
+        std::string textureFilename = line.substr(8);
+        if (mapPathToTexture.find(textureFilename) == mapPathToTexture.end()) {
+          mapPathToTexture[textureFilename].reset(new TextureImage());
+          mapPathToTexture[textureFilename]->Filename =
+              pathPrefix + textureFilename;
+        }
+        currentMaterialDefinition->DissolveMap =
             mapPathToTexture[textureFilename];
       }
     }
