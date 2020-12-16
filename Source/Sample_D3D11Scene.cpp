@@ -81,7 +81,7 @@ float4 mainPS(VertexPS vin) : SV_Target
 {
     float3 p = vin.WorldPosition;
     float3 n = vin.Normal;
-    float3 l = normalize(float3(4, 4, -4) - p);
+    float3 l = normalize(float3(1, 4, -1) - p);
     float illum = dot(n, l);
     return float4(illum, illum, illum, 1);
 }
@@ -92,7 +92,7 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     if (mask.x < 0.5) discard;
     float3 p = vin.WorldPosition;
     float3 n = vin.Normal;
-    float3 l = normalize(float3(4, 4, -4) - p);
+    float3 l = normalize(float3(1, 4, -1) - p);
     float illum = dot(n, l);
     float4 albedo = TextureAlbedoMap.Sample(userSampler, vin.Texcoord);
     return float4(albedo.xyz * illum, albedo.w);
