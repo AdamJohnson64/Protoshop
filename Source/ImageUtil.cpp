@@ -632,3 +632,12 @@ std::shared_ptr<IImage> Image_Sample(uint32_t width, uint32_t height) {
   return std::shared_ptr<ImageOwned>(new ImageOwned(
       width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }
+
+std::shared_ptr<IImage> Image_SolidColor(uint32_t width, uint32_t height,
+                                         uint32_t color) {
+  void *data = new uint8_t[4 * width * height];
+  Image_Fill_Color(ImageBGRA{data, width, height, 4 * width},
+                   *reinterpret_cast<PixelBGRA *>(&color));
+  return std::shared_ptr<ImageOwned>(new ImageOwned(
+      width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
+}
