@@ -190,23 +190,23 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
       device->GetID3D11DeviceContext(), Image_BrickAlbedo(16, 16).get());
   // Textures currently being loaded (async).
   std::map<const TextureImage *, std::shared_future<std::shared_ptr<IImage>>>
-      factoryTextureInFlight;
+      mapTexturesLoading;
   // Textures processed and ready for use.
   std::map<const TextureImage *, CComPtr<ID3D11ShaderResourceView>>
-      factoryTexture;
+      mapTexturesReady;
 
   // The "Texture Server" is just a function that returns SRVs ready for use.
   std::function<CComPtr<ID3D11ShaderResourceView>(const TextureImage *)>
-      textureServer = [=](const TextureImage *texture) mutable {
+      factoryTexture = [=](const TextureImage *texture) mutable {
         // Check if there's a fully processed version ready.
-        auto findIt = factoryTexture.find(texture);
-        if (findIt != factoryTexture.end()) {
+        auto findIt = mapTexturesReady.find(texture);
+        if (findIt != mapTexturesReady.end()) {
           return findIt->second;
         }
         // There isn't one ready; check for a generator in flight.
-        auto findGen = factoryTextureInFlight.find(texture);
-        if (findGen == factoryTextureInFlight.end()) {
-          factoryTextureInFlight[texture] = std::async(
+        auto findGen = mapTexturesLoading.find(texture);
+        if (findGen == mapTexturesLoading.end()) {
+          mapTexturesLoading[texture] = std::async(
               [&](const TextureImage *texture) {
                 return Load_TGA(texture != nullptr ? texture->Filename.c_str()
                                                    : nullptr);
@@ -221,10 +221,11 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
           return defaultTexture;
         }
         // We have a result pending; construct the SRV in sync.
-        // Load the result into the completed map to short out the async generator.
+        // Load the result into the completed map to short out the async
+        // generator.
         auto result = D3D11_Create_SRV(device->GetID3D11DeviceContext(),
                                        findGen->second.get().get());
-        factoryTexture[texture] = result;
+        mapTexturesReady[texture] = result;
         return result;
       };
 #else
@@ -276,13 +277,8 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
         device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr, 0);
         Textured *textured = dynamic_cast<Textured *>(instance.Material.get());
         if (textured != nullptr) {
-#ifdef LOAD_TEXTURE_ASYNC
           CComPtr<ID3D11ShaderResourceView> albedo =
-              textureServer(textured->AlbedoMap.get());
-#else
-          CComPtr<ID3D11ShaderResourceView> albedo =
-              factoryTexture.get(textured->AlbedoMap.get());
-#endif
+              factoryTexture(textured->AlbedoMap.get());
           device->GetID3D11DeviceContext()->PSSetShader(shaderPixelTextured,
                                                         nullptr, 0);
           device->GetID3D11DeviceContext()->PSSetSamplers(0, 1,
@@ -298,7 +294,7 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
       // Setup geometry for draw.
       {
         auto constantBuffer =
-            factoryConstants.get(instance.TransformObjectToWorld.get());
+            factoryConstants(instance.TransformObjectToWorld.get());
         {
           Constants constants = {};
           constants.TransformWorldToClip =
@@ -313,11 +309,11 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
       {
         const UINT vertexStride[] = {sizeof(VertexFormat)};
         const UINT vertexOffset[] = {0};
-        auto vb = factoryVertex.get(scene[instanceIndex].Mesh.get());
+        auto vb = factoryVertex(scene[instanceIndex].Mesh.get());
         device->GetID3D11DeviceContext()->IASetVertexBuffers(
             0, 1, &vb.p, vertexStride, vertexOffset);
       }
-      auto ib = factoryIndex.get(scene[instanceIndex].Mesh.get());
+      auto ib = factoryIndex(scene[instanceIndex].Mesh.get());
       device->GetID3D11DeviceContext()->IASetIndexBuffer(
           ib, DXGI_FORMAT_R32_UINT, 0);
       device->GetID3D11DeviceContext()->DrawIndexed(

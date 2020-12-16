@@ -190,7 +190,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
           1; // HACK: HARD CODE THE MATERIAL TO INDEX 1 (Barycentric visual)
       instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
           *instance.TransformObjectToWorld, materialID,
-          factoryBLAS.get(instance.Mesh.get())->GetGPUVirtualAddress());
+          factoryBLAS(instance.Mesh.get())->GetGPUVirtualAddress());
       instanceDescs[i].InstanceID = i;
     }
     resourceTLAS =

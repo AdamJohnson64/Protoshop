@@ -146,7 +146,7 @@ float4 main() : SV_Target
         const Instance &instance = scene[i];
         {
           D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
-          desc.BufferLocation = factoryConstants.get(instance.TransformObjectToWorld.get())->GetGPUVirtualAddress();
+          desc.BufferLocation = factoryConstants(instance.TransformObjectToWorld.get())->GetGPUVirtualAddress();
           desc.SizeInBytes = 256;
           D3D12_CPU_DESCRIPTOR_HANDLE handle =
               descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
@@ -166,7 +166,7 @@ float4 main() : SV_Target
         {
           D3D12_VERTEX_BUFFER_VIEW desc = {};
           desc.BufferLocation =
-              factoryVertex.get(instance.Mesh.get())->GetGPUVirtualAddress();
+              factoryVertex(instance.Mesh.get())->GetGPUVirtualAddress();
           desc.SizeInBytes = sizeof(float[3]) * scene[i].Mesh->getVertexCount();
           desc.StrideInBytes = sizeof(float[3]);
           commandList->IASetVertexBuffers(0, 1, &desc);
@@ -174,7 +174,7 @@ float4 main() : SV_Target
         {
           D3D12_INDEX_BUFFER_VIEW desc = {};
           desc.BufferLocation =
-              factoryIndex.get(instance.Mesh.get())->GetGPUVirtualAddress();
+              factoryIndex(instance.Mesh.get())->GetGPUVirtualAddress();
           desc.SizeInBytes = sizeof(int32_t) * scene[i].Mesh->getIndexCount();
           desc.Format = DXGI_FORMAT_R32_UINT;
           commandList->IASetIndexBuffer(&desc);
