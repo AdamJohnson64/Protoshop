@@ -50,8 +50,6 @@ void SetCameraWorldToView(const Matrix44 &transformWorldToView) {
 
 class WindowBase : public Object {
 protected:
-  const int defaultWidth = 640;
-  const int defaultHeight = 480;
   HWND m_hWindow;
 
 public:
@@ -71,7 +69,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////
     // Create a window of this class.
     {
-      RECT rect = {64, 64, 64 + defaultWidth, 64 + defaultHeight};
+      RECT rect = {64, 64, 64 + RENDERTARGET_WIDTH, 64 + RENDERTARGET_HEIGHT};
       AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
       m_hWindow =
           CreateWindow(L"Protoshop", L"Protoshop", WS_OVERLAPPEDWINDOW,
@@ -252,7 +250,8 @@ public:
       TRYD3D(m_Direct3D11Device->GetID3D11Device()->CreateDepthStencilView(
           textureDepth, &desc, &dsvDepth));
     }
-    m_fnRender(textureBackbuffer, dsvDepth, GetTransformSource()->GetTransformWorldToClip());
+    m_fnRender(textureBackbuffer, dsvDepth,
+               GetTransformSource()->GetTransformWorldToClip());
     m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
   }
 };
@@ -409,8 +408,8 @@ public:
       descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
       D3D12_RESOURCE_DESC descResource = {};
       descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-      descResource.Width = defaultWidth;
-      descResource.Height = defaultHeight;
+      descResource.Width = RENDERTARGET_WIDTH;
+      descResource.Height = RENDERTARGET_HEIGHT;
       descResource.DepthOrArraySize = 1;
       descResource.MipLevels = 1;
       descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -456,8 +455,8 @@ public:
           structureChain = {
               vk::ImageCreateInfo(
                   {}, vk::ImageType::e2D, vk::Format::eR8G8B8A8Unorm,
-                  {static_cast<uint32_t>(defaultWidth),
-                   static_cast<uint32_t>(defaultHeight), 1},
+                  {static_cast<uint32_t>(RENDERTARGET_WIDTH),
+                   static_cast<uint32_t>(RENDERTARGET_HEIGHT), 1},
                   1, 1, vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
                   vk::ImageUsageFlagBits::eTransferDst |
                       vk::ImageUsageFlagBits::eColorAttachment,

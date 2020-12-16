@@ -22,8 +22,6 @@
 
 class Sample_D3D11ShaderToy : public Object {
 private:
-  const int defaultRenderWidth = 640;
-  const int defaultRenderHeight = 480;
   const int defaultCodeWidth = 512;
   const int defaultErrorHeight = 64;
   HWND m_hWindowHost;
@@ -36,6 +34,7 @@ private:
   CComPtr<ID3D11ComputeShader> m_pComputeShader;
   __declspec(align(16)) struct Constants {
     Matrix44 TransformClipToWorld;
+    Vector2 WindowDimensions;
     float Time;
   };
 
@@ -67,8 +66,8 @@ public:
     ////////////////////////////////////////////////////////////////////////////////
     // Create a window of this class.
     {
-      RECT rect = {64, 64, 64 + defaultRenderWidth + defaultCodeWidth,
-                   64 + defaultRenderHeight};
+      RECT rect = {64, 64, 64 + RENDERTARGET_WIDTH + defaultCodeWidth,
+                   64 + RENDERTARGET_HEIGHT};
       AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
       m_hWindowHost = CreateWindow(
           L"ProtoshopShaderToyHost", L"Protoshop Shader Toy (Win32)",
@@ -78,13 +77,14 @@ public:
     }
     m_hWindowRender = CreateWindow(L"ProtoshopShaderToyRender",
                                    L"Render Window", WS_CHILD | WS_VISIBLE, 0,
-                                   0, defaultRenderWidth, defaultRenderHeight,
+                                   0, RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT,
                                    m_hWindowHost, nullptr, nullptr, this);
     m_pSwapChain = CreateDXGISwapChain(m_pDevice, m_hWindowRender);
     std::string strShaderCode =
         R"SHADER(cbuffer Constants
 {
     float4x4 TransformClipToWorld;
+    float2 WindowDimensions;
     float Time;
 };
 
@@ -153,7 +153,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     const float3 light = normalize(float3(1, 1, -1));
     ////////////////////////////////////////////////////////////////////////////////
     // Form up normalized screen coordinates.
-    const float2 Normalized = mad(float2(2, -2) / float2(640, 480), float2(dispatchThreadId.xy), float2(-1, 1));
+    const float2 Normalized = mad(float2(2, -2) / WindowDimensions, float2(dispatchThreadId.xy), float2(-1, 1));
     ////////////////////////////////////////////////////////////////////////////////
     // Form the world ray.
     float4 front = mul(TransformClipToWorld, float4(Normalized.xy, 0, 1));
@@ -198,12 +198,12 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         CreateWindowA("EDIT", strShaderCode.c_str(),
                       WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL |
                           ES_AUTOHSCROLL | ES_WANTRETURN,
-                      defaultRenderWidth, 0, defaultCodeWidth,
-                      defaultRenderHeight - defaultErrorHeight, m_hWindowHost,
+                      RENDERTARGET_WIDTH, 0, RENDERTARGET_WIDTH,
+                      RENDERTARGET_HEIGHT - defaultErrorHeight, m_hWindowHost,
                       nullptr, nullptr, nullptr);
     m_hWindowError = CreateWindowA(
         "EDIT", "Compilation successful.", WS_CHILD | WS_VISIBLE | ES_MULTILINE,
-        defaultRenderWidth, defaultRenderHeight - defaultErrorHeight,
+        RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT - defaultErrorHeight,
         defaultCodeWidth, defaultErrorHeight, m_hWindowHost, nullptr, nullptr,
         nullptr);
     ////////////////////////////////////////////////////////////////////////////////
@@ -293,6 +293,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         Constants constants;
         constants.TransformClipToWorld =
             Invert(GetTransformSource()->GetTransformWorldToClip());
+        constants.WindowDimensions = {RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT};
         constants.Time = t;
         window->m_pDevice->GetID3D11DeviceContext()->UpdateSubresource(
             window->m_pBufferConstants, 0, nullptr, &constants, 0, 0);

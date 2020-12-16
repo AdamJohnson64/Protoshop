@@ -31,6 +31,7 @@ CreateSample_D3D11LightProbeCross(std::shared_ptr<Direct3D11Device> device) {
 cbuffer Constants
 {
     float4x4 TransformClipToWorld;
+    float2 WindowDimensions;
 };
 
 RWTexture2D<float4> renderTarget;
@@ -41,7 +42,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
     ////////////////////////////////////////////////////////////////////////////////
     // Form up normalized screen coordinates.
-    const float2 Normalized = mad(float2(2, -2) / float2(640, 480), float2(dispatchThreadId.xy), float2(-1, 1));
+    const float2 Normalized = mad(float2(2, -2) / WindowDimensions, float2(dispatchThreadId.xy), float2(-1, 1));
     ////////////////////////////////////////////////////////////////////////////////
     // Form the world ray.
     float4 front = mul(TransformClipToWorld, float4(Normalized.xy, 0, 1));
@@ -114,8 +115,12 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         blobCS->GetBufferPointer(), blobCS->GetBufferSize(), nullptr,
         &shaderCompute));
   }
+  __declspec(align(16)) struct Constants {
+    Matrix44 TransformClipToWorld;
+    Vector2 WindowDimensions;
+  };
   CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
-      device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Matrix44));
+      device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
   CComPtr<ID3D11ShaderResourceView> srvLightProbe;
   {
     const char *hdr =
@@ -135,9 +140,14 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
                                         textureBackbuffer);
     device->GetID3D11DeviceContext()->ClearState();
     // Upload the constant buffer.
-    device->GetID3D11DeviceContext()->UpdateSubresource(
-        bufferConstants, 0, nullptr,
-        &Invert(GetTransformSource()->GetTransformWorldToClip()), 0, 0);
+    {
+      Constants constants;
+      constants.TransformClipToWorld =
+          Invert(GetTransformSource()->GetTransformWorldToClip());
+      constants.WindowDimensions = {RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT};
+      device->GetID3D11DeviceContext()->UpdateSubresource(
+          bufferConstants, 0, nullptr, &constants, 0, 0);
+    }
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
         0, 1, &uavBackbuffer.p, nullptr);

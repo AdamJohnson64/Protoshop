@@ -28,6 +28,7 @@ CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device) {
 cbuffer Constants
 {
     float4x4 TransformClipToWorld;
+    float2 WindowDimensions;
     float Time;
 };
 
@@ -96,7 +97,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     const float3 light = normalize(float3(1, 1, -1));
     ////////////////////////////////////////////////////////////////////////////////
     // Form up normalized screen coordinates.
-    const float2 Normalized = mad(float2(2, -2) / float2(640, 480), float2(dispatchThreadId.xy), float2(-1, 1));
+    const float2 Normalized = mad(float2(2, -2) / WindowDimensions, float2(dispatchThreadId.xy), float2(-1, 1));
     ////////////////////////////////////////////////////////////////////////////////
     // Form the world ray.
     float4 front = mul(TransformClipToWorld, float4(Normalized.xy, 0, 1));
@@ -135,6 +136,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
   }
   __declspec(align(16)) struct Constants {
     Matrix44 TransformClipToWorld;
+    Vector2 WindowDimensions;
     float Time;
   };
   CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
@@ -152,6 +154,7 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       Constants constants;
       constants.TransformClipToWorld =
           Invert(GetTransformSource()->GetTransformWorldToClip());
+      constants.WindowDimensions = {RENDERTARGET_WIDTH, RENDERTARGET_HEIGHT};
       constants.Time = t;
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, &constants, 0, 0);
