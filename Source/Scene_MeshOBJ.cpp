@@ -17,6 +17,8 @@ public:
   void copyVertices(void *to, uint32_t stride) const override;
   void copyNormals(void *to, uint32_t stride) const override;
   void copyTexcoords(void *to, uint32_t stride) const override;
+  void copyTangents(void *to, uint32_t stride) const override;
+  void copyBitangents(void *to, uint32_t stride) const override;
   void copyIndices(void *to, uint32_t stride) const override;
   int m_vertexCount;
   int m_indexCount;
@@ -52,6 +54,14 @@ void MeshFromOBJ::copyTexcoords(void *to, uint32_t stride) const {
     *reinterpret_cast<TVector2<float> *>(to) = m_texcoords[i];
     to = reinterpret_cast<uint8_t *>(to) + stride;
   }
+}
+
+void MeshFromOBJ::copyTangents(void *to, uint32_t stride) const {
+  // TODO: Tangents
+}
+
+void MeshFromOBJ::copyBitangents(void *to, uint32_t stride) const {
+  // TODO: Bitangents
 }
 
 void MeshFromOBJ::copyIndices(void *to, uint32_t stride) const {

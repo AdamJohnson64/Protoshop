@@ -38,6 +38,8 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
     Vector3 Position;
     Vector3 Normal;
     Vector2 Texcoord;
+    Vector3 Tangent;
+    Vector3 Bitangent;
   };
   ////////////////////////////////////////////////////////////////////////////////
   // Create all the shaders that we might need.
@@ -57,6 +59,8 @@ struct VertexVS
     float4 Position : SV_Position;
     float3 Normal : NORMAL;
     float2 Texcoord : TEXCOORD;
+    float3 Tangent : TANGENT;
+    float3 Bitangent : BITANGENT;
 };
 
 struct VertexPS
@@ -64,6 +68,8 @@ struct VertexPS
     float4 Position : SV_Position;
     float3 Normal : NORMAL;
     float2 Texcoord : TEXCOORD;
+    float3 Tangent : TANGENT;
+    float3 Bitangent : BITANGENT;
     float3 WorldPosition : POSITION1;
 };
 
@@ -73,6 +79,8 @@ VertexPS mainVS(VertexVS vin)
     vout.Position = mul(TransformWorldToClip, vin.Position);
     vout.Normal = normalize(mul(TransformObjectToWorld, float4(vin.Normal, 0)).xyz);
     vout.Texcoord = vin.Texcoord;
+    vout.Tangent = normalize(mul(TransformObjectToWorld, float4(vin.Tangent, 0)).xyz);
+    vout.Bitangent = normalize(mul(TransformObjectToWorld, float4(vin.Bitangent, 0)).xyz);
     vout.WorldPosition = mul(TransformObjectToWorld, vin.Position).xyz;
     return vout;
 }
@@ -121,7 +129,7 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   // Create the input vertex layout.
   CComPtr<ID3D11InputLayout> inputLayout;
   {
-    std::array<D3D11_INPUT_ELEMENT_DESC, 3> desc = {};
+    std::array<D3D11_INPUT_ELEMENT_DESC, 5> desc = {};
     desc[0].SemanticName = "SV_Position";
     desc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
     desc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -134,6 +142,14 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     desc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
     desc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
     desc[2].AlignedByteOffset = offsetof(VertexFormat, Texcoord);
+    desc[3].SemanticName = "TANGENT";
+    desc[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    desc[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    desc[3].AlignedByteOffset = offsetof(VertexFormat, Tangent);
+    desc[4].SemanticName = "BITANGENT";
+    desc[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    desc[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+    desc[4].AlignedByteOffset = offsetof(VertexFormat, Bitangent);
     TRYD3D(device->GetID3D11Device()->CreateInputLayout(
         &desc[0], desc.size(), blobShaderVertex->GetBufferPointer(),
         blobShaderVertex->GetBufferSize(), &inputLayout));
@@ -181,6 +197,13 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     mesh->copyTexcoords(
         reinterpret_cast<Vector2 *>(bytesVertex.get() +
                                     offsetof(VertexFormat, Texcoord)),
+        sizeof(VertexFormat));
+    mesh->copyTangents(reinterpret_cast<Vector3 *>(
+                           bytesVertex.get() + offsetof(VertexFormat, Tangent)),
+                       sizeof(VertexFormat));
+    mesh->copyBitangents(
+        reinterpret_cast<Vector3 *>(bytesVertex.get() +
+                                    offsetof(VertexFormat, Bitangent)),
         sizeof(VertexFormat));
     return D3D11_Create_Buffer(device->GetID3D11Device(),
                                D3D11_BIND_VERTEX_BUFFER, sizeVertex,

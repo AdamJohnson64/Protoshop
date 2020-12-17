@@ -47,6 +47,36 @@ void ParametricUVToMesh::copyTexcoords(void *to, uint32_t stride) const {
   }
 }
 
+void ParametricUVToMesh::copyTangents(void *to, uint32_t stride) const {
+  const float ETA = 0.001f;
+  for (int32_t v = 0; v <= m_stepsInV; ++v) {
+    for (int32_t u = 0; u <= m_stepsInU; ++u) {
+      Vector3 p1 = m_shape->getVertexPosition(
+          {(float)u / m_stepsInU - ETA, (float)v / m_stepsInV});
+      Vector3 p2 = m_shape->getVertexPosition(
+          {(float)u / m_stepsInU + ETA, (float)v / m_stepsInV});
+      *(reinterpret_cast<Vector3 *>(to)) = Normalize(p2 - p1);
+      to =
+          reinterpret_cast<Vector3 *>(reinterpret_cast<uint8_t *>(to) + stride);
+    }
+  }
+}
+
+void ParametricUVToMesh::copyBitangents(void *to, uint32_t stride) const {
+  const float ETA = 0.001f;
+  for (int32_t v = 0; v <= m_stepsInV; ++v) {
+    for (int32_t u = 0; u <= m_stepsInU; ++u) {
+      Vector3 p1 = m_shape->getVertexPosition(
+          {(float)u / m_stepsInU, (float)v / m_stepsInV - ETA});
+      Vector3 p2 = m_shape->getVertexPosition(
+          {(float)u / m_stepsInU, (float)v / m_stepsInV + ETA});
+      *(reinterpret_cast<Vector3 *>(to)) = Normalize(p2 - p1);
+      to =
+          reinterpret_cast<Vector3 *>(reinterpret_cast<uint8_t *>(to) + stride);
+    }
+  }
+}
+
 void ParametricUVToMesh::copyIndices(void *to, uint32_t stride) const {
   for (int32_t v = 0; v < m_stepsInV; ++v) {
     for (int32_t u = 0; u < m_stepsInU; ++u) {
