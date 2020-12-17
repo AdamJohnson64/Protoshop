@@ -149,24 +149,27 @@ std::vector<Instance> LoadOBJ(const char *filename) {
   // Accumulated instances so far.
   std::vector<Instance> instances;
   // Vertices and faces for the accumulated mesh so far.
-  std::vector<Vector3> vertices, normals;
-  std::vector<Vector2> uvs;
-  std::vector<uint32_t> facesVertex, facesNormal, facesUV;
+  std::vector<Vector3> vertexPosition;
+  std::vector<Vector3> vertexNormal;
+  std::vector<Vector2> vertexTexcoord;
+  std::vector<uint32_t> facesVertex;
+  std::vector<uint32_t> facesNormal;
+  std::vector<uint32_t> facesTexcoord;
   // Last detected material.
-  std::shared_ptr<IMaterial> currentMaterial;
+  std::shared_ptr<IMaterial> lastActiveMaterial;
   ////////////////////////////////////////////////////////////////////////////////
-  // This is a bit cheeky. In order to shared constant buffers we're packing
+  // This is a bit cheeky. In order to share constant buffers we're packing
   // transforms into objects and sharing them with shared_ptr. This is nasty
   // but solves our problem of transform constant buffer identity.
-  std::shared_ptr<Matrix44> sharedTransform(
+  std::shared_ptr<Matrix44> transformIdentity(
       new Matrix44{CreateMatrixTranslate(Vector3{0, 0, 0})});
   ////////////////////////////////////////////////////////////////////////////////
   // Flush the accumulated geometry and materials to a new instance.
   std::function<void()> FLUSHMESH = [&]() {
-    if (currentMaterial == nullptr)
+    if (lastActiveMaterial == nullptr)
       return;
     Instance instance = {};
-    instance.TransformObjectToWorld = sharedTransform;
+    instance.TransformObjectToWorld = transformIdentity;
     std::shared_ptr<MeshFromOBJ> mesh(new MeshFromOBJ());
     mesh->m_indexCount = facesVertex.size();
     mesh->m_vertexCount = facesVertex.size();
@@ -178,76 +181,94 @@ std::vector<Instance> LoadOBJ(const char *filename) {
     mesh->m_indices.reset(new uint32_t[mesh->m_indexCount]);
     for (int f = 0; f < mesh->m_indexCount; ++f) {
       mesh->m_indices[f] = f;
-      mesh->m_vertices[mesh->m_indices[f]] = vertices[facesVertex[f]] * 0.01f;
-      mesh->m_normals[mesh->m_indices[f]] = normals[facesNormal[f]];
-      mesh->m_texcoords[mesh->m_indices[f]] = uvs[facesUV[f]];
+      mesh->m_vertices[mesh->m_indices[f]] =
+          vertexPosition[facesVertex[f]] * 0.01f;
+      mesh->m_normals[mesh->m_indices[f]] = vertexNormal[facesNormal[f]];
+      mesh->m_texcoords[mesh->m_indices[f]] = vertexTexcoord[facesTexcoord[f]];
     }
     instance.Mesh = mesh;
-    instance.Material = currentMaterial;
+    instance.Material = lastActiveMaterial;
     instances.push_back(instance);
     facesVertex.clear();
     facesNormal.clear();
-    facesUV.clear();
-    currentMaterial.reset();
+    facesTexcoord.clear();
+    lastActiveMaterial.reset();
   };
   ////////////////////////////////////////////////////////////////////////////////
   // Parse the model definition.
-  std::ifstream model(filename);
-  std::string line;
-  std::map<std::string, std::shared_ptr<IMaterial>> materials;
-  while (std::getline(model, line)) {
-    if (false) {
-    } else if (line.size() == 0 || line[0] == '#') {
-      // Ignore comment.
-    } else if (line.substr(0, 7) == "mtllib ") {
+  std::ifstream fileOBJ(filename);
+  std::string fileLine;
+  std::map<std::string, std::shared_ptr<IMaterial>> mapNameToMaterial;
+  while (std::getline(fileOBJ, fileLine)) {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Ignore comments (#)
+    if (fileLine.size() == 0 || fileLine[0] == '#') {
+
+      ////////////////////////////////////////////////////////////////////////////////
       // Filename of the material definition file (mtllib)
-      std::string materialName = line.substr(7);
-      materials = LoadMTL(materialName.c_str());
-    } else if (line.substr(0, 2) == "v ") {
+    } else if (fileLine.substr(0, 7) == "mtllib ") {
+      std::string materialName = fileLine.substr(7);
+      mapNameToMaterial = LoadMTL(materialName.c_str());
+
+      ////////////////////////////////////////////////////////////////////////////////
       // Vertex Position (v)
-      auto bits = split(line);
+    } else if (fileLine.substr(0, 2) == "v ") {
+      auto bits = split(fileLine);
       if (bits.size() != 4) {
         throw std::exception("Wrong number of components in vertex position.");
       }
       float x = std::stof(std::string(bits[1]));
       float y = std::stof(std::string(bits[2]));
       float z = std::stof(std::string(bits[3]));
-      vertices.push_back({x, y, z});
-    } else if (line.substr(0, 3) == "vn ") {
+      vertexPosition.push_back({x, y, z});
+
+      ////////////////////////////////////////////////////////////////////////////////
       // Vertex Normals (vn)
-      auto bits = split(line);
+    } else if (fileLine.substr(0, 3) == "vn ") {
+      auto bits = split(fileLine);
       if (bits.size() != 4) {
         throw std::exception("Wrong number of components in vertex normal.");
       }
       float x = std::stof(std::string(bits[1]));
       float y = std::stof(std::string(bits[2]));
       float z = std::stof(std::string(bits[3]));
-      normals.push_back({x, y, z});
-    } else if (line.substr(0, 3) == "vt ") {
+      vertexNormal.push_back({x, y, z});
+
+      ////////////////////////////////////////////////////////////////////////////////
       // Vertex Texture Coordinates (vt)
-      auto bits = split(line);
+    } else if (fileLine.substr(0, 3) == "vt ") {
+      auto bits = split(fileLine);
       if (bits.size() != 4) {
         throw std::exception("Wrong number of components in vertex UV.");
       }
       float x = std::stof(std::string(bits[1]));
       float y = std::stof(std::string(bits[2]));
       float z = std::stof(std::string(bits[3]));
-      uvs.push_back({x, 1 - y}); // Note: Correction for OpenGL flipped V.
-    } else if (line.substr(0, 2) == "g ") {
+      vertexTexcoord.push_back(
+          {x, 1 - y}); // Note: Correction for OpenGL flipped V.
+
+      ////////////////////////////////////////////////////////////////////////////////
       // Groups (g?)
-      std::string groupName = line.substr(2);
-    } else if (line.substr(0, 7) == "usemtl ") {
+    } else if (fileLine.substr(0, 2) == "g ") {
+      std::string groupName = fileLine.substr(2);
+
+      ////////////////////////////////////////////////////////////////////////////////
+      // Material selection (usemtl)
+    } else if (fileLine.substr(0, 7) == "usemtl ") {
       FLUSHMESH();
-      std::string materialName = line.substr(7);
-      if (materials.size() > 0 &&
-          materials.find(materialName) == materials.end()) {
+      std::string materialName = fileLine.substr(7);
+      if (mapNameToMaterial.size() > 0 &&
+          mapNameToMaterial.find(materialName) == mapNameToMaterial.end()) {
         throw std::exception("Requested material is undefined.");
       }
-      currentMaterial = materials[materialName];
-    } else if (line.substr(0, 2) == "s ") {
+      lastActiveMaterial = mapNameToMaterial[materialName];
 
-    } else if (line.substr(0, 2) == "f ") {
-      auto bits = split(line);
+    } else if (fileLine.substr(0, 2) == "s ") {
+
+      ////////////////////////////////////////////////////////////////////////////////
+      // Faces (f)
+    } else if (fileLine.substr(0, 2) == "f ") {
+      auto bits = split(fileLine);
       if (bits.size() < 4) {
         throw std::exception("Insufficient components in face.");
       }
@@ -264,6 +285,7 @@ std::vector<Instance> LoadOBJ(const char *filename) {
         if (facebits3.size() != 3) {
           throw std::exception("Wrong number of indices in face.");
         }
+        // Extract the indices (pos/uv/nor pos/uv/nor pos/uv/nor)
         int v0 = std::stoi(std::string(facebits1[0])) - 1;
         int v1 = std::stoi(std::string(facebits2[0])) - 1;
         int v2 = std::stoi(std::string(facebits3[0])) - 1;
@@ -273,15 +295,16 @@ std::vector<Instance> LoadOBJ(const char *filename) {
         int vn0 = std::stoi(std::string(facebits1[2])) - 1;
         int vn1 = std::stoi(std::string(facebits2[2])) - 1;
         int vn2 = std::stoi(std::string(facebits3[2])) - 1;
-        if (v0 >= vertices.size() || v1 >= vertices.size() ||
-            v2 >= vertices.size()) {
+        if (v0 >= vertexPosition.size() || v1 >= vertexPosition.size() ||
+            v2 >= vertexPosition.size()) {
           throw std::exception("Vertex position index out of range.");
         }
-        if (vn0 >= normals.size() || vn1 >= normals.size() ||
-            vn2 >= normals.size()) {
+        if (vn0 >= vertexNormal.size() || vn1 >= vertexNormal.size() ||
+            vn2 >= vertexNormal.size()) {
           throw std::exception("Vertex normal index out of range.");
         }
-        if (vt0 >= uvs.size() || vt1 >= uvs.size() || vt2 >= uvs.size()) {
+        if (vt0 >= vertexTexcoord.size() || vt1 >= vertexTexcoord.size() ||
+            vt2 >= vertexTexcoord.size()) {
           throw std::exception("Vertex UV index out of range.");
         }
         facesVertex.push_back(v0);
@@ -290,12 +313,14 @@ std::vector<Instance> LoadOBJ(const char *filename) {
         facesNormal.push_back(vn0);
         facesNormal.push_back(vn1);
         facesNormal.push_back(vn2);
-        facesUV.push_back(vt0);
-        facesUV.push_back(vt1);
-        facesUV.push_back(vt2);
+        facesTexcoord.push_back(vt0);
+        facesTexcoord.push_back(vt1);
+        facesTexcoord.push_back(vt2);
       }
+
     } else {
-      throw std::exception(("Unreadable OBJ file at '" + line + ".").c_str());
+      throw std::exception(
+          ("Unreadable OBJ file at '" + fileLine + ".").c_str());
     }
   }
   FLUSHMESH();
