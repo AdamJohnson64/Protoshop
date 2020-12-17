@@ -16,8 +16,6 @@ public:
   void copyVertices(void *to, uint32_t stride) const override;
   void copyNormals(void *to, uint32_t stride) const override;
   void copyTexcoords(void *to, uint32_t stride) const override;
-  void copyTangents(void *to, uint32_t stride) const override;
-  void copyBitangents(void *to, uint32_t stride) const override;
   void copyIndices(void *to, uint32_t stride) const override;
 
 private:

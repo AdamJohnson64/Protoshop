@@ -60,8 +60,6 @@ struct VertexVS
     float4 Position : SV_Position;
     float3 Normal : NORMAL;
     float2 Texcoord : TEXCOORD;
-    float3 Tangent : TANGENT;
-    float3 Bitangent : BITANGENT;
 };
 
 struct VertexPS
@@ -69,8 +67,6 @@ struct VertexPS
     float4 Position : SV_Position;
     float3 Normal : NORMAL;
     float2 Texcoord : TEXCOORD;
-    float3 Tangent : TANGENT;
-    float3 Bitangent : BITANGENT;
     float3 WorldPosition : POSITION1;
 };
 
@@ -80,10 +76,26 @@ VertexPS mainVS(VertexVS vin)
     vout.Position = mul(TransformWorldToClip, vin.Position);
     vout.Normal = normalize(mul(TransformObjectToWorld, float4(vin.Normal, 0)).xyz);
     vout.Texcoord = vin.Texcoord;
-    vout.Tangent = normalize(mul(TransformObjectToWorld, float4(vin.Tangent, 0)).xyz);
-    vout.Bitangent = normalize(mul(TransformObjectToWorld, float4(vin.Bitangent, 0)).xyz);
     vout.WorldPosition = mul(TransformObjectToWorld, vin.Position).xyz;
     return vout;
+}
+
+// This is the same cotangent reconstruction described at:
+// http://www.thetenthplanet.de/archives/1180
+float3x3 cotangent_frame( float3 N, float3 p, float2 uv ) {
+  // get edge vectors of the pixel triangle
+  float3 dp1 = ddx( p );
+  float3 dp2 = ddy( p );
+  float2 duv1 = ddx( uv );
+  float2 duv2 = ddy( uv );
+  // solve the linear system
+  float3 dp2perp = cross( dp2, N );
+  float3 dp1perp = cross( N, dp1 );
+  float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+  float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+  // construct a scale-invariant frame
+  float invmax = rsqrt( max( dot(T,T), dot(B,B) ) );
+  return float3x3( T * invmax, B * invmax, N );
 }
 
 float4 mainPS(VertexPS vin) : SV_Target
@@ -97,14 +109,24 @@ float4 mainPS(VertexPS vin) : SV_Target
 
 float4 mainPSTextured(VertexPS vin) : SV_Target
 {
+    ////////////////////////////////////////////////////////////////////////////////
+    // Alpha Masking (Alpha Test)
     float4 mask = TextureMaskMap.Sample(userSampler, vin.Texcoord);
     if (mask.x < 0.5) discard;
 
-    float3 NormalMap = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
-    float3x3 TangentFrame = float3x3(vin.Tangent, -vin.Bitangent, vin.Normal);
-    float3 n = mul(TangentFrame, NormalMap);
+    ////////////////////////////////////////////////////////////////////////////////
+    // Normal Mapping.
 
+    // Calculate the normal (Pixel/Analytical Based).
+    float3x3 TBN = cotangent_frame(vin.Normal, vin.WorldPosition, vin.Texcoord);
+    
+    float3 NormalMap = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
+    float3 n = normalize(mul(NormalMap, TBN));
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Final Lighting.
     float3 l = normalize(float3(1, 2, -1) - vin.WorldPosition);
+    //float3 l = normalize(float3(1, 1, 1));
     float illum = dot(n, l);
     float4 albedo = TextureAlbedoMap.Sample(userSampler, vin.Texcoord);
     return float4(albedo.xyz * illum, albedo.w);
@@ -133,7 +155,7 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   // Create the input vertex layout.
   CComPtr<ID3D11InputLayout> inputLayout;
   {
-    std::array<D3D11_INPUT_ELEMENT_DESC, 5> desc = {};
+    std::array<D3D11_INPUT_ELEMENT_DESC, 3> desc = {};
     desc[0].SemanticName = "SV_Position";
     desc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
     desc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -146,14 +168,6 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     desc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
     desc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
     desc[2].AlignedByteOffset = offsetof(VertexFormat, Texcoord);
-    desc[3].SemanticName = "TANGENT";
-    desc[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    desc[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    desc[3].AlignedByteOffset = offsetof(VertexFormat, Tangent);
-    desc[4].SemanticName = "BITANGENT";
-    desc[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    desc[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    desc[4].AlignedByteOffset = offsetof(VertexFormat, Bitangent);
     TRYD3D(device->GetID3D11Device()->CreateInputLayout(
         &desc[0], desc.size(), blobShaderVertex->GetBufferPointer(),
         blobShaderVertex->GetBufferSize(), &inputLayout));
@@ -201,13 +215,6 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     mesh->copyTexcoords(
         reinterpret_cast<Vector2 *>(bytesVertex.get() +
                                     offsetof(VertexFormat, Texcoord)),
-        sizeof(VertexFormat));
-    mesh->copyTangents(reinterpret_cast<Vector3 *>(
-                           bytesVertex.get() + offsetof(VertexFormat, Tangent)),
-                       sizeof(VertexFormat));
-    mesh->copyBitangents(
-        reinterpret_cast<Vector3 *>(bytesVertex.get() +
-                                    offsetof(VertexFormat, Bitangent)),
         sizeof(VertexFormat));
     return D3D11_Create_Buffer(device->GetID3D11Device(),
                                D3D11_BIND_VERTEX_BUFFER, sizeVertex,

@@ -17,8 +17,6 @@ public:
   void copyVertices(void *to, uint32_t stride) const override;
   void copyNormals(void *to, uint32_t stride) const override;
   void copyTexcoords(void *to, uint32_t stride) const override;
-  void copyTangents(void *to, uint32_t stride) const override;
-  void copyBitangents(void *to, uint32_t stride) const override;
   void copyIndices(void *to, uint32_t stride) const override;
   int m_vertexCount;
   int m_indexCount;
@@ -53,48 +51,6 @@ void MeshFromOBJ::copyTexcoords(void *to, uint32_t stride) const {
   for (int i = 0; i < m_vertexCount; ++i) {
     *reinterpret_cast<TVector2<float> *>(to) = m_texcoords[i];
     to = reinterpret_cast<uint8_t *>(to) + stride;
-  }
-}
-
-void MeshFromOBJ::copyTangents(void *to, uint32_t stride) const {
-  if ((m_vertexCount % 3) != 0) {
-    throw std::exception(
-        "We expect the mesh to be fully exploded (numverts = numfaces * 3)");
-  }
-  void *begin = to;
-  for (int i = 0; i < m_vertexCount / 3; ++i) {
-    Vector3 p1 = m_vertices[3 * i + 1] - m_vertices[3 * i + 0];
-    Vector3 p2 = m_vertices[3 * i + 2] - m_vertices[3 * i + 0];
-    Vector2 t1 = m_texcoords[3 * i + 1] - m_texcoords[3 * i + 0];
-    Vector2 t2 = m_texcoords[3 * i + 2] - m_texcoords[3 * i + 0];
-    Vector3 o =
-        Normalize(Vector3{t2.Y * p1.X - t1.Y * p2.X, t2.Y * p1.Y - t1.Y * p2.Y,
-                          t2.Y * p1.Z - t1.Y * p2.Z});
-    for (int j = 0; j < 3; ++j) {
-      *reinterpret_cast<TVector3<float> *>(to) = o;
-      to = reinterpret_cast<uint8_t *>(to) + stride;
-    }
-  }
-}
-
-void MeshFromOBJ::copyBitangents(void *to, uint32_t stride) const {
-  if ((m_vertexCount % 3) != 0) {
-    throw std::exception(
-        "We expect the mesh to be fully exploded (numverts = numfaces * 3)");
-  }
-  void *begin = to;
-  for (int i = 0; i < m_vertexCount / 3; ++i) {
-    Vector3 p1 = m_vertices[3 * i + 1] - m_vertices[3 * i + 0];
-    Vector3 p2 = m_vertices[3 * i + 2] - m_vertices[3 * i + 0];
-    Vector2 t1 = m_texcoords[3 * i + 1] - m_texcoords[3 * i + 0];
-    Vector2 t2 = m_texcoords[3 * i + 2] - m_texcoords[3 * i + 0];
-    Vector3 o =
-        Normalize(Vector3{t2.X * p1.X - t1.X * p2.X, t2.X * p1.Y - t1.X * p2.Y,
-                          t2.X * p1.Z - t1.X * p2.Z});
-    for (int j = 0; j < 3; ++j) {
-      *reinterpret_cast<TVector3<float> *>(to) = o;
-      to = reinterpret_cast<uint8_t *>(to) + stride;
-    }
   }
 }
 
