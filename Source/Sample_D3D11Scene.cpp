@@ -51,7 +51,8 @@ cbuffer Constants
 };
 
 Texture2D TextureAlbedoMap : register(t0);
-Texture2D TextureMaskMap : register(t1);
+Texture2D TextureNormalMap : register(t1);
+Texture2D TextureMaskMap : register(t2);
 sampler userSampler;
 
 struct VertexVS
@@ -98,9 +99,12 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
 {
     float4 mask = TextureMaskMap.Sample(userSampler, vin.Texcoord);
     if (mask.x < 0.5) discard;
-    float3 p = vin.WorldPosition;
-    float3 n = vin.Normal;
-    float3 l = normalize(float3(1, 4, -1) - p);
+
+    float3 NormalMap = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
+    float3x3 TangentFrame = float3x3(vin.Tangent, -vin.Bitangent, vin.Normal);
+    float3 n = mul(TangentFrame, NormalMap);
+
+    float3 l = normalize(float3(1, 2, -1) - vin.WorldPosition);
     float illum = dot(n, l);
     float4 albedo = TextureAlbedoMap.Sample(userSampler, vin.Texcoord);
     return float4(albedo.xyz * illum, albedo.w);
@@ -273,6 +277,9 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   CComPtr<ID3D11ShaderResourceView> defaultAlbedoMap =
       D3D11_Create_SRV(device->GetID3D11DeviceContext(),
                        Image_SolidColor(1, 1, 0xFFFF0000).get());
+  CComPtr<ID3D11ShaderResourceView> defaultNormalMap =
+      D3D11_Create_SRV(device->GetID3D11DeviceContext(),
+                       Image_SolidColor(1, 1, 0xFF8080FF).get());
   CComPtr<ID3D11ShaderResourceView> defaultMaskMap =
       D3D11_Create_SRV(device->GetID3D11DeviceContext(),
                        Image_SolidColor(1, 1, 0xFFFFFFFF).get());
@@ -320,6 +327,7 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
                                                         nullptr, 0);
           device->GetID3D11DeviceContext()->PSSetSamplers(0, 1,
                                                           &samplerState.p);
+          // Bind Albedo Map.
           CComPtr<ID3D11ShaderResourceView> srvAlbedoMap =
               factoryTexture(textured->DiffuseMap.get());
           if (srvAlbedoMap == nullptr) {
@@ -327,12 +335,23 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
           }
           device->GetID3D11DeviceContext()->PSSetShaderResources(
               0, 1, &srvAlbedoMap.p);
+
+          // Bind Normal Map.
+          CComPtr<ID3D11ShaderResourceView> srvNormalMap =
+              factoryTexture(textured->NormalMap.get());
+          if (srvNormalMap == nullptr) {
+            srvNormalMap = defaultNormalMap;
+          }
+          device->GetID3D11DeviceContext()->PSSetShaderResources(
+              1, 1, &srvNormalMap.p);
+
+          // Bind Mask Map.
           CComPtr<ID3D11ShaderResourceView> srvMaskMap =
               factoryTexture(textured->DissolveMap.get());
           if (srvMaskMap == nullptr) {
             srvMaskMap = defaultMaskMap;
           }
-          device->GetID3D11DeviceContext()->PSSetShaderResources(1, 1,
+          device->GetID3D11DeviceContext()->PSSetShaderResources(2, 1,
                                                                  &srvMaskMap.p);
         } else {
           device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr,
