@@ -38,8 +38,6 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
     Vector3 Position;
     Vector3 Normal;
     Vector2 Texcoord;
-    Vector3 Tangent;
-    Vector3 Bitangent;
   };
   ////////////////////////////////////////////////////////////////////////////////
   // Create all the shaders that we might need.
@@ -111,25 +109,25 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
 {
     ////////////////////////////////////////////////////////////////////////////////
     // Alpha Masking (Alpha Test)
-    float4 mask = TextureMaskMap.Sample(userSampler, vin.Texcoord);
-    if (mask.x < 0.5) discard;
+    float4 texelMask = TextureMaskMap.Sample(userSampler, vin.Texcoord);
+    if (texelMask.x < 0.5) discard;
 
     ////////////////////////////////////////////////////////////////////////////////
     // Normal Mapping.
-
     // Calculate the normal (Pixel/Analytical Based).
-    float3x3 TBN = cotangent_frame(vin.Normal, vin.WorldPosition, vin.Texcoord);
-    
-    float3 NormalMap = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
-    float3 n = normalize(mul(NormalMap, TBN));
+    float3x3 matTangentFrame = cotangent_frame(vin.Normal, vin.WorldPosition, vin.Texcoord);    
+    float3 texelNormal = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
+    float3 vectorNormal = normalize(mul(texelNormal, matTangentFrame));
 
     ////////////////////////////////////////////////////////////////////////////////
     // Final Lighting.
-    float3 l = normalize(float3(1, 2, -1) - vin.WorldPosition);
-    //float3 l = normalize(float3(1, 1, 1));
-    float illum = dot(n, l);
-    float4 albedo = TextureAlbedoMap.Sample(userSampler, vin.Texcoord);
-    return float4(albedo.xyz * illum, albedo.w);
+    float3 vectorLight = float3(-10, 4, -3) - vin.WorldPosition;
+    float lightDistance = length(vectorLight);
+    vectorLight /= lightDistance;
+    float illumination = max(0, dot(vectorNormal, vectorLight) - 0.005f * lightDistance * lightDistance);
+    
+    float4 texelAlbedo = TextureAlbedoMap.Sample(userSampler, vin.Texcoord);
+    return float4(texelAlbedo.xyz * illumination, texelAlbedo.w);
 })SHADER";
   CComPtr<ID3D11VertexShader> shaderVertex;
   CComPtr<ID3DBlob> blobShaderVertex =
