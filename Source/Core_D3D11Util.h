@@ -4,6 +4,8 @@
 #include <atlbase.h>
 #include <d3d11.h>
 
+D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultBorder();
+
 D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultWrap();
 
 D3D11_VIEWPORT Make_D3D11_VIEWPORT(UINT width, UINT height);

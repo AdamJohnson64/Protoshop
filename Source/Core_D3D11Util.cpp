@@ -3,6 +3,16 @@
 #include "Core_DXGIUtil.h"
 #include <array>
 
+D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultBorder() {
+  D3D11_SAMPLER_DESC desc = {};
+  desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+  desc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+  desc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+  desc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+  desc.MaxLOD = D3D11_FLOAT32_MAX;
+  return desc;
+}
+
 D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultWrap() {
   D3D11_SAMPLER_DESC desc = {};
   desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;

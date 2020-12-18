@@ -31,6 +31,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Object> D3D11RayMarch = CreateNewWindow(deviceD3D11, CreateSample_D3D11RayMarch(deviceD3D11));
     std::shared_ptr<Object> D3D11SceneDefault = CreateNewWindow(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11, Scene_Default()));
     std::shared_ptr<Object> D3D11SceneSponza = CreateNewWindow(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11, Scene_Sponza()));
+    std::shared_ptr<Object> D3D11SceneShadowMap = CreateNewWindow(deviceD3D11, CreateSample_D3D11ShadowMap(deviceD3D11));
     std::shared_ptr<Object> D3D11ShowTexture = CreateNewWindow(deviceD3D11, CreateSample_D3D11ShowTexture(deviceD3D11));
     std::shared_ptr<Object> D3D11Tessellation = CreateNewWindow(deviceD3D11, CreateSample_D3D11Tessellation(deviceD3D11));
     //std::shared_ptr<Object> D3D11Voxel = CreateNewWindow(deviceD3D11, CreateSample_D3D11Voxel(deviceD3D11));
@@ -54,7 +55,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<OpenGLDevice> deviceGL = CreateOpenGLDevice();
     std::shared_ptr<Object> GLBasic = CreateNewWindow(deviceGL, CreateSample_OpenGLBasic(deviceGL));
 #if VULKAN_INSTALLED
-    ////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////
     // Vulkan Samples
     std::shared_ptr<VKDevice> deviceVK = CreateVKDevice();
     std::shared_ptr<Object> VKBasic = CreateNewWindow(deviceVK, deviceD3D12, CreateSample_VKBasic());

@@ -113,6 +113,12 @@ template <class T> TVector3<T> operator*(const TVector3<T> &lhs, const T &rhs) {
   return {lhs.X * rhs, lhs.Y * rhs, lhs.Z * rhs};
 }
 
+template <class T>
+TVector3<T> Cross(const TVector3<T> &lhs, const TVector3<T> &rhs) {
+  return {lhs.Y * rhs.Z - lhs.Z * rhs.Y, lhs.Z * rhs.X - lhs.X * rhs.Z,
+          lhs.X * rhs.Y - lhs.Y * rhs.X};
+}
+
 template <class T> float Dot(const TVector3<T> &lhs, const TVector3<T> &rhs) {
   return lhs.X * rhs.X + lhs.Y * rhs.Y + lhs.Z * rhs.Z;
 }
@@ -228,6 +234,24 @@ TMatrix44<T> operator*(const TMatrix44<T> &lhs, const TMatrix44<T> &rhs) {
       // clang-format on
   };
 }
+
+template <class T>
+TMatrix44<T> CreateMatrixLookAt(const TVector3<T> &eye, const TVector3<T> &at,
+                                const TVector3<T> &up) {
+  Vector3 z = Normalize(at - eye);
+  Vector3 x = Normalize(Cross(up, z));
+  Vector3 y = Normalize(Cross(z, x));
+  x = Cross(y, z);
+  Matrix44 o = {
+      // clang-format off
+    x.X, x.Y, x.Z, 0,
+    y.X, y.Y, y.Z, 0,
+    z.X, z.Y, z.Z, 0,
+    eye.X, eye.Y, eye.Z, 1
+      // clang-format on
+  };
+  return Invert(o);
+};
 
 template <class T> TMatrix44<T> CreateMatrixRotation(const TQuaternion<T> &q) {
   T m11 = 1 - 2 * q.Y * q.Y - 2 * q.Z * q.Z;

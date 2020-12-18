@@ -49,6 +49,10 @@ std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
                         const std::vector<Instance> &scene);
 
+std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
+                   const Matrix44 &)>
+CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device);
+
 std::function<void(ID3D11Texture2D *)>
 CreateSample_D3D11ShowTexture(std::shared_ptr<Direct3D11Device> device);
 

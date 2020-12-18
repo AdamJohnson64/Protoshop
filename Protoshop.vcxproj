@@ -71,6 +71,7 @@
     <ClCompile Include="Source\Sample_D3D11RayMarch.cpp" />
     <ClCompile Include="Source\Sample_D3D11Mesh.cpp" />
     <ClCompile Include="Source\Sample_D3D11Scene.cpp" />
+    <ClCompile Include="Source\Sample_D3D11ShadowMap.cpp" />
     <ClCompile Include="Source\Sample_D3D11ShowTexture.cpp" />
     <ClCompile Include="Source\Sample_D3D11Tessellation.cpp" />
     <ClCompile Include="Source\Sample_D3D11Voxel.cpp" />
