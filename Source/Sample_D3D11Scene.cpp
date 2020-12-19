@@ -34,11 +34,6 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
     Matrix44 TransformWorldToClip;
     Matrix44 TransformObjectToWorld;
   };
-  struct VertexFormat {
-    Vector3 Position;
-    Vector3 Normal;
-    Vector2 Texcoord;
-  };
   ////////////////////////////////////////////////////////////////////////////////
   // Create all the shaders that we might need.
   const char *szShaderCode = R"SHADER(
@@ -51,21 +46,6 @@ cbuffer Constants
 };
 
 Texture2D TextureMaskMap : register(t2);
-
-struct VertexVS
-{
-    float4 Position : SV_Position;
-    float3 Normal : NORMAL;
-    float2 Texcoord : TEXCOORD;
-};
-
-struct VertexPS
-{
-    float4 Position : SV_Position;
-    float3 Normal : NORMAL;
-    float2 Texcoord : TEXCOORD;
-    float3 WorldPosition : POSITION1;
-};
 
 VertexPS mainVS(VertexVS vin)
 {
@@ -138,15 +118,15 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     desc[0].SemanticName = "SV_Position";
     desc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
     desc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    desc[0].AlignedByteOffset = offsetof(VertexFormat, Position);
+    desc[0].AlignedByteOffset = offsetof(VertexVS, Position);
     desc[1].SemanticName = "NORMAL";
     desc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
     desc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    desc[1].AlignedByteOffset = offsetof(VertexFormat, Normal);
+    desc[1].AlignedByteOffset = offsetof(VertexVS, Normal);
     desc[2].SemanticName = "TEXCOORD";
     desc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
     desc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-    desc[2].AlignedByteOffset = offsetof(VertexFormat, Texcoord);
+    desc[2].AlignedByteOffset = offsetof(VertexVS, Texcoord);
     TRYD3D(device->GetID3D11Device()->CreateInputLayout(
         &desc[0], desc.size(), blobShaderVertex->GetBufferPointer(),
         blobShaderVertex->GetBufferSize(), &inputLayout));
@@ -182,19 +162,17 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
 
   MutableMap<const IMesh *, CComPtr<ID3D11Buffer>> factoryVertex;
   factoryVertex.fnGenerator = [&](const IMesh *mesh) {
-    int sizeVertex = sizeof(VertexFormat) * mesh->getVertexCount();
+    int sizeVertex = sizeof(VertexVS) * mesh->getVertexCount();
     std::unique_ptr<int8_t[]> bytesVertex(new int8_t[sizeVertex]);
-    mesh->copyVertices(
-        reinterpret_cast<Vector3 *>(bytesVertex.get() +
-                                    offsetof(VertexFormat, Position)),
-        sizeof(VertexFormat));
-    mesh->copyNormals(reinterpret_cast<Vector3 *>(
-                          bytesVertex.get() + offsetof(VertexFormat, Normal)),
-                      sizeof(VertexFormat));
-    mesh->copyTexcoords(
-        reinterpret_cast<Vector2 *>(bytesVertex.get() +
-                                    offsetof(VertexFormat, Texcoord)),
-        sizeof(VertexFormat));
+    mesh->copyVertices(reinterpret_cast<Vector3 *>(
+                           bytesVertex.get() + offsetof(VertexVS, Position)),
+                       sizeof(VertexVS));
+    mesh->copyNormals(reinterpret_cast<Vector3 *>(bytesVertex.get() +
+                                                  offsetof(VertexVS, Normal)),
+                      sizeof(VertexVS));
+    mesh->copyTexcoords(reinterpret_cast<Vector2 *>(
+                            bytesVertex.get() + offsetof(VertexVS, Texcoord)),
+                        sizeof(VertexVS));
     return D3D11_Create_Buffer(device->GetID3D11Device(),
                                D3D11_BIND_VERTEX_BUFFER, sizeVertex,
                                bytesVertex.get());
@@ -361,7 +339,7 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
             0, 1, &constantBuffer.p);
       }
       {
-        const UINT vertexStride[] = {sizeof(VertexFormat)};
+        const UINT vertexStride[] = {sizeof(VertexVS)};
         const UINT vertexOffset[] = {0};
         auto vb = factoryVertex(scene[instanceIndex].Mesh.get());
         device->GetID3D11DeviceContext()->IASetVertexBuffers(

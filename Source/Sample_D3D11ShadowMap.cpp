@@ -29,7 +29,7 @@ CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
   // do this so we don't have to update all the objects when we switch between
   // camera views for the shadow map - that cost far exceeds the multiplies.
 
-  struct ConstantsWorld {
+  __declspec(align(16)) struct ConstantsWorld {
     Matrix44 TransformWorldToClip;
     Matrix44 TransformWorldToClipShadow;
     Matrix44 TransformWorldToClipShadowInverse;
@@ -37,12 +37,6 @@ CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
 
   struct ConstantsObject {
     Matrix44 TransformObjectToWorld;
-  };
-
-  struct VertexFormat {
-    Vector3 Position;
-    Vector3 Normal;
-    Vector2 Texcoord;
   };
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -145,15 +139,15 @@ float4 mainPS(VertexPS vin) : SV_Target
       inputdesc[0].SemanticName = "SV_Position";
       inputdesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
       inputdesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[0].AlignedByteOffset = offsetof(VertexFormat, Position);
+      inputdesc[0].AlignedByteOffset = offsetof(VertexVS, Position);
       inputdesc[1].SemanticName = "NORMAL";
       inputdesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
       inputdesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[1].AlignedByteOffset = offsetof(VertexFormat, Normal);
+      inputdesc[1].AlignedByteOffset = offsetof(VertexVS, Normal);
       inputdesc[2].SemanticName = "TEXCOORD";
       inputdesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
       inputdesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[2].AlignedByteOffset = offsetof(VertexFormat, Texcoord);
+      inputdesc[2].AlignedByteOffset = offsetof(VertexVS, Texcoord);
       TRYD3D(device->GetID3D11Device()->CreateInputLayout(
           &inputdesc[0], inputdesc.size(), blobVS->GetBufferPointer(),
           blobVS->GetBufferSize(), &inputLayout));
@@ -213,19 +207,17 @@ float4 mainPS(VertexPS vin) : SV_Target
 
   MutableMap<const IMesh *, CComPtr<ID3D11Buffer>> factoryVertex;
   factoryVertex.fnGenerator = [&](const IMesh *mesh) {
-    int sizeVertex = sizeof(VertexFormat) * mesh->getVertexCount();
+    int sizeVertex = sizeof(VertexVS) * mesh->getVertexCount();
     std::unique_ptr<int8_t[]> bytesVertex(new int8_t[sizeVertex]);
-    mesh->copyVertices(
-        reinterpret_cast<Vector3 *>(bytesVertex.get() +
-                                    offsetof(VertexFormat, Position)),
-        sizeof(VertexFormat));
-    mesh->copyNormals(reinterpret_cast<Vector3 *>(
-                          bytesVertex.get() + offsetof(VertexFormat, Normal)),
-                      sizeof(VertexFormat));
-    mesh->copyTexcoords(
-        reinterpret_cast<Vector3 *>(bytesVertex.get() +
-                                    offsetof(VertexFormat, Texcoord)),
-        sizeof(VertexFormat));
+    mesh->copyVertices(reinterpret_cast<Vector3 *>(
+                           bytesVertex.get() + offsetof(VertexVS, Position)),
+                       sizeof(VertexVS));
+    mesh->copyNormals(reinterpret_cast<Vector3 *>(bytesVertex.get() +
+                                                  offsetof(VertexVS, Normal)),
+                      sizeof(VertexVS));
+    mesh->copyTexcoords(reinterpret_cast<Vector3 *>(
+                            bytesVertex.get() + offsetof(VertexVS, Texcoord)),
+                        sizeof(VertexVS));
     return D3D11_Create_Buffer(device->GetID3D11Device(),
                                D3D11_BIND_VERTEX_BUFFER, sizeVertex,
                                bytesVertex.get());
@@ -316,7 +308,7 @@ float4 mainPS(VertexPS vin) : SV_Target
         ////////////////////////////////////////////////////////////////////////
         // Setup geometry for draw.
         {
-          const UINT vertexStride[] = {sizeof(VertexFormat)};
+          const UINT vertexStride[] = {sizeof(VertexVS)};
           const UINT vertexOffset[] = {0};
           auto vb = factoryVertex(scene[instanceIndex].Mesh.get());
           device->GetID3D11DeviceContext()->IASetVertexBuffers(

@@ -19,21 +19,17 @@
 std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
                    const Matrix44 &)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device) {
-  __declspec(align(16)) struct Constants {
+  __declspec(align(16)) struct ConstantsWorld {
     Matrix44 TransformWorldToClip;
     Matrix44 TransformWorldToView;
     Vector3 CameraPosition;
   };
-  struct VertexFormat {
-    Vector3 Position;
-    Vector3 Normal;
-    Vector2 Texcoord;
-  };
   CComPtr<ID3D11SamplerState> samplerState;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
       &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerState.p));
-  CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
-      device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
+  CComPtr<ID3D11Buffer> bufferConstants =
+      D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
+                          sizeof(ConstantsWorld));
   const char *szShaderCode = R"SHADER(
 #include "Sample_D3D11_Common.inc"
 
@@ -42,21 +38,6 @@ cbuffer Constants
     float4x4 TransformWorldToClip;
     float4x4 TransformWorldToView;
     float3 CameraPosition;
-};
-
-struct VertexVS
-{
-    float4 Position : SV_Position;
-    float3 Normal : NORMAL;
-    float2 Texcoord : TEXCOORD;
-};
-
-struct VertexPS
-{
-    float4 Position : SV_Position;
-    float3 Normal : NORMAL;
-    float2 Texcoord : TEXCOORD;
-    float3 WorldPosition : POSITION1;
 };
 
 VertexPS mainVS(VertexVS vin)
@@ -98,15 +79,15 @@ float4 mainPS(VertexPS vin) : SV_Target
       inputdesc[0].SemanticName = "SV_Position";
       inputdesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
       inputdesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[0].AlignedByteOffset = offsetof(VertexFormat, Position);
+      inputdesc[0].AlignedByteOffset = offsetof(VertexVS, Position);
       inputdesc[1].SemanticName = "NORMAL";
       inputdesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
       inputdesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[1].AlignedByteOffset = offsetof(VertexFormat, Normal);
+      inputdesc[1].AlignedByteOffset = offsetof(VertexVS, Normal);
       inputdesc[2].SemanticName = "TEXCOORD";
       inputdesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
       inputdesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[2].AlignedByteOffset = offsetof(VertexFormat, Texcoord);
+      inputdesc[2].AlignedByteOffset = offsetof(VertexVS, Texcoord);
       TRYD3D(device->GetID3D11Device()->CreateInputLayout(
           &inputdesc[0], inputdesc.size(), blobVS->GetBufferPointer(),
           blobVS->GetBufferSize(), &inputLayout));
@@ -153,7 +134,7 @@ float4 mainPS(VertexPS vin) : SV_Target
     ////////////////////////////////////////////////////////////////////////////////
     // Update constant buffer.
     {
-      Constants constants = {};
+      ConstantsWorld constants = {};
       constants.TransformWorldToClip = transformWorldToClip;
       constants.TransformWorldToView =
           GetTransformSource()->GetTransformWorldToView();
@@ -166,7 +147,7 @@ float4 mainPS(VertexPS vin) : SV_Target
     // Create a vertex buffer.
     CComPtr<ID3D11Buffer> bufferVertex;
     {
-      VertexFormat vertices[] = {
+      VertexVS vertices[] = {
           // clang format off
           {{-10, 0, 10}, {0, 1, 0}, {0, 0}},  {{10, 0, 10}, {0, 1, 0}, {1, 0}},
           {{10, 0, -10}, {0, 1, 0}, {1, 1}},  {{10, 0, -10}, {0, 1, 0}, {1, 1}},
@@ -196,7 +177,7 @@ float4 mainPS(VertexPS vin) : SV_Target
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
     {
-      UINT uStrides[] = {sizeof(VertexFormat)};
+      UINT uStrides[] = {sizeof(VertexVS)};
       UINT uOffsets[] = {0};
       device->GetID3D11DeviceContext()->IASetVertexBuffers(
           0, 1, &bufferVertex.p, uStrides, uOffsets);

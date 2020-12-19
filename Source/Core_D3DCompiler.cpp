@@ -29,6 +29,27 @@ float3x3 cotangent_frame( float3 N, float3 p, float2 uv ) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Common structures
+// Most of our extended 3D samples use a common vertex format for simplicity.
+// The vertex shader in many cases can also be the same for these samples as
+// long as they have access to the constants.
+
+struct VertexVS
+{
+    float4 Position : SV_Position;
+    float3 Normal : NORMAL;
+    float2 Texcoord : TEXCOORD;
+};
+
+struct VertexPS
+{
+    float4 Position : SV_Position;
+    float3 Normal : NORMAL;
+    float2 Texcoord : TEXCOORD;
+    float3 WorldPosition : POSITION1;
+};
+
+////////////////////////////////////////////////////////////////////////////////
 // Common resources
 // We keep map types in designated slots so we can indicate them easily.
 
