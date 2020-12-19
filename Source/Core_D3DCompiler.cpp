@@ -6,6 +6,10 @@
 #pragma comment(lib, "d3dcompiler.lib")
 
 static const char Shader_D3D11_Common[] = R"SHADER(
+
+////////////////////////////////////////////////////////////////////////////////
+// Common functions
+
 // This is the same cotangent reconstruction described at:
 // http://www.thetenthplanet.de/archives/1180
 float3x3 cotangent_frame( float3 N, float3 p, float2 uv ) {
@@ -23,21 +27,31 @@ float3x3 cotangent_frame( float3 N, float3 p, float2 uv ) {
   float invmax = rsqrt( max( dot(T,T), dot(B,B) ) );
   return float3x3( T * invmax, B * invmax, N );
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Common resources
+// We keep map types in designated slots so we can indicate them easily.
+
+Texture2D<float4> TextureAlbedoMap : register(t0);
+Texture2D<float4> TextureNormalMap : register(t1);
+Texture2D<float4> TextureDepthMap : register(t2);
+sampler userSampler;
+
 )SHADER";
 
 class InjectedIncludes : public ID3DInclude {
 public:
-  HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override {
-    if (IncludeType == D3D_INCLUDE_LOCAL && !strcmp(pFileName, "Sample_D3D11_Common.inc")) {
+  HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName,
+               LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override {
+    if (IncludeType == D3D_INCLUDE_LOCAL &&
+        !strcmp(pFileName, "Sample_D3D11_Common.inc")) {
       *ppData = Shader_D3D11_Common;
-      *pBytes = sizeof(Shader_D3D11_Common) - 1; // This will have a NULL terminator which will screw up parsing; remove it.
+      *pBytes = sizeof(Shader_D3D11_Common) - 1; // Remove NULL terminator!
       return S_OK;
     }
     return STG_E_FILENOTFOUND;
   }
-  HRESULT Close(LPCVOID pData) override {
-    return S_OK;
-  }
+  HRESULT Close(LPCVOID pData) override { return S_OK; }
 };
 
 ID3DBlob *CompileShader(const char *profile, const char *entrypoint,

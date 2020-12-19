@@ -28,8 +28,6 @@ CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device) {
     Vector3 Position;
     Vector3 Normal;
     Vector2 Texcoord;
-    Vector3 Tangent;
-    Vector3 Bitangent;
   };
   CComPtr<ID3D11SamplerState> samplerState;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
@@ -37,43 +35,47 @@ CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device) {
   CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
       device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
   const char *szShaderCode = R"SHADER(
+#include "Sample_D3D11_Common.inc"
+
 cbuffer Constants
 {
     float4x4 TransformWorldToClip;
     float3 Light;
 };
 
-Texture2D<float4> TextureAlbedoMap;
-Texture2D<float4> TextureNormalMap;
-sampler userSampler;
-
-struct Vertex
+struct VertexVS
 {
     float4 Position : SV_Position;
     float3 Normal : NORMAL;
     float2 Texcoord : TEXCOORD;
-    float3 Tangent : TANGENT;
-    float3 Bitangent : BITANGENT;
 };
 
-Vertex mainVS(Vertex vin)
+struct VertexPS
 {
-    Vertex vout;
+    float4 Position : SV_Position;
+    float3 Normal : NORMAL;
+    float2 Texcoord : TEXCOORD;
+    float3 WorldPosition : POSITION1;
+};
+
+VertexPS mainVS(VertexVS vin)
+{
+    VertexPS vout;
     vout.Position = mul(TransformWorldToClip, vin.Position);
     vout.Normal = vin.Normal;
     vout.Texcoord = vin.Texcoord * 10;
-    vout.Tangent = vin.Tangent;
-    vout.Bitangent = vin.Bitangent;
+    vout.WorldPosition = vin.Position.xyz;
     return vout;
 }
 
-float4 mainPS(Vertex vin) : SV_Target
+float4 mainPS(VertexPS vin) : SV_Target
 {
-    float3 AlbedoMap = TextureAlbedoMap.Sample(userSampler, vin.Texcoord).xyz;
-    float3 NormalMap = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
-    float3x3 TangentFrame = float3x3(vin.Tangent, vin.Bitangent, vin.Normal);
-    float3 Normal = mul(TangentFrame, NormalMap);
-    return float4(AlbedoMap * dot(Normal, Light), 1);
+    float3x3 matTangentFrame = cotangent_frame(vin.Normal, vin.WorldPosition, vin.Texcoord);    
+    float3 texelNormal = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
+    float3 vectorNormal = normalize(mul(texelNormal, matTangentFrame));
+    
+    float3 texelAlbedoMap = TextureAlbedoMap.Sample(userSampler, vin.Texcoord).xyz;
+    return float4(texelAlbedoMap * dot(vectorNormal, Light), 1);
 })SHADER";
   CComPtr<ID3D11VertexShader> shaderVertex;
   CComPtr<ID3D11InputLayout> inputLayout;
@@ -83,7 +85,7 @@ float4 mainPS(Vertex vin) : SV_Target
         blobVS->GetBufferPointer(), blobVS->GetBufferSize(), nullptr,
         &shaderVertex));
     {
-      std::array<D3D11_INPUT_ELEMENT_DESC, 5> inputdesc = {};
+      std::array<D3D11_INPUT_ELEMENT_DESC, 3> inputdesc = {};
       inputdesc[0].SemanticName = "SV_Position";
       inputdesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
       inputdesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -96,17 +98,9 @@ float4 mainPS(Vertex vin) : SV_Target
       inputdesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
       inputdesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
       inputdesc[2].AlignedByteOffset = offsetof(VertexFormat, Texcoord);
-      inputdesc[3].SemanticName = "TANGENT";
-      inputdesc[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-      inputdesc[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[3].AlignedByteOffset = offsetof(VertexFormat, Tangent);
-      inputdesc[4].SemanticName = "BITANGENT";
-      inputdesc[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-      inputdesc[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-      inputdesc[4].AlignedByteOffset = offsetof(VertexFormat, Bitangent);
       TRYD3D(device->GetID3D11Device()->CreateInputLayout(
-          &inputdesc[0], 5, blobVS->GetBufferPointer(), blobVS->GetBufferSize(),
-          &inputLayout));
+          &inputdesc[0], inputdesc.size(), blobVS->GetBufferPointer(),
+          blobVS->GetBufferSize(), &inputLayout));
     }
   }
   CComPtr<ID3D11PixelShader> shaderPixel;
@@ -130,12 +124,9 @@ float4 mainPS(Vertex vin) : SV_Target
   {
     VertexFormat vertices[] = {
         // clang format off
-        {{-10, 0, 10}, {0, 1, 0}, {0, 0}, {1, 0, 0}, {0, 0, 1}},
-        {{10, 0, 10}, {0, 1, 0}, {1, 0}, {1, 0, 0}, {0, 0, 1}},
-        {{10, 0, -10}, {0, 1, 0}, {1, 1}, {1, 0, 0}, {0, 0, 1}},
-        {{10, 0, -10}, {0, 1, 0}, {1, 1}, {1, 0, 0}, {0, 0, 1}},
-        {{-10, 0, -10}, {0, 1, 0}, {0, 1}, {1, 0, 0}, {0, 0, 1}},
-        {{-10, 0, 10}, {0, 1, 0}, {0, 0}, {1, 0, 0}, {0, 0, 1}},
+        {{-10, 0, 10}, {0, 1, 0}, {0, 0}},  {{10, 0, 10}, {0, 1, 0}, {1, 0}},
+        {{10, 0, -10}, {0, 1, 0}, {1, 1}},  {{10, 0, -10}, {0, 1, 0}, {1, 1}},
+        {{-10, 0, -10}, {0, 1, 0}, {0, 1}}, {{-10, 0, 10}, {0, 1, 0}, {0, 0}},
         // clang format on
     };
     bufferVertex =
