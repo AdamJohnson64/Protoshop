@@ -50,10 +50,7 @@ cbuffer Constants
     float4x4 TransformObjectToWorld;
 };
 
-Texture2D TextureAlbedoMap : register(t0);
-Texture2D TextureNormalMap : register(t1);
 Texture2D TextureMaskMap : register(t2);
-sampler userSampler;
 
 struct VertexVS
 {
