@@ -29,16 +29,6 @@ CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device) {
   const char *szShaderCode = R"SHADER(
 #include "Sample_D3D11_Common.inc"
 
-VertexPS mainVS(VertexVS vin)
-{
-    VertexPS vout;
-    vout.Position = mul(TransformWorldToClip, vin.Position);
-    vout.Normal = vin.Normal;
-    vout.Texcoord = vin.Texcoord * 10;
-    vout.WorldPosition = vin.Position.xyz;
-    return vout;
-}
-
 float4 mainPS(VertexPS vin) : SV_Target
 {
     float3x3 matTangentFrame = cotangent_frame(vin.Normal, vin.WorldPosition, vin.Texcoord);    
@@ -51,7 +41,8 @@ float4 mainPS(VertexPS vin) : SV_Target
   CComPtr<ID3D11VertexShader> shaderVertex;
   CComPtr<ID3D11InputLayout> inputLayout;
   {
-    CComPtr<ID3DBlob> blobVS = CompileShader("vs_5_0", "mainVS", szShaderCode);
+    CComPtr<ID3DBlob> blobVS =
+        CompileShader("vs_5_0", "mainVS_NOOBJTRANSFORM", szShaderCode);
     TRYD3D(device->GetID3D11Device()->CreateVertexShader(
         blobVS->GetBufferPointer(), blobVS->GetBufferSize(), nullptr,
         &shaderVertex));

@@ -73,6 +73,33 @@ Texture2D<float4> TextureNormalMap : register(t1);
 Texture2D<float4> TextureDepthMap : register(t2);
 sampler userSampler;
 
+////////////////////////////////////////////////////////////////////////////////
+// Common entrypoints
+
+// All of the structure above is captured and initialized here.
+
+VertexPS mainVS(VertexVS vin)
+{
+    VertexPS vout;
+    vout.Position = mul(TransformWorldToClip, mul(TransformObjectToWorld, vin.Position));
+    vout.Normal = normalize(mul(TransformObjectToWorld, float4(vin.Normal, 0)).xyz);
+    vout.Texcoord = vin.Texcoord;
+    vout.WorldPosition = mul(TransformObjectToWorld, vin.Position).xyz;
+    return vout;
+}
+
+// No object transforms are used here if you want to omit that code.
+
+VertexPS mainVS_NOOBJTRANSFORM(VertexVS vin)
+{
+    VertexPS vout;
+    vout.Position = mul(TransformWorldToClip, vin.Position);
+    vout.Normal = vin.Normal;
+    vout.Texcoord = vin.Texcoord * 10;
+    vout.WorldPosition = vin.Position.xyz;
+    return vout;
+}
+
 )SHADER";
 
 class InjectedIncludes : public ID3DInclude {

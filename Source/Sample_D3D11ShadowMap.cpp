@@ -35,16 +35,6 @@ CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
 
 Texture2D TextureShadowMap : register(t0);
 
-VertexPS mainVS(VertexVS vin)
-{
-    VertexPS vout;
-    vout.Position = mul(TransformWorldToClip, mul(TransformObjectToWorld, vin.Position));
-    vout.Normal = normalize(mul(TransformObjectToWorld, float4(vin.Normal, 0)).xyz);
-    vout.Texcoord = vin.Texcoord;
-    vout.WorldPosition = mul(TransformObjectToWorld, vin.Position).xyz;
-    return vout;
-}
-
 float4 mainPS(VertexPS vin) : SV_Target
 {
     float3 lightPosition = float3(4, 2, -4);
