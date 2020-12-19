@@ -19,11 +19,6 @@
 std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
                    const Matrix44 &)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device) {
-  __declspec(align(16)) struct ConstantsWorld {
-    Matrix44 TransformWorldToClip;
-    Matrix44 TransformWorldToView;
-    Vector3 CameraPosition;
-  };
   CComPtr<ID3D11SamplerState> samplerState;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
       &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerState.p));
@@ -32,13 +27,6 @@ CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device) {
                           sizeof(ConstantsWorld));
   const char *szShaderCode = R"SHADER(
 #include "Sample_D3D11_Common.inc"
-
-cbuffer Constants
-{
-    float4x4 TransformWorldToClip;
-    float4x4 TransformWorldToView;
-    float3 CameraPosition;
-};
 
 VertexPS mainVS(VertexVS vin)
 {
@@ -134,14 +122,14 @@ float4 mainPS(VertexPS vin) : SV_Target
     ////////////////////////////////////////////////////////////////////////////////
     // Update constant buffer.
     {
-      ConstantsWorld constants = {};
-      constants.TransformWorldToClip = transformWorldToClip;
-      constants.TransformWorldToView =
+      ConstantsWorld data = {};
+      data.TransformWorldToClip = transformWorldToClip;
+      data.TransformWorldToView =
           GetTransformSource()->GetTransformWorldToView();
       Matrix44 t = Invert(GetTransformSource()->GetTransformWorldToView());
-      constants.CameraPosition = Vector3{t.M41, t.M42, t.M43};
-      device->GetID3D11DeviceContext()->UpdateSubresource(
-          bufferConstants, 0, nullptr, &constants, 0, 0);
+      data.CameraPosition = Vector3{t.M41, t.M42, t.M43};
+      device->GetID3D11DeviceContext()->UpdateSubresource(bufferConstants, 0,
+                                                          nullptr, &data, 0, 0);
     }
     ////////////////////////////////////////////////////////////////////////////////
     // Create a vertex buffer.

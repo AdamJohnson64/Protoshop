@@ -34,6 +34,21 @@ float3x3 cotangent_frame( float3 N, float3 p, float2 uv ) {
 // The vertex shader in many cases can also be the same for these samples as
 // long as they have access to the constants.
 
+cbuffer ConstantsWorld : register(b0)
+{
+    float4x4 TransformWorldToClip;
+    float4x4 TransformWorldToView;
+    float4x4 TransformWorldToClipShadow;
+    float4x4 TransformWorldToClipShadowInverse;
+    float3 CameraPosition;
+    float3 LightPosition;
+};
+
+cbuffer ConstantsObject : register(b1)
+{
+    float4x4 TransformObjectToWorld;
+};
+
 struct VertexVS
 {
     float4 Position : SV_Position;

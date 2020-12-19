@@ -30,27 +30,17 @@ std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
                    const Matrix44 &)>
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
                         const std::vector<Instance> &scene) {
-  struct Constants {
-    Matrix44 TransformWorldToClip;
-    Matrix44 TransformObjectToWorld;
-  };
   ////////////////////////////////////////////////////////////////////////////////
   // Create all the shaders that we might need.
   const char *szShaderCode = R"SHADER(
 #include "Sample_D3D11_Common.inc"
-
-cbuffer Constants
-{
-    float4x4 TransformWorldToClip;
-    float4x4 TransformObjectToWorld;
-};
 
 Texture2D TextureMaskMap : register(t2);
 
 VertexPS mainVS(VertexVS vin)
 {
     VertexPS vout;
-    vout.Position = mul(TransformWorldToClip, vin.Position);
+    vout.Position = mul(TransformWorldToClip, mul(TransformObjectToWorld, vin.Position));
     vout.Normal = normalize(mul(TransformObjectToWorld, float4(vin.Normal, 0)).xyz);
     vout.Texcoord = vin.Texcoord;
     vout.WorldPosition = mul(TransformObjectToWorld, vin.Position).xyz;
@@ -131,11 +121,23 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
         &desc[0], desc.size(), blobShaderVertex->GetBufferPointer(),
         blobShaderVertex->GetBufferSize(), &inputLayout));
   }
+  ////////////////////////////////////////////////////////////////////////
+  // Constant slot 0 : World Constants
+  // These constants persist through all draw calls in the scene for any
+  // single pass. The shadow map and primary render will have *different*
+  // versions of this since the depth map uses a different camera.
+
+  CComPtr<ID3D11Buffer> constantsWorld =
+      D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
+                          sizeof(ConstantsWorld));
+
   ////////////////////////////////////////////////////////////////////////////////
   // Default wrapping sampler.
+
   CComPtr<ID3D11SamplerState> samplerState;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
       &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerState.p));
+
   ////////////////////////////////////////////////////////////////////////////////
   // Our so-called Factory Storage (aka) "Mutable Map".
   ////////////////////////////////////////////////////////////////////////////////
@@ -145,8 +147,11 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
 
   MutableMap<const Matrix44 *, CComPtr<ID3D11Buffer>> factoryConstants;
   factoryConstants.fnGenerator = [=](const Matrix44 *transform) {
+    ConstantsObject data = {};
+    data.TransformObjectToWorld = *transform;
     return D3D11_Create_Buffer(device->GetID3D11Device(),
-                               D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
+                               D3D11_BIND_CONSTANT_BUFFER,
+                               sizeof(ConstantsObject), &data);
   };
 
   MutableMap<const IMesh *, CComPtr<ID3D11Buffer>> factoryIndex;
@@ -278,6 +283,17 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
 
+    {
+      ConstantsWorld data = {};
+      data.TransformWorldToClip = transform;
+      device->GetID3D11DeviceContext()->UpdateSubresource(constantsWorld, 0,
+                                                          nullptr, &data, 0, 0);
+      device->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1,
+                                                             &constantsWorld.p);
+      device->GetID3D11DeviceContext()->PSSetConstantBuffers(0, 1,
+                                                             &constantsWorld.p);
+    }
+
     for (int instanceIndex = 0; instanceIndex < scene.size(); ++instanceIndex) {
       const Instance &instance = scene[instanceIndex];
       ////////////////////////////////////////////////////////////////////////
@@ -327,16 +343,8 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
       {
         auto constantBuffer =
             factoryConstants(instance.TransformObjectToWorld.get());
-        {
-          Constants constants = {};
-          constants.TransformWorldToClip =
-              *instance.TransformObjectToWorld * transform;
-          constants.TransformObjectToWorld = *instance.TransformObjectToWorld;
-          device->GetID3D11DeviceContext()->UpdateSubresource(
-              constantBuffer, 0, nullptr, &constants, 0, 0);
-        }
         device->GetID3D11DeviceContext()->VSSetConstantBuffers(
-            0, 1, &constantBuffer.p);
+            1, 1, &constantBuffer.p);
       }
       {
         const UINT vertexStride[] = {sizeof(VertexVS)};

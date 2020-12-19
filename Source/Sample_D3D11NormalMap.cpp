@@ -20,10 +20,6 @@ std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
                    const Matrix44 &)>
 CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device) {
 
-  __declspec(align(16)) struct ConstantsWorld {
-    Matrix44 TransformWorldToClip;
-    Vector3 Light;
-  };
   CComPtr<ID3D11SamplerState> samplerState;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
       &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerState.p));
@@ -32,12 +28,6 @@ CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device) {
                           sizeof(ConstantsWorld));
   const char *szShaderCode = R"SHADER(
 #include "Sample_D3D11_Common.inc"
-
-cbuffer Constants
-{
-    float4x4 TransformWorldToClip;
-    float3 Light;
-};
 
 VertexPS mainVS(VertexVS vin)
 {
@@ -56,7 +46,7 @@ float4 mainPS(VertexPS vin) : SV_Target
     float3 vectorNormal = normalize(mul(texelNormal, matTangentFrame));
     
     float3 texelAlbedoMap = TextureAlbedoMap.Sample(userSampler, vin.Texcoord).xyz;
-    return float4(texelAlbedoMap * dot(vectorNormal, Light), 1);
+    return float4(texelAlbedoMap * dot(vectorNormal, LightPosition), 1);
 })SHADER";
   CComPtr<ID3D11VertexShader> shaderVertex;
   CComPtr<ID3D11InputLayout> inputLayout;
@@ -137,12 +127,12 @@ float4 mainPS(VertexPS vin) : SV_Target
     // Update constant buffer.
     {
       static float angle = 0;
-      ConstantsWorld constants = {};
-      constants.TransformWorldToClip = transformWorldToClip;
-      constants.Light = Normalize(Vector3{sinf(angle), 1, -cosf(angle)});
+      ConstantsWorld data = {};
+      data.TransformWorldToClip = transformWorldToClip;
+      data.LightPosition = Normalize(Vector3{sinf(angle), 1, -cosf(angle)});
       angle += 0.05f;
-      device->GetID3D11DeviceContext()->UpdateSubresource(
-          bufferConstants, 0, nullptr, &constants, 0, 0);
+      device->GetID3D11DeviceContext()->UpdateSubresource(bufferConstants, 0,
+                                                          nullptr, &data, 0, 0);
     }
     ////////////////////////////////////////////////////////////////////////////////
     // Setup and draw.

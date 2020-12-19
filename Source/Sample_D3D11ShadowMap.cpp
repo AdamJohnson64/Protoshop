@@ -23,23 +23,6 @@ std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
 CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
 
   ////////////////////////////////////////////////////////////////////////////////
-  // Note here that we finally split the transform stack into world and object
-  // transforms. This wastes a bit more processing in the vertex stage since we
-  // need to perform two matrix multiplies to get from object to clip space. We
-  // do this so we don't have to update all the objects when we switch between
-  // camera views for the shadow map - that cost far exceeds the multiplies.
-
-  __declspec(align(16)) struct ConstantsWorld {
-    Matrix44 TransformWorldToClip;
-    Matrix44 TransformWorldToClipShadow;
-    Matrix44 TransformWorldToClipShadowInverse;
-  };
-
-  struct ConstantsObject {
-    Matrix44 TransformObjectToWorld;
-  };
-
-  ////////////////////////////////////////////////////////////////////////////////
   // Create shaders & input layout.
   // We'll need shaders for both the depth render and the primary render pass.
   // Depth render doesn't need shadow maps since it's only rendering geometry
@@ -48,35 +31,9 @@ CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
   // as a depth comparison test target to evaluate shadowing.
 
   const char *szShaderCode = R"SHADER(
-cbuffer ConstantsWorld : register(b0)
-{
-    float4x4 TransformWorldToClip;
-    float4x4 TransformWorldToClipShadow;
-    float4x4 TransformWorldToClipShadowInverse;
-};
-
-cbuffer ConstantsObject : register(b1)
-{
-    float4x4 TransformObjectToWorld;
-};
+#include "Sample_D3D11_Common.inc"
 
 Texture2D TextureShadowMap : register(t0);
-sampler userSampler;
-
-struct VertexVS
-{
-    float4 Position : SV_Position;
-    float3 Normal : NORMAL;
-    float2 Texcoord : TEXCOORD;
-};
-
-struct VertexPS
-{
-    float4 Position : SV_Position;
-    float3 Normal : NORMAL;
-    float2 Texcoord : TEXCOORD;
-    float3 WorldPosition : POSITION1;
-};
 
 VertexPS mainVS(VertexVS vin)
 {
