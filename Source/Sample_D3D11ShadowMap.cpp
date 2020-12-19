@@ -42,6 +42,7 @@ CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
   struct VertexFormat {
     Vector3 Position;
     Vector3 Normal;
+    Vector2 Texcoord;
   };
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -72,12 +73,14 @@ struct VertexVS
 {
     float4 Position : SV_Position;
     float3 Normal : NORMAL;
+    float2 Texcoord : TEXCOORD;
 };
 
 struct VertexPS
 {
     float4 Position : SV_Position;
     float3 Normal : NORMAL;
+    float2 Texcoord : TEXCOORD;
     float3 WorldPosition : POSITION1;
 };
 
@@ -86,6 +89,7 @@ VertexPS mainVS(VertexVS vin)
     VertexPS vout;
     vout.Position = mul(TransformWorldToClip, mul(TransformObjectToWorld, vin.Position));
     vout.Normal = normalize(mul(TransformObjectToWorld, float4(vin.Normal, 0)).xyz);
+    vout.Texcoord = vin.Texcoord;
     vout.WorldPosition = mul(TransformObjectToWorld, vin.Position).xyz;
     return vout;
 }
@@ -137,7 +141,7 @@ float4 mainPS(VertexPS vin) : SV_Target
         blobVS->GetBufferPointer(), blobVS->GetBufferSize(), nullptr,
         &shaderVertex));
     {
-      std::array<D3D11_INPUT_ELEMENT_DESC, 2> inputdesc = {};
+      std::array<D3D11_INPUT_ELEMENT_DESC, 3> inputdesc = {};
       inputdesc[0].SemanticName = "SV_Position";
       inputdesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
       inputdesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -146,6 +150,10 @@ float4 mainPS(VertexPS vin) : SV_Target
       inputdesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
       inputdesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
       inputdesc[1].AlignedByteOffset = offsetof(VertexFormat, Normal);
+      inputdesc[2].SemanticName = "TEXCOORD";
+      inputdesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+      inputdesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+      inputdesc[2].AlignedByteOffset = offsetof(VertexFormat, Texcoord);
       TRYD3D(device->GetID3D11Device()->CreateInputLayout(
           &inputdesc[0], inputdesc.size(), blobVS->GetBufferPointer(),
           blobVS->GetBufferSize(), &inputLayout));
@@ -214,6 +222,10 @@ float4 mainPS(VertexPS vin) : SV_Target
     mesh->copyNormals(reinterpret_cast<Vector3 *>(
                           bytesVertex.get() + offsetof(VertexFormat, Normal)),
                       sizeof(VertexFormat));
+    mesh->copyTexcoords(
+        reinterpret_cast<Vector3 *>(bytesVertex.get() +
+                                    offsetof(VertexFormat, Texcoord)),
+        sizeof(VertexFormat));
     return D3D11_Create_Buffer(device->GetID3D11Device(),
                                D3D11_BIND_VERTEX_BUFFER, sizeVertex,
                                bytesVertex.get());
@@ -321,7 +333,7 @@ float4 mainPS(VertexPS vin) : SV_Target
     ////////////////////////////////////////////////////////////////////////
     // Create the camera projection matrix.
     // Right now this matrix just mimics the light in the pixel shader.
-    
+
     Matrix44 TransformWorldToClipShadow =
         CreateMatrixLookAt(Vector3{4, 2, -4}, Vector3{0, 0, 0},
                            Vector3{0, 1, 0}) *
