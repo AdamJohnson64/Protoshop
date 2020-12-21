@@ -16,12 +16,12 @@ CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
                 std::function<void(const SampleResourcesD3D11 &)> fnRender);
 
 std::shared_ptr<Object>
-CreateNewWindowRTV(std::shared_ptr<Direct3D12Device> device,
-                   std::function<void(ID3D12Resource *)> fnRender);
+CreateNewWindow(std::shared_ptr<Direct3D12Device> device,
+                std::function<void(const SampleResourcesD3D12RTV &)> fnRender);
 
 std::shared_ptr<Object>
-CreateNewWindowUAV(std::shared_ptr<Direct3D12Device> device,
-                   std::function<void(ID3D12Resource *)> fnRender);
+CreateNewWindow(std::shared_ptr<Direct3D12Device> device,
+                std::function<void(const SampleResourcesD3D12UAV &)> fnRender);
 
 std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<OpenGLDevice> device,
                                         std::function<void()> fnRender);

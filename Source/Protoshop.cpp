@@ -39,17 +39,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     ////////////////////////////////////////////////////////////////////////////////
     // Direct3D 12 Samples
     std::shared_ptr<Direct3D12Device> deviceD3D12 = CreateDirect3D12Device();
-    std::shared_ptr<Object> D3D12Basic = CreateNewWindowRTV(deviceD3D12, CreateSample_D3D12Basic(deviceD3D12));
-    std::shared_ptr<Object> D3D12SceneDefault = CreateNewWindowRTV(deviceD3D12, CreateSample_D3D12Scene(deviceD3D12, Scene_Default()));
-    std::shared_ptr<Object> D3D12SceneSponza = CreateNewWindowRTV(deviceD3D12, CreateSample_D3D12Scene(deviceD3D12, Scene_Sponza()));
-    std::shared_ptr<Object> DXRAmbientOcclusion = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRAmbientOcclusion(deviceD3D12));
-    std::shared_ptr<Object> DXRBasic = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRBasic(deviceD3D12));
-    std::shared_ptr<Object> DXRMesh = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRMesh(deviceD3D12));
-    std::shared_ptr<Object> DXRPathTrace = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRPathTrace(deviceD3D12));
-    std::shared_ptr<Object> DXRSceneDefault = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRScene(deviceD3D12, Scene_Default()));
-    std::shared_ptr<Object> DXRSceneSponza = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRScene(deviceD3D12, Scene_Sponza()));
-    std::shared_ptr<Object> DXRTexture = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRTexture(deviceD3D12));
-    std::shared_ptr<Object> DXRWhitted = CreateNewWindowUAV(deviceD3D12, CreateSample_DXRWhitted(deviceD3D12));
+    std::shared_ptr<Object> D3D12Basic = CreateNewWindow(deviceD3D12, CreateSample_D3D12Basic(deviceD3D12));
+    std::shared_ptr<Object> D3D12SceneDefault = CreateNewWindow(deviceD3D12, CreateSample_D3D12Scene(deviceD3D12, Scene_Default()));
+    std::shared_ptr<Object> D3D12SceneSponza = CreateNewWindow(deviceD3D12, CreateSample_D3D12Scene(deviceD3D12, Scene_Sponza()));
+    std::shared_ptr<Object> DXRAmbientOcclusion = CreateNewWindow(deviceD3D12, CreateSample_DXRAmbientOcclusion(deviceD3D12));
+    std::shared_ptr<Object> DXRBasic = CreateNewWindow(deviceD3D12, CreateSample_DXRBasic(deviceD3D12));
+    std::shared_ptr<Object> DXRMesh = CreateNewWindow(deviceD3D12, CreateSample_DXRMesh(deviceD3D12));
+    std::shared_ptr<Object> DXRPathTrace = CreateNewWindow(deviceD3D12, CreateSample_DXRPathTrace(deviceD3D12));
+    std::shared_ptr<Object> DXRSceneDefault = CreateNewWindow(deviceD3D12, CreateSample_DXRScene(deviceD3D12, Scene_Default()));
+    std::shared_ptr<Object> DXRSceneSponza = CreateNewWindow(deviceD3D12, CreateSample_DXRScene(deviceD3D12, Scene_Sponza()));
+    std::shared_ptr<Object> DXRTexture = CreateNewWindow(deviceD3D12, CreateSample_DXRTexture(deviceD3D12));
+    std::shared_ptr<Object> DXRWhitted = CreateNewWindow(deviceD3D12, CreateSample_DXRWhitted(deviceD3D12));
     ////////////////////////////////////////////////////////////////////////////////
     // OpenGL Samples
     std::shared_ptr<OpenGLDevice> deviceGL = CreateOpenGLDevice();

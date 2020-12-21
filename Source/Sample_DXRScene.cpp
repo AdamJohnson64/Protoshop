@@ -15,6 +15,7 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "MutableMap.h"
+#include "SampleResources.h"
 #include "Scene_IMaterial.h"
 #include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
@@ -25,7 +26,7 @@
 #include <string>
 #include <vector>
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
                       const std::vector<Instance> &scene) {
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
@@ -164,19 +165,19 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   }
   ////////////////////////////////////////////////////////////////////////////////
   // BLAS - Build the bottom level acceleration structures.
-  MutableMap<const IMesh*, CComPtr<ID3D12Resource1>> factoryBLAS;
-  factoryBLAS.fnGenerator = [=](const IMesh* mesh) {
+  MutableMap<const IMesh *, CComPtr<ID3D12Resource1>> factoryBLAS;
+  factoryBLAS.fnGenerator = [=](const IMesh *mesh) {
     int sizeVertex = sizeof(float[3]) * mesh->getVertexCount();
     std::unique_ptr<int8_t[]> dataVertex(new int8_t[sizeVertex]);
     mesh->copyVertices(reinterpret_cast<Vector3 *>(dataVertex.get()),
-                      sizeof(Vector3));
+                       sizeof(Vector3));
     int sizeIndices = sizeof(int32_t) * mesh->getIndexCount();
     std::unique_ptr<int8_t[]> dataIndex(new int8_t[sizeIndices]);
     mesh->copyIndices(reinterpret_cast<uint32_t *>(dataIndex.get()),
                       sizeof(uint32_t));
     return DXRCreateBLAS(device.get(), dataVertex.get(), mesh->getVertexCount(),
-                      DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
-                      mesh->getIndexCount(), DXGI_FORMAT_R32_UINT);
+                         DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
+                         mesh->getIndexCount(), DXGI_FORMAT_R32_UINT);
   };
   ////////////////////////////////////////////////////////////////////////////////
   // TLAS - Build the top level acceleration structure.
@@ -196,8 +197,9 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     resourceTLAS =
         DXRCreateTLAS(device.get(), &instanceDescs[0], instanceDescs.size());
   }
-  return [=](ID3D12Resource *resourceTarget) {
-    D3D12_RESOURCE_DESC descTarget = resourceTarget->GetDesc();
+  return [=](const SampleResourcesD3D12UAV &sampleResources) {
+    D3D12_RESOURCE_DESC descTarget =
+        sampleResources.BackBufferResource->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -215,7 +217,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     CComPtr<ID3D12Resource> resourceConstants = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44),
-        &Invert(GetTransformSource()->GetTransformWorldToClip()));
+        &Invert(sampleResources.TransformWorldToClip));
     ////////////////////////////////////////////////////////////////////////////////
     // Build the descriptor table to establish resource views.
     //
@@ -232,8 +234,8 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
       {
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        device->m_pDevice->CreateUnorderedAccessView(resourceTarget, nullptr,
-                                                     &desc, descriptorBase);
+        device->m_pDevice->CreateUnorderedAccessView(
+            sampleResources.BackBufferResource, nullptr, &desc, descriptorBase);
         descriptorBase.ptr += descriptorElementSize;
       }
       // Create the SRV for the acceleration structure.

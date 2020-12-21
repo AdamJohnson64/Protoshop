@@ -14,6 +14,7 @@
 #include "Core_DXRUtil.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
+#include "SampleResources.h"
 #include "generated.Sample_DXRBasic.dxr.h"
 #include <array>
 #include <atlbase.h>
@@ -21,7 +22,7 @@
 #include <functional>
 #include <memory>
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
       D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
@@ -159,8 +160,9 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
             Identity<float>, 0, resourceBLAS->GetGPUVirtualAddress());
     resourceTLAS = DXRCreateTLAS(device.get(), &DxrInstance, 1);
   }
-  return [=](ID3D12Resource *resourceTarget) {
-    D3D12_RESOURCE_DESC descTarget = resourceTarget->GetDesc();
+  return [=](const SampleResourcesD3D12UAV &sampleResources) {
+    D3D12_RESOURCE_DESC descTarget =
+        sampleResources.BackBufferResource->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -186,8 +188,8 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
       {
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        device->m_pDevice->CreateUnorderedAccessView(resourceTarget, nullptr,
-                                                     &desc, descriptorBase);
+        device->m_pDevice->CreateUnorderedAccessView(
+            sampleResources.BackBufferResource, nullptr, &desc, descriptorBase);
         descriptorBase.ptr += descriptorElementSize;
       }
       // Create the SRV for the acceleration structure.

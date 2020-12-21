@@ -12,24 +12,26 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
+#include "SampleResources.h"
 #include <atlbase.h>
 #include <functional>
 #include <memory>
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12RTV &)>
 CreateSample_D3D12Basic(std::shared_ptr<Direct3D12Device> m_pDevice) {
-  return [=](ID3D12Resource *resourceBackbuffer) {
+  return [=](const SampleResourcesD3D12RTV &sampleResources) {
     m_pDevice->m_pDevice->CreateRenderTargetView(
-        resourceBackbuffer,
+        sampleResources.BackBufferResource,
         &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
         m_pDevice->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
     D3D12_Run_Synchronously(
         m_pDevice.get(), [&](ID3D12GraphicsCommandList5 *commandList) {
           // Put the RTV into render target state and clear it before use.
           commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(
-                     resourceBackbuffer, D3D12_RESOURCE_STATE_COMMON,
-                     D3D12_RESOURCE_STATE_RENDER_TARGET));
+              1,
+              &Make_D3D12_RESOURCE_BARRIER(sampleResources.BackBufferResource,
+                                           D3D12_RESOURCE_STATE_COMMON,
+                                           D3D12_RESOURCE_STATE_RENDER_TARGET));
           {
             static float r = 0;
             float color[4] = {r, 1, 0, 1};
@@ -43,9 +45,10 @@ CreateSample_D3D12Basic(std::shared_ptr<Direct3D12Device> m_pDevice) {
           }
           // Transition the render target into presentation state for display.
           commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(
-                     resourceBackbuffer, D3D12_RESOURCE_STATE_RENDER_TARGET,
-                     D3D12_RESOURCE_STATE_PRESENT));
+              1,
+              &Make_D3D12_RESOURCE_BARRIER(sampleResources.BackBufferResource,
+                                           D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                           D3D12_RESOURCE_STATE_PRESENT));
         });
   };
 }

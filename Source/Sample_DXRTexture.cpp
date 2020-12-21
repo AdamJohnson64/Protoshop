@@ -14,6 +14,7 @@
 #include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
+#include "SampleResources.h"
 #include "generated.Sample_DXRTexture.dxr.h"
 #include <array>
 #include <atlbase.h>
@@ -30,7 +31,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE operator+(D3D12_GPU_DESCRIPTOR_HANDLE h,
   return h;
 }
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
       D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 8);
@@ -265,8 +266,9 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     resourceTLAS =
         DXRCreateTLAS(device.get(), &DxrInstance[0], DxrInstance.size());
   }
-  return [=](ID3D12Resource *resourceTarget) {
-    D3D12_RESOURCE_DESC descTarget = resourceTarget->GetDesc();
+  return [=](const SampleResourcesD3D12UAV &sampleResources) {
+    D3D12_RESOURCE_DESC descTarget =
+        sampleResources.BackBufferResource->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     //
@@ -284,7 +286,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     CComPtr<ID3D12Resource> resourceConstants = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COMMON, 256, sizeof(Matrix44),
-        &Invert(GetTransformSource()->GetTransformWorldToClip()));
+        &Invert(sampleResources.TransformWorldToClip));
     ////////////////////////////////////////////////////////////////////////////////
     // Establish resource views.
     {
@@ -295,7 +297,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
         device->m_pDevice->CreateUnorderedAccessView(
-            resourceTarget, nullptr, &desc,
+            sampleResources.BackBufferResource, nullptr, &desc,
             descriptorBase + descriptorOffsetGlobals +
                 descriptorElementSize * 0);
       }

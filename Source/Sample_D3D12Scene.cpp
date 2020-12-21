@@ -16,13 +16,14 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "MutableMap.h"
+#include "SampleResources.h"
 #include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
 #include <atlbase.h>
 #include <functional>
 #include <memory>
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12RTV &)>
 CreateSample_D3D12Scene(std::shared_ptr<Direct3D12Device> device,
                         const std::vector<Instance> &scene) {
   CComPtr<ID3D12RootSignature> rootSignature =
@@ -100,10 +101,11 @@ float4 main() : SV_Target
                                sizeIndices, indices.get());
   };
 
-  return [=](ID3D12Resource *resourceBackbuffer) {
-    D3D12_RESOURCE_DESC descBackbuffer = resourceBackbuffer->GetDesc();
+  return [=](const SampleResourcesD3D12RTV &sampleResources) {
+    D3D12_RESOURCE_DESC descBackbuffer =
+        sampleResources.BackBufferResource->GetDesc();
     device->m_pDevice->CreateRenderTargetView(
-        resourceBackbuffer,
+        sampleResources.BackBufferResource,
         &Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault(),
         device->m_pDescriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
 
@@ -111,8 +113,7 @@ float4 main() : SV_Target
     factoryConstants.fnGenerator = [=](const Matrix44 *transform) {
       return D3D12_Create_Buffer(
           device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
-          256, 256,
-          &(*transform * GetTransformSource()->GetTransformWorldToClip()));
+          256, 256, &(*transform * sampleResources.TransformWorldToClip));
     };
 
     D3D12_Run_Synchronously(device.get(), [&](ID3D12GraphicsCommandList5
@@ -122,7 +123,7 @@ float4 main() : SV_Target
       commandList->SetDescriptorHeaps(1, descriptorHeaps);
       // Put the RTV into render target state and clear it before use.
       commandList->ResourceBarrier(
-          1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
+          1, &Make_D3D12_RESOURCE_BARRIER(sampleResources.BackBufferResource,
                                           D3D12_RESOURCE_STATE_COMMON,
                                           D3D12_RESOURCE_STATE_RENDER_TARGET));
       {
@@ -146,7 +147,9 @@ float4 main() : SV_Target
         const Instance &instance = scene[i];
         {
           D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
-          desc.BufferLocation = factoryConstants(instance.TransformObjectToWorld.get())->GetGPUVirtualAddress();
+          desc.BufferLocation =
+              factoryConstants(instance.TransformObjectToWorld.get())
+                  ->GetGPUVirtualAddress();
           desc.SizeInBytes = 256;
           D3D12_CPU_DESCRIPTOR_HANDLE handle =
               descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
@@ -184,7 +187,7 @@ float4 main() : SV_Target
       }
       // Transition the render target into presentation state for display.
       commandList->ResourceBarrier(
-          1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
+          1, &Make_D3D12_RESOURCE_BARRIER(sampleResources.BackBufferResource,
                                           D3D12_RESOURCE_STATE_RENDER_TARGET,
                                           D3D12_RESOURCE_STATE_PRESENT));
     });

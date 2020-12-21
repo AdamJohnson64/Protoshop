@@ -60,33 +60,33 @@ CreateSample_D3D11Voxel(std::shared_ptr<Direct3D11Device> device);
 std::shared_ptr<Object>
 CreateSample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12RTV &)>
 CreateSample_D3D12Basic(std::shared_ptr<Direct3D12Device> device);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12RTV &)>
 CreateSample_D3D12Scene(std::shared_ptr<Direct3D12Device> device,
                         const std::vector<Instance> &scene);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRMesh(std::shared_ptr<Direct3D12Device> device);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
                       const std::vector<Instance> &scene);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device);
 
-std::function<void(ID3D12Resource *)>
+std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device);
 
 std::function<void()>

@@ -233,11 +233,12 @@ public:
 };
 
 class WindowRenderToD3D12RTV : public WindowWithSwapChainD3D12 {
-  std::function<void(ID3D12Resource *)> m_fnRender;
+  std::function<void(const SampleResourcesD3D12RTV &)> m_fnRender;
 
 public:
-  WindowRenderToD3D12RTV(std::shared_ptr<Direct3D12Device> device,
-                         std::function<void(ID3D12Resource *)> fnRender)
+  WindowRenderToD3D12RTV(
+      std::shared_ptr<Direct3D12Device> device,
+      std::function<void(const SampleResourcesD3D12RTV &)> fnRender)
       : WindowWithSwapChainD3D12(device) {
     m_fnRender = fnRender;
   }
@@ -246,17 +247,24 @@ public:
     TRYD3D(m_DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
         m_DXGISwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
         __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
-    m_fnRender(resourceBackbuffer);
+    SampleResourcesD3D12RTV sampleResources = {};
+    sampleResources.TransformWorldToClip =
+        GetTransformSource()->GetTransformWorldToClip();
+    sampleResources.TransformWorldToView =
+        GetTransformSource()->GetTransformWorldToView();
+    sampleResources.BackBufferResource = resourceBackbuffer;
+    m_fnRender(sampleResources);
     m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
   }
 };
 
 class WindowRenderToD3D12UAV : public WindowWithSwapChainD3D12 {
-  std::function<void(ID3D12Resource *)> m_fnRender;
+  std::function<void(const SampleResourcesD3D12UAV &)> m_fnRender;
 
 public:
-  WindowRenderToD3D12UAV(std::shared_ptr<Direct3D12Device> device,
-                         std::function<void(ID3D12Resource *)> fnRender)
+  WindowRenderToD3D12UAV(
+      std::shared_ptr<Direct3D12Device> device,
+      std::function<void(const SampleResourcesD3D12UAV &)> fnRender)
       : WindowWithSwapChainD3D12(device) {
     m_fnRender = fnRender;
   }
@@ -281,7 +289,13 @@ public:
           __uuidof(ID3D12Resource1), (void **)&resourceTarget.p));
       resourceTarget->SetName(L"Direct3D 12 Interposing UAV");
     }
-    m_fnRender(resourceTarget);
+    SampleResourcesD3D12UAV sampleResources = {};
+    sampleResources.TransformWorldToClip =
+        GetTransformSource()->GetTransformWorldToClip();
+    sampleResources.TransformWorldToView =
+        GetTransformSource()->GetTransformWorldToView();
+    sampleResources.BackBufferResource = resourceTarget;
+    m_fnRender(sampleResources);
     TRYD3D(m_DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
         m_DXGISwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
         __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
@@ -531,15 +545,15 @@ CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
 }
 
 std::shared_ptr<Object>
-CreateNewWindowRTV(std::shared_ptr<Direct3D12Device> deviceD3D12,
-                   std::function<void(ID3D12Resource *rt)> fnRender) {
+CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
+                std::function<void(const SampleResourcesD3D12RTV &)> fnRender) {
   return std::shared_ptr<Object>(
       new WindowRenderToD3D12RTV(deviceD3D12, fnRender));
 }
 
 std::shared_ptr<Object>
-CreateNewWindowUAV(std::shared_ptr<Direct3D12Device> deviceD3D12,
-                   std::function<void(ID3D12Resource *rt)> fnRender) {
+CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
+                std::function<void(const SampleResourcesD3D12UAV &)> fnRender) {
   return std::shared_ptr<Object>(
       new WindowRenderToD3D12UAV(deviceD3D12, fnRender));
 }
