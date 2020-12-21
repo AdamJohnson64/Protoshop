@@ -3,7 +3,6 @@
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
 #include "Core_DXRUtil.h"
-#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "SampleResources.h"

@@ -32,7 +32,6 @@
     <ClInclude Include="Source\Scene_IMaterial.h" />
     <ClInclude Include="Source\Sample_DXR_RayRecurse.inc" />
     <ClInclude Include="Source\Sample_Manifest.h" />
-    <ClInclude Include="Source\Core_ITransformSource.h" />
     <ClInclude Include="Source\Scene_InstanceTable.h" />
     <ClInclude Include="Source\Scene_IMesh.h" />
     <ClInclude Include="Source\Scene_MeshOBJ.h" />

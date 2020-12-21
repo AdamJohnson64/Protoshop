@@ -5,7 +5,6 @@
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
 #include "Core_DXGI.h"
-#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Object.h"
 #include "Core_OpenGL.h"
@@ -34,16 +33,6 @@ static Matrix44 TransformWorldToView = {
 
 static Matrix44 TransformViewToClip = CreateProjection<float>(
     0.01f, 100.0f, 45 * (Pi<float> / 180), 45 * (Pi<float> / 180));
-
-class TransformSource : public ITransformSource {
-public:
-  virtual Matrix44 GetTransformWorldToClip() {
-    return TransformWorldToView * TransformViewToClip;
-  }
-  virtual Matrix44 GetTransformWorldToView() { return TransformWorldToView; }
-} g_TransformSource;
-
-ITransformSource *GetTransformSource() { return &g_TransformSource; }
 
 void SetCameraWorldToView(const Matrix44 &transformWorldToView) {
   TransformWorldToView = transformWorldToView;
@@ -224,9 +213,8 @@ public:
     sampleResources.BackBufferTexture = textureBackbuffer;
     sampleResources.DepthStencilView = dsvDepth;
     sampleResources.TransformWorldToClip =
-        GetTransformSource()->GetTransformWorldToClip();
-    sampleResources.TransformWorldToView =
-        GetTransformSource()->GetTransformWorldToView();
+        TransformWorldToView * TransformViewToClip;
+    sampleResources.TransformWorldToView = TransformWorldToView;
     m_fnRender(sampleResources);
     m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
   }
@@ -249,9 +237,8 @@ public:
         __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
     SampleResourcesD3D12RTV sampleResources = {};
     sampleResources.TransformWorldToClip =
-        GetTransformSource()->GetTransformWorldToClip();
-    sampleResources.TransformWorldToView =
-        GetTransformSource()->GetTransformWorldToView();
+        TransformWorldToView * TransformViewToClip;
+    sampleResources.TransformWorldToView = TransformWorldToView;
     sampleResources.BackBufferResource = resourceBackbuffer;
     m_fnRender(sampleResources);
     m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
@@ -291,9 +278,8 @@ public:
     }
     SampleResourcesD3D12UAV sampleResources = {};
     sampleResources.TransformWorldToClip =
-        GetTransformSource()->GetTransformWorldToClip();
-    sampleResources.TransformWorldToView =
-        GetTransformSource()->GetTransformWorldToView();
+        TransformWorldToView * TransformViewToClip;
+    sampleResources.TransformWorldToView = TransformWorldToView;
     sampleResources.BackBufferResource = resourceTarget;
     m_fnRender(sampleResources);
     TRYD3D(m_DXGISwapChain->GetIDXGISwapChain()->GetBuffer(

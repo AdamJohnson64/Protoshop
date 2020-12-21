@@ -28,9 +28,7 @@ Matrix44 ConvertMatrix(vr::HmdMatrix44_t &m) {
 
 void CreateNewOpenVRSession(
     std::shared_ptr<Direct3D11Device> device,
-    std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                       const Matrix44 &)>
-        fnRender) {
+    std::function<void(const SampleResourcesD3D11 &)> fnRender) {
 
   vr::IVRSystem *vrsystem = vr::VR_Init(
       nullptr, vr::EVRApplicationType::VRApplication_Scene, nullptr);
@@ -98,8 +96,16 @@ void CreateNewOpenVRSession(
     Matrix44 projectionRightEye = ConvertMatrix(
         vrsystem->GetProjectionMatrix(vr::Eye_Right, 0.001f, 100.0f));
 
-    fnRender(textureVR, dsvDepth,
-             world * head * transformHeadToLeftEye * projectionLeftEye);
+    {
+      SampleResourcesD3D11 sampleResources = {};
+      sampleResources.BackBufferTexture = textureVR;
+      sampleResources.DepthStencilView = dsvDepth;
+      sampleResources.TransformWorldToClip =
+          world * head * transformHeadToLeftEye * projectionLeftEye;
+      sampleResources.TransformWorldToView =
+          world * head * transformHeadToLeftEye;
+      fnRender(sampleResources);
+    }
     {
       vr::Texture_t texture = {};
       texture.handle = textureVR.p;
@@ -107,8 +113,16 @@ void CreateNewOpenVRSession(
       texture.eType = vr::TextureType_DirectX;
       vrcompositor->Submit(vr::Eye_Left, &texture);
     }
-    fnRender(textureVR, dsvDepth,
-             world * head * transformHeadToRightEye * projectionRightEye);
+    {
+      SampleResourcesD3D11 sampleResources = {};
+      sampleResources.BackBufferTexture = textureVR;
+      sampleResources.DepthStencilView = dsvDepth;
+      sampleResources.TransformWorldToClip =
+          world * head * transformHeadToRightEye * projectionRightEye;
+      sampleResources.TransformWorldToView =
+          world * head * transformHeadToRightEye;
+      fnRender(sampleResources);
+    }
     {
       vr::Texture_t texture = {};
       texture.handle = textureVR.p;

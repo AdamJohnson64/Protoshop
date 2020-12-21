@@ -10,7 +10,6 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
-#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"

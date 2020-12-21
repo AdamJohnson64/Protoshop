@@ -12,7 +12,6 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
-#include "Core_ITransformSource.h"
 #include "Core_Math.h"
 #include "Core_Object.h"
 #include "Core_Util.h"
@@ -290,9 +289,19 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       // Upload the constant buffer.
       {
         static float t = 0;
+        Matrix44 TransformWorldToView = {
+            // clang-format off
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, -1, 5, 1
+            // clang-format on
+        };
+        Matrix44 TransformViewToClip = CreateProjection<float>(
+            0.01f, 100.0f, 45 * (Pi<float> / 180), 45 * (Pi<float> / 180));
         Constants constants;
         constants.TransformClipToWorld =
-            Invert(GetTransformSource()->GetTransformWorldToClip());
+            Invert(TransformWorldToView * TransformViewToClip);
         constants.WindowDimensions = {static_cast<float>(RENDERTARGET_WIDTH),
                                       static_cast<float>(RENDERTARGET_HEIGHT)};
         constants.Time = t;
