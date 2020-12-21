@@ -9,17 +9,18 @@
 
 #include "Core_D3D11.h"
 #include "Core_D3D11Util.h"
+#include "SampleResources.h"
 #include <d3d11.h>
 #include <functional>
 #include <memory>
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Basic(std::shared_ptr<Direct3D11Device> device) {
-  return [=](ID3D11Texture2D *textureBackbuffer) {
+  return [=](const SampleResourcesD3D11 &sampleResources) {
     {
       CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
           D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
-                                          textureBackbuffer);
+                                          sampleResources.BackBufferTexture);
       float color[4] = {0.5f, 0.1f, 0.1f, 1.0f};
       device->GetID3D11DeviceContext()->ClearRenderTargetView(rtvBackbuffer,
                                                               color);

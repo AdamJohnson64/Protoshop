@@ -14,6 +14,7 @@
 #include "ImageUtil.h"
 #include "Image_TGA.h"
 #include "MutableMap.h"
+#include "SampleResources.h"
 #include "Scene_IMaterial.h"
 #include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
@@ -26,8 +27,7 @@
 
 #define LOAD_TEXTURE_ASYNC
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
                         const std::vector<Instance> &scene) {
   ////////////////////////////////////////////////////////////////////////////////
@@ -251,31 +251,30 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   // members to carry this state. This should make it easier to offload
   // processing into construction without changing things too much (you should
   // just move the code out of the lambda).
-  return [=](ID3D11Texture2D *textureBackbuffer,
-             ID3D11DepthStencilView *dsvDepth, const Matrix44 &transform) {
+  return [=](const SampleResourcesD3D11 &sampleResources) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
-    textureBackbuffer->GetDesc(&descBackbuffer);
+    sampleResources.BackBufferTexture->GetDesc(&descBackbuffer);
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
         D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
-                                        textureBackbuffer);
+                                        sampleResources.BackBufferTexture);
     ////////////////////////////////////////////////////////////////////////
     // Setup primary state; render targets, merger, prim assembly, etc.
     device->GetID3D11DeviceContext()->ClearState();
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->ClearDepthStencilView(
-        dsvDepth, D3D11_CLEAR_DEPTH, 1.0f, 0);
+        sampleResources.DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
-    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
-                                                         dsvDepth);
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(
+        1, &rtvBackbuffer.p, sampleResources.DepthStencilView);
     device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
 
     {
       ConstantsWorld data = {};
-      data.TransformWorldToClip = transform;
+      data.TransformWorldToClip = sampleResources.TransformWorldToClip;
       device->GetID3D11DeviceContext()->UpdateSubresource(constantsWorld, 0,
                                                           nullptr, &data, 0, 0);
       device->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1,

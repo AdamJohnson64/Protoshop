@@ -12,12 +12,12 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
+#include "SampleResources.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device) {
 
   CComPtr<ID3D11SamplerState> samplerState;
@@ -95,31 +95,29 @@ float4 mainPS(VertexPS vin) : SV_Target
         D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER,
                             sizeof(vertices), vertices);
   }
-  return [=](ID3D11Texture2D *textureBackbuffer,
-             ID3D11DepthStencilView *dsvDepth,
-             const Matrix44 &transformWorldToClip) {
+  return [=](const SampleResourcesD3D11 &sampleResources) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
-    textureBackbuffer->GetDesc(&descBackbuffer);
+    sampleResources.BackBufferTexture->GetDesc(&descBackbuffer);
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
         D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
-                                        textureBackbuffer);
+                                        sampleResources.BackBufferTexture);
     device->GetID3D11DeviceContext()->ClearState();
     ////////////////////////////////////////////////////////////////////////////////
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->ClearDepthStencilView(
-        dsvDepth, D3D11_CLEAR_DEPTH, 1.0f, 0);
+        sampleResources.DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
-    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
-                                                         dsvDepth);
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(
+        1, &rtvBackbuffer.p, sampleResources.DepthStencilView);
     ////////////////////////////////////////////////////////////////////////////////
     // Update constant buffer.
     {
       static float angle = 0;
       ConstantsWorld data = {};
-      data.TransformWorldToClip = transformWorldToClip;
+      data.TransformWorldToClip = sampleResources.TransformWorldToClip;
       data.LightPosition = Normalize(Vector3{sinf(angle), 1, -cosf(angle)});
       angle += 0.05f;
       device->GetID3D11DeviceContext()->UpdateSubresource(bufferConstants, 0,

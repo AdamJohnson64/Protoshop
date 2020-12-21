@@ -13,12 +13,13 @@
 #include "Core_DXGI.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
+#include "SampleResources.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>
 #include <vector>
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11DrawingContext(std::shared_ptr<Direct3D11Device> device) {
   ////////////////////////////////////////////////////////////////////////////////
   // Create a vertex shader and matching input layout.
@@ -56,12 +57,12 @@ float4 main() : SV_Target
         blobPS->GetBufferPointer(), blobPS->GetBufferSize(), nullptr,
         &shaderPixel));
   }
-  return [=](ID3D11Texture2D *textureBackbuffer) {
+  return [=](const SampleResourcesD3D11 &sampleResources) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
-    textureBackbuffer->GetDesc(&descBackbuffer);
+    sampleResources.BackBufferTexture->GetDesc(&descBackbuffer);
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
         D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
-                                        textureBackbuffer);
+                                        sampleResources.BackBufferTexture);
     device->GetID3D11DeviceContext()->ClearState();
     // Beginning of rendering.
     device->GetID3D11DeviceContext()->ClearRenderTargetView(

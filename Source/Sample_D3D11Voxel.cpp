@@ -13,6 +13,7 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "ImageUtil.h"
+#include "SampleResources.h"
 #include <atlbase.h>
 #include <cstdint>
 #include <functional>
@@ -20,7 +21,7 @@
 
 const int VOXEL_SIZE = 64;
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Voxel(std::shared_ptr<Direct3D11Device> device) {
   // Create a compute shader.
   CComPtr<ID3D11ComputeShader> shaderCompute;
@@ -170,12 +171,12 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
           textureVoxel, &desc, &srvVoxel.p));
     }
   }
-  return [=](ID3D11Texture2D *textureBackbuffer) {
+  return [=](const SampleResourcesD3D11 &sampleResources) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
-    textureBackbuffer->GetDesc(&descBackbuffer);
+    sampleResources.BackBufferTexture->GetDesc(&descBackbuffer);
     CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
         D3D11_Create_UAV_From_Texture2D(device->GetID3D11Device(),
-                                        textureBackbuffer);
+                                        sampleResources.BackBufferTexture);
     device->GetID3D11DeviceContext()->ClearState();
     // Upload the constant buffer.
     static float angle = 0;

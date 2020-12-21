@@ -1,3 +1,4 @@
+#include "Core_Window.h"
 #include "Core_D3D.h"
 #include "Core_D3D11.h"
 #include "Core_D3D11Util.h"
@@ -168,18 +169,6 @@ private:
   }
 };
 
-class WindowWithSwapChainD3D11 : public WindowBase {
-protected:
-  std::shared_ptr<Direct3D11Device> m_Direct3D11Device;
-  std::shared_ptr<DXGISwapChain> m_DXGISwapChain;
-
-public:
-  WindowWithSwapChainD3D11(std::shared_ptr<Direct3D11Device> device) {
-    m_Direct3D11Device = device;
-    m_DXGISwapChain = CreateDXGISwapChain(device, m_hWindow);
-  }
-};
-
 class WindowWithSwapChainD3D12 : public WindowBase {
 protected:
   std::shared_ptr<Direct3D12Device> m_Direct3D12Device;
@@ -192,36 +181,17 @@ public:
   }
 };
 
-class WindowRenderToD3D11Texture2D : public WindowWithSwapChainD3D11 {
-  std::function<void(ID3D11Texture2D *)> m_fnRender;
+class WindowRenderToD3D11 : public WindowBase {
+  std::shared_ptr<Direct3D11Device> m_Direct3D11Device;
+  std::shared_ptr<DXGISwapChain> m_DXGISwapChain;
+  std::function<void(const SampleResourcesD3D11 &)> m_fnRender;
 
 public:
-  WindowRenderToD3D11Texture2D(std::shared_ptr<Direct3D11Device> device,
-                               std::function<void(ID3D11Texture2D *)> fnRender)
-      : WindowWithSwapChainD3D11(device) {
-    m_fnRender = fnRender;
-  }
-  void OnPaint() override {
-    CComPtr<ID3D11Texture2D> textureBackbuffer;
-    TRYD3D(m_DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
-        0, __uuidof(ID3D11Texture2D), (void **)&textureBackbuffer.p));
-    m_fnRender(textureBackbuffer);
-    m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
-  }
-};
-
-class WindowRenderToD3D11RTVDSV : public WindowWithSwapChainD3D11 {
-  std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                     const Matrix44 &)>
-      m_fnRender;
-
-public:
-  WindowRenderToD3D11RTVDSV(
+  WindowRenderToD3D11(
       std::shared_ptr<Direct3D11Device> device,
-      std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                         const Matrix44 &)>
-          fnRender)
-      : WindowWithSwapChainD3D11(device) {
+      std::function<void(const SampleResourcesD3D11 &)> fnRender) {
+    m_Direct3D11Device = device;
+    m_DXGISwapChain = CreateDXGISwapChain(device, m_hWindow);
     m_fnRender = fnRender;
   }
   void OnPaint() override {
@@ -250,8 +220,14 @@ public:
       TRYD3D(m_Direct3D11Device->GetID3D11Device()->CreateDepthStencilView(
           textureDepth, &desc, &dsvDepth));
     }
-    m_fnRender(textureBackbuffer, dsvDepth,
-               GetTransformSource()->GetTransformWorldToClip());
+    SampleResourcesD3D11 sampleResources = {};
+    sampleResources.BackBufferTexture = textureBackbuffer;
+    sampleResources.DepthStencilView = dsvDepth;
+    sampleResources.TransformWorldToClip =
+        GetTransformSource()->GetTransformWorldToClip();
+    sampleResources.TransformWorldToView =
+        GetTransformSource()->GetTransformWorldToView();
+    m_fnRender(sampleResources);
     m_DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
   }
 };
@@ -549,18 +525,9 @@ public:
 
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
-                std::function<void(ID3D11Texture2D *)> fnRender) {
+                std::function<void(const SampleResourcesD3D11 &)> fnRender) {
   return std::shared_ptr<Object>(
-      new WindowRenderToD3D11Texture2D(deviceD3D11, fnRender));
-}
-
-std::shared_ptr<Object>
-CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
-                std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                                   const Matrix44 &)>
-                    fnRender) {
-  return std::shared_ptr<Object>(
-      new WindowRenderToD3D11RTVDSV(deviceD3D11, fnRender));
+      new WindowRenderToD3D11(deviceD3D11, fnRender));
 }
 
 std::shared_ptr<Object>

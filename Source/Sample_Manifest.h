@@ -2,9 +2,11 @@
 
 #include "Core_D3D11.h"
 #include "Core_Math.h"
+#include "SampleResources.h"
 #include "Scene_InstanceTable.h"
 #include <d3d11.h>
 #include <functional>
+#include <memory>
 
 class DXGISwapChain;
 class Direct3D11Device;
@@ -12,54 +14,47 @@ class Direct3D12Device;
 class OpenGLDevice;
 class VKDevice;
 
-#include <memory>
-
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Basic(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11ComputeCanvas(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11DrawingContext(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11LightProbe(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11LightProbeCross(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Mesh(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11NormalMap(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
                         const std::vector<Instance> &scene);
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11ShowTexture(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Tessellation(std::shared_ptr<Direct3D11Device> device);
 
-std::function<void(ID3D11Texture2D *)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Voxel(std::shared_ptr<Direct3D11Device> device);
 
 std::shared_ptr<Object>

@@ -12,14 +12,14 @@
 #include "Core_Math.h"
 #include "Core_Util.h"
 #include "MutableMap.h"
+#include "SampleResources.h"
 #include "Scene_IMesh.h"
 #include "Scene_InstanceTable.h"
 #include <array>
 #include <atlbase.h>
 #include <functional>
 
-std::function<void(ID3D11Texture2D *, ID3D11DepthStencilView *,
-                   const Matrix44 &)>
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -210,14 +210,12 @@ float4 mainPS(VertexPS vin) : SV_Target
   // single draw call which draws everything to the output target.
 
   const std::vector<Instance> &scene = Scene_Default();
-  return [=](ID3D11Texture2D *textureBackbuffer,
-             ID3D11DepthStencilView *dsvDepth,
-             const Matrix44 &transformWorldToClip) {
+  return [=](const SampleResourcesD3D11 &sampleResources) {
     D3D11_TEXTURE2D_DESC descBackbuffer = {};
-    textureBackbuffer->GetDesc(&descBackbuffer);
+    sampleResources.BackBufferTexture->GetDesc(&descBackbuffer);
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
         D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
-                                        textureBackbuffer);
+                                        sampleResources.BackBufferTexture);
     ////////////////////////////////////////////////////////////////////////
     // Setup primitive assembly.
     // This is common to all draw calls within the frame. We clear the state
@@ -318,7 +316,7 @@ float4 mainPS(VertexPS vin) : SV_Target
 
     {
       ConstantsWorld data = {};
-      data.TransformWorldToClip = transformWorldToClip;
+      data.TransformWorldToClip = sampleResources.TransformWorldToClip;
       data.TransformWorldToClipShadow = TransformWorldToClipShadow;
       data.TransformWorldToClipShadowInverse =
           Invert(TransformWorldToClipShadow);
@@ -332,11 +330,11 @@ float4 mainPS(VertexPS vin) : SV_Target
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->ClearDepthStencilView(
-        dsvDepth, D3D11_CLEAR_DEPTH, 1, 0);
+        sampleResources.DepthStencilView, D3D11_CLEAR_DEPTH, 1, 0);
     device->GetID3D11DeviceContext()->RSSetViewports(
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
-    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvBackbuffer.p,
-                                                         dsvDepth);
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(
+        1, &rtvBackbuffer.p, sampleResources.DepthStencilView);
     device->GetID3D11DeviceContext()->PSSetShaderResources(0, 1,
                                                            &srvDepthShadow.p);
     DRAWEVERYTHING();
