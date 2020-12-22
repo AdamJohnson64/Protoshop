@@ -1,7 +1,7 @@
-#include <exception>
-
+#include "Core_D3D.h"
 #include <atlbase.h>
 #include <d3dcompiler.h>
+#include <exception>
 
 #pragma comment(lib, "d3dcompiler.lib")
 
@@ -68,10 +68,14 @@ struct VertexPS
 // Common resources
 // We keep map types in designated slots so we can indicate them easily.
 
+sampler SamplerDefaultWrap : register(s0);
+sampler SamplerDefaultBorder : register(s1);
+
 Texture2D<float4> TextureAlbedoMap : register(t0);
 Texture2D<float4> TextureNormalMap : register(t1);
 Texture2D<float4> TextureDepthMap : register(t2);
-sampler userSampler;
+Texture2D<float4> TextureMaskMap : register(t2);
+Texture2D<float4> TextureShadowMap : register(t3);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Common entrypoints
@@ -98,6 +102,26 @@ VertexPS mainVS_NOOBJTRANSFORM(VertexVS vin)
     vout.Texcoord = vin.Texcoord * 10;
     vout.WorldPosition = vin.Position.xyz;
     return vout;
+}
+
+float CalculateSpotlightShadowMap(float3 worldSpacePosition)
+{
+    float4 worldInShadowSpaceHomogeneous = mul(TransformWorldToClipShadow, float4(worldSpacePosition, 1));
+    float4 worldInShadowSpaceHomogeneousWDIV = worldInShadowSpaceHomogeneous / worldInShadowSpaceHomogeneous.w;
+    float spotlight = clamp(1 - pow(sqrt(dot(worldInShadowSpaceHomogeneousWDIV.xy, worldInShadowSpaceHomogeneousWDIV.xy)), 10), 0, 1);
+    // Map each world point into the shadow map buffer.
+    // This will take clip space and map it to texture UV space.
+    // The Y axis is upside down.
+    float2 shadowuv = (worldInShadowSpaceHomogeneousWDIV.xy + 1) / 2;
+    shadowuv.y = 1 - shadowuv.y;
+    // Read the depth value out of the shadow map.
+    float depth = TextureShadowMap.Sample(SamplerDefaultWrap, shadowuv).x;
+    // If the w adjusted depth of this fragment is beyond the shadow then we are shadowed.
+    if (worldInShadowSpaceHomogeneousWDIV.z > (depth + 0.00001))
+    {
+        return 0;
+    }
+    return spotlight;
 }
 
 )SHADER";

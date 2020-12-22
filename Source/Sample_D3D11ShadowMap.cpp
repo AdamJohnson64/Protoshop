@@ -32,7 +32,6 @@ CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device) {
   const char *szShaderCode = R"SHADER(
 #include "Sample_D3D11_Common.inc"
 
-Texture2D TextureShadowMap : register(t0);
 
 float4 mainPS(VertexPS vin) : SV_Target
 {
@@ -40,37 +39,9 @@ float4 mainPS(VertexPS vin) : SV_Target
     float3 vectorLight = lightPosition - vin.WorldPosition;
     float lightDistance = length(vectorLight);
     vectorLight /= lightDistance;
-
-    float4 worldInShadowSpaceHomogeneous = mul(TransformWorldToClipShadow, float4(vin.WorldPosition, 1));
-    float4 worldInShadowSpaceHomogeneousWDIV = worldInShadowSpaceHomogeneous / worldInShadowSpaceHomogeneous.w;
-    float spotlight = 1 - pow(sqrt(dot(worldInShadowSpaceHomogeneousWDIV.xy, worldInShadowSpaceHomogeneousWDIV.xy)), 10);
-
+    float spotlight = CalculateSpotlightShadowMap(vin.WorldPosition);
     float i = dot(vectorLight, vin.Normal) * spotlight - 0.002f * lightDistance * lightDistance;
-    float4 color = float4(i, i, i, 1);
-
-    // DEBUG : Map world points into the shadow map camera frame so we can see
-    // what the shadow camera sees. 
-    if (worldInShadowSpaceHomogeneous.w > 0 && worldInShadowSpaceHomogeneousWDIV.z < 1 &&
-        worldInShadowSpaceHomogeneousWDIV.x > -1 && worldInShadowSpaceHomogeneousWDIV.x < 1 &&
-        worldInShadowSpaceHomogeneousWDIV.y > -1 && worldInShadowSpaceHomogeneousWDIV.y < 1)
-    {
-      //color.b = 1;
-    }
-
-    // Map each world point into the shadow map buffer.
-    // This will take clip space and map it to texture UV space.
-    // The Y axis is upside down.
-    float2 shadowuv = (worldInShadowSpaceHomogeneousWDIV.xy + 1) / 2;
-    shadowuv.y = 1 - shadowuv.y;
-    // Read the depth value out of the shadow map.
-    float depth = TextureShadowMap.Sample(userSampler, shadowuv).x;
-    // If the w adjusted depth of this fragment is beyond the shadow then we are shadowed.
-    if (worldInShadowSpaceHomogeneousWDIV.z > (depth + 0.0001))
-    {
-      color.rgb = 0;
-    }
-
-    return color;
+    return float4(i, i, i, i);
 })SHADER";
 
   CComPtr<ID3D11VertexShader> shaderVertex;
@@ -110,9 +81,9 @@ float4 mainPS(VertexPS vin) : SV_Target
 
   ////////////////////////////////////////////////////////////////////////////////
   // Default wrapping sampler.
-  CComPtr<ID3D11SamplerState> samplerState;
+  CComPtr<ID3D11SamplerState> samplerDefaultWrap;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
-      &Make_D3D11_SAMPLER_DESC_DefaultBorder(), &samplerState.p));
+      &Make_D3D11_SAMPLER_DESC_DefaultBorder(), &samplerDefaultWrap.p));
 
   ////////////////////////////////////////////////////////////////////////
   // Constant slot 0 : World Constants
@@ -225,7 +196,8 @@ float4 mainPS(VertexPS vin) : SV_Target
     device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
-    device->GetID3D11DeviceContext()->PSSetSamplers(0, 1, &samplerState.p);
+    device->GetID3D11DeviceContext()->PSSetSamplers(kSamplerRegisterDefaultWrap,
+                                                    1, &samplerDefaultWrap.p);
 
     ////////////////////////////////////////////////////////////////////////
     // This function draws everything, even if it can't be seen.
@@ -334,8 +306,8 @@ float4 mainPS(VertexPS vin) : SV_Target
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
     device->GetID3D11DeviceContext()->OMSetRenderTargets(
         1, &rtvBackbuffer.p, sampleResources.DepthStencilView);
-    device->GetID3D11DeviceContext()->PSSetShaderResources(0, 1,
-                                                           &srvDepthShadow.p);
+    device->GetID3D11DeviceContext()->PSSetShaderResources(
+        kTextureRegisterShadowMap, 1, &srvDepthShadow.p);
     DRAWEVERYTHING();
 
     ////////////////////////////////////////////////////////////////////////

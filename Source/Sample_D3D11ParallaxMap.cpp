@@ -18,9 +18,9 @@
 
 std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device) {
-  CComPtr<ID3D11SamplerState> samplerState;
+  CComPtr<ID3D11SamplerState> samplerDefaultWrap;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
-      &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerState.p));
+      &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerDefaultWrap.p));
   CComPtr<ID3D11Buffer> bufferConstants =
       D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER,
                           sizeof(ConstantsWorld));
@@ -30,7 +30,7 @@ CreateSample_D3D11ParallaxMap(std::shared_ptr<Direct3D11Device> device) {
 float2 ParallaxMapping(float2 texCoords, float3 viewDir)
 {
     float height_scale = 0.1;
-    float height = 1 - TextureDepthMap.Sample(userSampler, texCoords).r;
+    float height = 1 - TextureDepthMap.Sample(SamplerDefaultWrap, texCoords).r;
     float2 p = viewDir.xy / viewDir.z * (height * height_scale);
     return texCoords - p;
 }
@@ -39,8 +39,8 @@ float4 mainPS(VertexPS vin) : SV_Target
 {
     float3x3 matTangentFrame = cotangent_frame(vin.Normal, vin.WorldPosition, vin.Texcoord);    
     float2 vectorParallaxUV = ParallaxMapping(vin.Texcoord, mul(matTangentFrame, CameraPosition - vin.WorldPosition));
-    float3 texelAlbedo = TextureAlbedoMap.Sample(userSampler, vectorParallaxUV).xyz;
-    float3 texelNormal = TextureNormalMap.Sample(userSampler, vectorParallaxUV).xyz * 2 - 1;
+    float3 texelAlbedo = TextureAlbedoMap.Sample(SamplerDefaultWrap, vectorParallaxUV).xyz;
+    float3 texelNormal = TextureNormalMap.Sample(SamplerDefaultWrap, vectorParallaxUV).xyz * 2 - 1;
     float3 vectorNormal = normalize(mul(texelNormal, matTangentFrame));
     return float4(texelAlbedo * dot(vectorNormal, normalize(float3(1, 1, -1))), 1);
 })SHADER";
@@ -141,13 +141,14 @@ float4 mainPS(VertexPS vin) : SV_Target
     device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr, 0);
     device->GetID3D11DeviceContext()->PSSetConstantBuffers(0, 1,
                                                            &bufferConstants.p);
-    device->GetID3D11DeviceContext()->PSSetSamplers(0, 1, &samplerState.p);
-    device->GetID3D11DeviceContext()->PSSetShaderResources(0, 1,
-                                                           &srvAlbedoMap.p);
-    device->GetID3D11DeviceContext()->PSSetShaderResources(1, 1,
-                                                           &srvNormalMap.p);
-    device->GetID3D11DeviceContext()->PSSetShaderResources(2, 1,
-                                                           &srvDepthMap.p);
+    device->GetID3D11DeviceContext()->PSSetSamplers(kSamplerRegisterDefaultWrap,
+                                                    1, &samplerDefaultWrap.p);
+    device->GetID3D11DeviceContext()->PSSetShaderResources(
+        kTextureRegisterAlbedoMap, 1, &srvAlbedoMap.p);
+    device->GetID3D11DeviceContext()->PSSetShaderResources(
+        kTextureRegisterNormalMap, 1, &srvNormalMap.p);
+    device->GetID3D11DeviceContext()->PSSetShaderResources(
+        kTextureRegisterDepthMap, 1, &srvDepthMap.p);
     device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
         D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);

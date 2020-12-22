@@ -34,8 +34,6 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
   const char *szShaderCode = R"SHADER(
 #include "Sample_D3D11_Common.inc"
 
-Texture2D TextureMaskMap : register(t2);
-
 float4 mainPS(VertexPS vin) : SV_Target
 {
     float3 p = vin.WorldPosition;
@@ -45,18 +43,31 @@ float4 mainPS(VertexPS vin) : SV_Target
     return float4(illum, illum, illum, 1);
 }
 
-float4 mainPSTextured(VertexPS vin) : SV_Target
+float4 mainPSOBJDepthOnly(VertexPS vin) : SV_Target
 {
     ////////////////////////////////////////////////////////////////////////////////
     // Alpha Masking (Alpha Test)
-    float4 texelMask = TextureMaskMap.Sample(userSampler, vin.Texcoord);
+    float4 texelMask = TextureMaskMap.Sample(SamplerDefaultWrap, vin.Texcoord);
     if (texelMask.x < 0.5) discard;
+    return float4(1, 1, 1, 1);
+}
+
+float4 mainPSOBJMaterial(VertexPS vin) : SV_Target
+{
+    ////////////////////////////////////////////////////////////////////////////////
+    // Alpha Masking (Alpha Test)
+    float4 texelMask = TextureMaskMap.Sample(SamplerDefaultWrap, vin.Texcoord);
+    if (texelMask.x < 0.5) discard;
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Shadow Mapping
+    float spotlight = CalculateSpotlightShadowMap(vin.WorldPosition);
 
     ////////////////////////////////////////////////////////////////////////////////
     // Normal Mapping.
     // Calculate the normal (Pixel/Analytical Based).
     float3x3 matTangentFrame = cotangent_frame(vin.Normal, vin.WorldPosition, vin.Texcoord);    
-    float3 texelNormal = TextureNormalMap.Sample(userSampler, vin.Texcoord).xyz * 2 - 1;
+    float3 texelNormal = TextureNormalMap.Sample(SamplerDefaultWrap, vin.Texcoord).xyz * 2 - 1;
     float3 vectorNormal = normalize(mul(texelNormal, matTangentFrame));
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -64,9 +75,9 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     float3 vectorLight = float3(-10, 4, -3) - vin.WorldPosition;
     float lightDistance = length(vectorLight);
     vectorLight /= lightDistance;
-    float illumination = max(0, dot(vectorNormal, vectorLight) - 0.005f * lightDistance * lightDistance);
-    
-    float4 texelAlbedo = TextureAlbedoMap.Sample(userSampler, vin.Texcoord);
+    float illumination = max(0, dot(vectorNormal, vectorLight) * spotlight - 0.005f * lightDistance * lightDistance);
+
+    float4 texelAlbedo = TextureAlbedoMap.Sample(SamplerDefaultWrap, vin.Texcoord);
     return float4(texelAlbedo.xyz * illumination, texelAlbedo.w);
 })SHADER";
   CComPtr<ID3D11VertexShader> shaderVertex;
@@ -82,12 +93,20 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
         blob->GetBufferPointer(), blob->GetBufferSize(), nullptr,
         &shaderPixel.p));
   }
-  CComPtr<ID3D11PixelShader> shaderPixelTextured;
+  CComPtr<ID3D11PixelShader> shaderPixelOBJDepthOnly;
   {
-    ID3DBlob *blob = CompileShader("ps_5_0", "mainPSTextured", szShaderCode);
+    ID3DBlob *blob =
+        CompileShader("ps_5_0", "mainPSOBJDepthOnly", szShaderCode);
     TRYD3D(device->GetID3D11Device()->CreatePixelShader(
         blob->GetBufferPointer(), blob->GetBufferSize(), nullptr,
-        &shaderPixelTextured.p));
+        &shaderPixelOBJDepthOnly.p));
+  }
+  CComPtr<ID3D11PixelShader> shaderPixelOBJMaterial;
+  {
+    ID3DBlob *blob = CompileShader("ps_5_0", "mainPSOBJMaterial", szShaderCode);
+    TRYD3D(device->GetID3D11Device()->CreatePixelShader(
+        blob->GetBufferPointer(), blob->GetBufferSize(), nullptr,
+        &shaderPixelOBJMaterial.p));
   }
   ////////////////////////////////////////////////////////////////////////////////
   // Create the input vertex layout.
@@ -123,9 +142,13 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
   ////////////////////////////////////////////////////////////////////////////////
   // Default wrapping sampler.
 
-  CComPtr<ID3D11SamplerState> samplerState;
+  CComPtr<ID3D11SamplerState> samplerDefaultWrap;
   TRYD3D(device->GetID3D11Device()->CreateSamplerState(
-      &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerState.p));
+      &Make_D3D11_SAMPLER_DESC_DefaultWrap(), &samplerDefaultWrap.p));
+
+  CComPtr<ID3D11SamplerState> samplerDefaultBorder;
+  TRYD3D(device->GetID3D11Device()->CreateSamplerState(
+      &Make_D3D11_SAMPLER_DESC_DefaultBorder(), &samplerDefaultBorder.p));
 
   ////////////////////////////////////////////////////////////////////////////////
   // Our so-called Factory Storage (aka) "Mutable Map".
@@ -242,6 +265,40 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
       D3D11_Create_SRV(device->GetID3D11DeviceContext(),
                        Image_SolidColor(1, 1, 0xFFFFFFFF).get());
 
+  const int SHADOW_MAP_WIDTH = 4096;
+  const int SHADOW_MAP_HEIGHT = 4096;
+  CComPtr<ID3D11DepthStencilView> dsvDepthShadow;
+  CComPtr<ID3D11ShaderResourceView> srvDepthShadow;
+  {
+    CComPtr<ID3D11Texture2D> textureDepthShadow;
+    {
+      D3D11_TEXTURE2D_DESC desc = {};
+      desc.Width = SHADOW_MAP_WIDTH;
+      desc.Height = SHADOW_MAP_HEIGHT;
+      desc.ArraySize = 1;
+      desc.Format = DXGI_FORMAT_R32_TYPELESS; // DXGI_FORMAT_D24_UNORM_S8_UINT;
+      desc.SampleDesc.Count = 1;
+      desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+      TRYD3D(device->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
+                                                        &textureDepthShadow));
+    }
+    {
+      D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
+      desc.Format = DXGI_FORMAT_D32_FLOAT;
+      desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+      TRYD3D(device->GetID3D11Device()->CreateDepthStencilView(
+          textureDepthShadow, &desc, &dsvDepthShadow.p));
+    }
+    {
+      D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+      desc.Format = DXGI_FORMAT_R32_FLOAT;
+      desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+      desc.Texture2D.MipLevels = 1;
+      TRYD3D(device->GetID3D11Device()->CreateShaderResourceView(
+          textureDepthShadow, &desc, &srvDepthShadow.p));
+    }
+  }
+
   ////////////////////////////////////////////////////////////////////////////////
   // Capture all of the above into the rendering function for every frame.
   //
@@ -259,6 +316,161 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
     ////////////////////////////////////////////////////////////////////////
     // Setup primary state; render targets, merger, prim assembly, etc.
     device->GetID3D11DeviceContext()->ClearState();
+    device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
+        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
+    device->GetID3D11DeviceContext()->PSSetSamplers(kSamplerRegisterDefaultWrap,
+                                                    1, &samplerDefaultWrap.p);
+    device->GetID3D11DeviceContext()->PSSetSamplers(
+        kSamplerRegisterDefaultBorder, 1, &samplerDefaultBorder.p);
+
+    // Perform a shadowmap material setup.
+    std::function<void(IMaterial *)> MATERIALSETUP_OBJDEPTHONLY =
+        [&](IMaterial *material) {
+          device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr,
+                                                        0);
+          OBJMaterial *textured = dynamic_cast<OBJMaterial *>(material);
+          if (textured != nullptr) {
+            device->GetID3D11DeviceContext()->PSSetShader(
+                shaderPixelOBJDepthOnly, nullptr, 0);
+            // Bind Mask Map.
+            CComPtr<ID3D11ShaderResourceView> srvMaskMap =
+                factoryTexture(textured->DissolveMap.get());
+            if (srvMaskMap == nullptr) {
+              srvMaskMap = defaultMaskMap;
+            }
+            device->GetID3D11DeviceContext()->PSSetShaderResources(
+                kTextureRegisterMaskMap, 1, &srvMaskMap.p);
+          } else {
+            device->GetID3D11DeviceContext()->PSSetShader(
+                shaderPixelOBJDepthOnly, nullptr, 0);
+          }
+        };
+
+    // Perform a full material setup.
+    std::function<void(IMaterial *)> MATERIALSETUP_OBJMATERIAL =
+        [&](IMaterial *material) {
+          device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr,
+                                                        0);
+          OBJMaterial *textured = dynamic_cast<OBJMaterial *>(material);
+          if (textured != nullptr) {
+            device->GetID3D11DeviceContext()->PSSetShader(
+                shaderPixelOBJMaterial, nullptr, 0);
+            device->GetID3D11DeviceContext()->PSSetSamplers(
+                kSamplerRegisterDefaultWrap, 1, &samplerDefaultWrap.p);
+            // Bind Albedo Map.
+            CComPtr<ID3D11ShaderResourceView> srvAlbedoMap =
+                factoryTexture(textured->DiffuseMap.get());
+            if (srvAlbedoMap == nullptr) {
+              srvAlbedoMap = defaultAlbedoMap;
+            }
+            device->GetID3D11DeviceContext()->PSSetShaderResources(
+                kTextureRegisterAlbedoMap, 1, &srvAlbedoMap.p);
+
+            // Bind Normal Map.
+            CComPtr<ID3D11ShaderResourceView> srvNormalMap =
+                factoryTexture(textured->NormalMap.get());
+            if (srvNormalMap == nullptr) {
+              srvNormalMap = defaultNormalMap;
+            }
+            device->GetID3D11DeviceContext()->PSSetShaderResources(
+                kTextureRegisterNormalMap, 1, &srvNormalMap.p);
+
+            // Bind Mask Map.
+            CComPtr<ID3D11ShaderResourceView> srvMaskMap =
+                factoryTexture(textured->DissolveMap.get());
+            if (srvMaskMap == nullptr) {
+              srvMaskMap = defaultMaskMap;
+            }
+            device->GetID3D11DeviceContext()->PSSetShaderResources(
+                kTextureRegisterMaskMap, 1, &srvMaskMap.p);
+          } else {
+            device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr,
+                                                          0);
+          }
+        };
+
+    std::function<void(std::function<void(IMaterial *)>)> DRAWEVERYTHING =
+        [&](std::function<void(IMaterial *)> fnMaterialSetup) {
+          for (int instanceIndex = 0; instanceIndex < scene.size();
+               ++instanceIndex) {
+            const Instance &instance = scene[instanceIndex];
+            ////////////////////////////////////////////////////////////////////////
+            // Setup the material; specific shaders and shader parameters.
+            fnMaterialSetup(instance.Material.get());
+            ////////////////////////////////////////////////////////////////////////
+            // Setup geometry for draw.
+            {
+              auto constantBuffer =
+                  factoryConstants(instance.TransformObjectToWorld.get());
+              device->GetID3D11DeviceContext()->VSSetConstantBuffers(
+                  1, 1, &constantBuffer.p);
+            }
+            {
+              const UINT vertexStride[] = {sizeof(VertexVS)};
+              const UINT vertexOffset[] = {0};
+              auto vb = factoryVertex(scene[instanceIndex].Mesh.get());
+              device->GetID3D11DeviceContext()->IASetVertexBuffers(
+                  0, 1, &vb.p, vertexStride, vertexOffset);
+            }
+            auto ib = factoryIndex(scene[instanceIndex].Mesh.get());
+            device->GetID3D11DeviceContext()->IASetIndexBuffer(
+                ib, DXGI_FORMAT_R32_UINT, 0);
+            device->GetID3D11DeviceContext()->DrawIndexed(
+                scene[instanceIndex].Mesh->getIndexCount(), 0, 0);
+          }
+        };
+    ////////////////////////////////////////////////////////////////////////
+    // Create the camera projection matrix.
+    // Right now this matrix just mimics the light in the pixel shader.
+
+    Matrix44 TransformWorldToClipShadow =
+        CreateMatrixLookAt(Vector3{-1, 2, 0}, Vector3{-4, 2, 0},
+                           Vector3{0, 1, 0}) *
+        CreateProjection(0.01f, 100.0f, 60 * (Pi<float> / 180),
+                         60 * (Pi<float> / 180));
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Shadow Map (Depth Only) Pass.
+
+    {
+      ConstantsWorld data = {};
+      data.TransformWorldToClip = TransformWorldToClipShadow;
+      data.TransformWorldToClipShadow = TransformWorldToClipShadow;
+      data.TransformWorldToClipShadowInverse =
+          Invert(TransformWorldToClipShadow);
+      device->GetID3D11DeviceContext()->UpdateSubresource(constantsWorld, 0,
+                                                          nullptr, &data, 0, 0);
+      device->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1,
+                                                             &constantsWorld.p);
+      device->GetID3D11DeviceContext()->PSSetConstantBuffers(0, 1,
+                                                             &constantsWorld.p);
+    }
+    device->GetID3D11DeviceContext()->ClearDepthStencilView(
+        dsvDepthShadow, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    device->GetID3D11DeviceContext()->RSSetViewports(
+        1, &Make_D3D11_VIEWPORT(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT));
+    ID3D11RenderTargetView *rtvNULL = {};
+    device->GetID3D11DeviceContext()->OMSetRenderTargets(1, &rtvNULL,
+                                                         dsvDepthShadow);
+    DRAWEVERYTHING(MATERIALSETUP_OBJDEPTHONLY);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Main Pass - Draw the shaded materials.
+
+    {
+      ConstantsWorld data = {};
+      data.TransformWorldToClip = sampleResources.TransformWorldToClip;
+      data.TransformWorldToClipShadow = TransformWorldToClipShadow;
+      data.TransformWorldToClipShadowInverse =
+          Invert(TransformWorldToClipShadow);
+      device->GetID3D11DeviceContext()->UpdateSubresource(constantsWorld, 0,
+                                                          nullptr, &data, 0, 0);
+      device->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1,
+                                                             &constantsWorld.p);
+      device->GetID3D11DeviceContext()->PSSetConstantBuffers(0, 1,
+                                                             &constantsWorld.p);
+    }
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
         rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->ClearDepthStencilView(
@@ -267,86 +479,10 @@ float4 mainPSTextured(VertexPS vin) : SV_Target
         1, &Make_D3D11_VIEWPORT(descBackbuffer.Width, descBackbuffer.Height));
     device->GetID3D11DeviceContext()->OMSetRenderTargets(
         1, &rtvBackbuffer.p, sampleResources.DepthStencilView);
-    device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
-        D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    device->GetID3D11DeviceContext()->IASetInputLayout(inputLayout);
+    device->GetID3D11DeviceContext()->PSSetShaderResources(
+        kTextureRegisterShadowMap, 1, &srvDepthShadow.p);
+    DRAWEVERYTHING(MATERIALSETUP_OBJMATERIAL);
 
-    {
-      ConstantsWorld data = {};
-      data.TransformWorldToClip = sampleResources.TransformWorldToClip;
-      device->GetID3D11DeviceContext()->UpdateSubresource(constantsWorld, 0,
-                                                          nullptr, &data, 0, 0);
-      device->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1,
-                                                             &constantsWorld.p);
-      device->GetID3D11DeviceContext()->PSSetConstantBuffers(0, 1,
-                                                             &constantsWorld.p);
-    }
-
-    for (int instanceIndex = 0; instanceIndex < scene.size(); ++instanceIndex) {
-      const Instance &instance = scene[instanceIndex];
-      ////////////////////////////////////////////////////////////////////////
-      // Setup the material; specific shaders and shader parameters.
-      {
-        device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr, 0);
-        OBJMaterial *textured =
-            dynamic_cast<OBJMaterial *>(instance.Material.get());
-        if (textured != nullptr) {
-          device->GetID3D11DeviceContext()->PSSetShader(shaderPixelTextured,
-                                                        nullptr, 0);
-          device->GetID3D11DeviceContext()->PSSetSamplers(0, 1,
-                                                          &samplerState.p);
-          // Bind Albedo Map.
-          CComPtr<ID3D11ShaderResourceView> srvAlbedoMap =
-              factoryTexture(textured->DiffuseMap.get());
-          if (srvAlbedoMap == nullptr) {
-            srvAlbedoMap = defaultAlbedoMap;
-          }
-          device->GetID3D11DeviceContext()->PSSetShaderResources(
-              0, 1, &srvAlbedoMap.p);
-
-          // Bind Normal Map.
-          CComPtr<ID3D11ShaderResourceView> srvNormalMap =
-              factoryTexture(textured->NormalMap.get());
-          if (srvNormalMap == nullptr) {
-            srvNormalMap = defaultNormalMap;
-          }
-          device->GetID3D11DeviceContext()->PSSetShaderResources(
-              1, 1, &srvNormalMap.p);
-
-          // Bind Mask Map.
-          CComPtr<ID3D11ShaderResourceView> srvMaskMap =
-              factoryTexture(textured->DissolveMap.get());
-          if (srvMaskMap == nullptr) {
-            srvMaskMap = defaultMaskMap;
-          }
-          device->GetID3D11DeviceContext()->PSSetShaderResources(2, 1,
-                                                                 &srvMaskMap.p);
-        } else {
-          device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr,
-                                                        0);
-        }
-      };
-      ////////////////////////////////////////////////////////////////////////
-      // Setup geometry for draw.
-      {
-        auto constantBuffer =
-            factoryConstants(instance.TransformObjectToWorld.get());
-        device->GetID3D11DeviceContext()->VSSetConstantBuffers(
-            1, 1, &constantBuffer.p);
-      }
-      {
-        const UINT vertexStride[] = {sizeof(VertexVS)};
-        const UINT vertexOffset[] = {0};
-        auto vb = factoryVertex(scene[instanceIndex].Mesh.get());
-        device->GetID3D11DeviceContext()->IASetVertexBuffers(
-            0, 1, &vb.p, vertexStride, vertexOffset);
-      }
-      auto ib = factoryIndex(scene[instanceIndex].Mesh.get());
-      device->GetID3D11DeviceContext()->IASetIndexBuffer(
-          ib, DXGI_FORMAT_R32_UINT, 0);
-      device->GetID3D11DeviceContext()->DrawIndexed(
-          scene[instanceIndex].Mesh->getIndexCount(), 0, 0);
-    }
     ////////////////////////////////////////////////////////////////////////
     // Clean up the DC state and flush everything to GPU
     device->GetID3D11DeviceContext()->ClearState();

@@ -26,3 +26,12 @@ struct VertexVS {
   Vector3 Normal;
   Vector2 Texcoord;
 };
+
+extern const int kSamplerRegisterDefaultWrap;
+extern const int kSamplerRegisterDefaultBorder;
+
+extern const int kTextureRegisterAlbedoMap;
+extern const int kTextureRegisterNormalMap;
+extern const int kTextureRegisterDepthMap;
+extern const int kTextureRegisterMaskMap;
+extern const int kTextureRegisterShadowMap;
