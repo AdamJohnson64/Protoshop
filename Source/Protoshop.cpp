@@ -16,13 +16,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nShowCmd) {
   try {
     // clang-format off
-    ////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////
     // Direct3D 11 Samples
     std::shared_ptr<Direct3D11Device> deviceD3D11 = CreateDirect3D11Device();
     //CreateNewOpenVRSession(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11, Scene_Sponza()));
     std::shared_ptr<Object> D3D11Basic = CreateNewWindow(deviceD3D11, CreateSample_D3D11Basic(deviceD3D11));
     std::shared_ptr<Object> D3D11ComputeCanvas = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeCanvas(deviceD3D11));
     std::shared_ptr<Object> D3D11DrawingContext = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContext(deviceD3D11));
+    std::shared_ptr<Object> D3D11MarchingTetrahedra = CreateNewWindow(deviceD3D11, CreateSample_D3D11MarchingTetrahedra(deviceD3D11));
     //std::shared_ptr<Object> D3D11LightProbe = CreateNewWindow(deviceD3D11, CreateSample_D3D11LightProbe(deviceD3D11));
     std::shared_ptr<Object> D3D11LightProbeCross = CreateNewWindow(deviceD3D11, CreateSample_D3D11LightProbeCross(deviceD3D11));
     std::shared_ptr<Object> D3D11Mesh = CreateNewWindow(deviceD3D11, CreateSample_D3D11Mesh(deviceD3D11));
@@ -55,7 +56,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<OpenGLDevice> deviceGL = CreateOpenGLDevice();
     std::shared_ptr<Object> GLBasic = CreateNewWindow(deviceGL, CreateSample_OpenGLBasic(deviceGL));
 #if VULKAN_INSTALLED
-    //////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////
     // Vulkan Samples
     std::shared_ptr<VKDevice> deviceVK = CreateVKDevice();
     std::shared_ptr<Object> VKBasic = CreateNewWindow(deviceVK, deviceD3D12, CreateSample_VKBasic());

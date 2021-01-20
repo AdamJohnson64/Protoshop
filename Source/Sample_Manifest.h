@@ -30,6 +30,9 @@ std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11LightProbeCross(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(const SampleResourcesD3D11 &)>
+CreateSample_D3D11MarchingTetrahedra(std::shared_ptr<Direct3D11Device> device);
+
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Mesh(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(const SampleResourcesD3D11 &)>

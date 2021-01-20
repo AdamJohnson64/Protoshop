@@ -21,6 +21,11 @@ __declspec(align(16)) struct ConstantsObject {
   Matrix44 TransformObjectToWorld;
 };
 
+struct VertexCol {
+  Vector3 Position;
+  unsigned int Color;
+};
+
 struct VertexVS {
   Vector3 Position;
   Vector3 Normal;

@@ -65,6 +65,7 @@
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
+    <ClCompile Include="Source\Sample_D3D11MarchingTetrahedra.cpp" />
     <ClCompile Include="Source\Sample_D3D11LightProbe.cpp" />
     <ClCompile Include="Source\Sample_D3D11LightProbeCross.cpp" />
     <ClCompile Include="Source\Sample_D3D11NormalMap.cpp" />
