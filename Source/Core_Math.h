@@ -4,6 +4,12 @@ template <class T>
 constexpr T Pi = static_cast<T>(3.1415926535897932384626433832795029L);
 
 ////////////////////////////////////////////////////////////////////////////////
+// Private math functions (avoid including math.h).
+
+float SquareRoot(float f);
+double SquareRoot(double f);
+
+////////////////////////////////////////////////////////////////////////////////
 // Private trancendental functions (avoid including math.h).
 
 float Cos(float x);
@@ -123,8 +129,8 @@ template <class T> float Dot(const TVector3<T> &lhs, const TVector3<T> &rhs) {
   return lhs.X * rhs.X + lhs.Y * rhs.Y + lhs.Z * rhs.Z;
 }
 
-template <class T> float Length(const TVector3<T> &lhs) {
-  return sqrt(Dot(lhs, lhs));
+template <class T> T Length(const TVector3<T> &lhs) {
+  return SquareRoot(Dot(lhs, lhs));
 }
 
 template <class T> TVector3<T> Normalize(const TVector3<T> &lhs) {

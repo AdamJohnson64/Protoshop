@@ -1,5 +1,9 @@
 #include <math.h>
 
+float SquareRoot(float f) { return sqrtf(f); }
+
+double SquareRoot(double f) { return sqrt(f); }
+
 float Cos(float x) { return cosf(x); }
 
 double Cos(double x) { return cos(x); }
