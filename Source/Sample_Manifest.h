@@ -63,6 +63,9 @@ CreateSample_D3D11Voxel(std::shared_ptr<Direct3D11Device> device);
 std::shared_ptr<Object>
 CreateSample_D3D11ShaderToy(std::shared_ptr<Direct3D11Device> device);
 
+std::function<void(const SampleResourcesD3D11 &)>
+CreateSample_D3D11VoxelPlanet(std::shared_ptr<Direct3D11Device> device);
+
 std::function<void(const SampleResourcesD3D12RTV &)>
 CreateSample_D3D12Basic(std::shared_ptr<Direct3D12Device> device);
 

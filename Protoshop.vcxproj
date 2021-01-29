@@ -77,6 +77,7 @@
     <ClCompile Include="Source\Sample_D3D11ShowTexture.cpp" />
     <ClCompile Include="Source\Sample_D3D11Tessellation.cpp" />
     <ClCompile Include="Source\Sample_D3D11Voxel.cpp" />
+    <ClCompile Include="Source\Sample_D3D11VoxelPlanet.cpp" />
     <ClCompile Include="Source\Sample_D3D12Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D12Scene.cpp" />
     <ClCompile Include="Source\Sample_DXRAmbientOcclusion.cpp" />
@@ -147,6 +148,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <FxCompile>
       <EntryPointName />

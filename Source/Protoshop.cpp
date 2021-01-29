@@ -36,6 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Object> D3D11ShowTexture = CreateNewWindow(deviceD3D11, CreateSample_D3D11ShowTexture(deviceD3D11));
     std::shared_ptr<Object> D3D11Tessellation = CreateNewWindow(deviceD3D11, CreateSample_D3D11Tessellation(deviceD3D11));
     //std::shared_ptr<Object> D3D11Voxel = CreateNewWindow(deviceD3D11, CreateSample_D3D11Voxel(deviceD3D11));
+    //std::shared_ptr<Object> D3D11VoxelPlanet = CreateNewWindow(deviceD3D11, CreateSample_D3D11VoxelPlanet(deviceD3D11));
     //std::shared_ptr<Object> D3DShaderToy = CreateSample_D3D11ShaderToy(deviceD3D11);
     ////////////////////////////////////////////////////////////////////////////////
     // Direct3D 12 Samples
