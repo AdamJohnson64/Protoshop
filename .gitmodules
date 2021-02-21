@@ -7,3 +7,9 @@
 [submodule "Submodules/RenderToyAssets"]
 	path = Submodules/RenderToyAssets
 	url = https://github.com/AdamJohnson64/RenderToyAssets.git
+[submodule "Submodules/freetype"]
+	path = Submodules/freetype
+	url = https://github.com/freetype/freetype.git
+[submodule "Submodules/roboto"]
+	path = Submodules/roboto
+	url = https://github.com/googlefonts/roboto.git

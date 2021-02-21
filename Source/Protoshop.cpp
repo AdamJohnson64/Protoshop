@@ -53,6 +53,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Object> DXRTexture = CreateNewWindow(deviceD3D12, CreateSample_DXRTexture(deviceD3D12));
     std::shared_ptr<Object> DXRWhitted = CreateNewWindow(deviceD3D12, CreateSample_DXRWhitted(deviceD3D12));
     ////////////////////////////////////////////////////////////////////////////////
+    // FreeType Samples
+    std::shared_ptr<Object> FreeTypeGlyphDump = CreateSample_FreeTypeGlyphDump();
+    ////////////////////////////////////////////////////////////////////////////////
     // OpenGL Samples
     std::shared_ptr<OpenGLDevice> deviceGL = CreateOpenGLDevice();
     std::shared_ptr<Object> GLBasic = CreateNewWindow(deviceGL, CreateSample_OpenGLBasic(deviceGL));
