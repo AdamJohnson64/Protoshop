@@ -24,6 +24,9 @@ std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11DrawingContext(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(const SampleResourcesD3D11 &)>
+CreateSample_D3D11DXGICapture(std::shared_ptr<Direct3D11Device> device);
+
+std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11LightProbe(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(const SampleResourcesD3D11 &)>

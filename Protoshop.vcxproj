@@ -65,6 +65,7 @@
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
+    <ClCompile Include="Source\Sample_D3D11DXGICapture.cpp" />
     <ClCompile Include="Source\Sample_D3D11MarchingTetrahedra.cpp" />
     <ClCompile Include="Source\Sample_D3D11LightProbe.cpp" />
     <ClCompile Include="Source\Sample_D3D11LightProbeCross.cpp" />
@@ -173,6 +174,7 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <Optimization>MaxSpeed</Optimization>
       <PreprocessorDefinitions>VULKAN_INSTALLED;FT2_BUILD_LIBRARY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <FxCompile>
       <EntryPointName />
