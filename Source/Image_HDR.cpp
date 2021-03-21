@@ -142,7 +142,7 @@ std::shared_ptr<IImage> Load_HDR(const char *filename) {
       }
     }
   }
-  return std::shared_ptr<IImage>(new ImageOwned(
+  return std::shared_ptr<IImage>(CreateImage_AutoDelete(
       imageWidth, imageHeight, sizeof(PixelR32G32B32F) * imageWidth,
       DXGI_FORMAT_R32G32B32_FLOAT, finalImage.release()));
 }

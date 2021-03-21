@@ -3,6 +3,7 @@
 #include "Core_Object.h"
 #include <cstdint>
 #include <dxgi.h>
+#include <memory>
 
 class IImage {
 public:
@@ -14,52 +15,27 @@ public:
   virtual const void *GetData() const = 0;
 };
 
-////////////////////////////////////////////////////////////////////////////////
-// DO NOT USE - The base image is not constructible.
-class ImageBase : public Object, public IImage {
-public:
-  uint32_t GetWidth() const override;
-  uint32_t GetHeight() const override;
-  uint32_t GetStride() const override;
-  DXGI_FORMAT GetFormat() const override;
+// Create an image from pixel data which has been allocated with malloc/new.
+// The provided image data will be automatically deleted along with this image.
+// DO NOT USE! It's generally a bad idea to delete memory that was provided by
+// something else since it's not guaranteed that memory was actually allocated
+// in the manner this object assumes. Prefer a copy instead.
+std::unique_ptr<IImage> CreateImage_AutoDelete(uint32_t width, uint32_t height,
+                                               uint32_t stride,
+                                               DXGI_FORMAT format, void *data);
 
-protected:
-  ImageBase();
-  ImageBase(uint32_t width, uint32_t height, uint32_t stride,
-            DXGI_FORMAT format);
-  uint32_t m_Width;
-  uint32_t m_Height;
-  uint32_t m_Stride;
-  DXGI_FORMAT m_Format;
-};
+// Create an image from pixel data and make a copy of the provided data.
+// The image data will be automatically managed.
+std::unique_ptr<IImage> CreateImage_CopyPixels(uint32_t width, uint32_t height,
+                                               uint32_t stride,
+                                               DXGI_FORMAT format,
+                                               const void *data);
 
-////////////////////////////////////////////////////////////////////////////////
-// An unowned image is not assumed to "own" its image data.
-// The data will not be deleted upon destruction.
-//
-// Use this object to pass around temporary stubs for images to declare their
-// format and dimensions where the data itself is maintained somewhere else.
-class ImageUnowned : public ImageBase {
-public:
-  ImageUnowned();
-  ImageUnowned(uint32_t width, uint32_t height, uint32_t stride,
-               DXGI_FORMAT format, void *owneddata);
-  const void *GetData() const override;
-
-protected:
-  void *m_Data;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// An owned image controls the lifetime of its internal image data.
-// This object will delete its image data on destruction.
-//
-// Use this object when returning images from utility functions.
-class ImageOwned : public ImageUnowned {
-public:
-  ImageOwned(uint32_t width, uint32_t height, uint32_t stride,
-             DXGI_FORMAT format, void *owneddata);
-  ImageOwned(const ImageOwned &copy) = delete;
-  ImageOwned(ImageOwned &&move);
-  ~ImageOwned();
-};
+// Create an image from externally managed pixel data.
+// CAUTION: It is assumed that the pixel data will remain static throughout the
+// lifetime of this object. DO NOT DELETE THE PIXEL DATA AT THE MEMORY LOCATION
+// PROVIDED HERE; this may (at best) cause non-deterministic behavior and will
+// almost certainly crash the application.
+std::unique_ptr<IImage> CreateImage_Unowned(uint32_t width, uint32_t height,
+                                            uint32_t stride, DXGI_FORMAT format,
+                                            const void *data);

@@ -47,7 +47,7 @@ std::shared_ptr<IImage> Load_TGA(const char *filename) {
         data[3 + 4 * x + 4 * width * y] = 255;
       }
     }
-    return std::shared_ptr<IImage>(new ImageOwned(
+    return std::shared_ptr<IImage>(CreateImage_AutoDelete(
         width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data.release()));
   } else if (bitdepth == 32) {
     if (imagedescriptor != 8)
@@ -62,7 +62,7 @@ std::shared_ptr<IImage> Load_TGA(const char *filename) {
         data[3 + 4 * x + 4 * width * y] = Read<uint8_t>(file);
       }
     }
-    return std::shared_ptr<IImage>(new ImageOwned(
+    return std::shared_ptr<IImage>(CreateImage_AutoDelete(
         width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data.release()));
   }
   return nullptr;

@@ -50,13 +50,10 @@ CreateSample_D3D11FreeType(std::shared_ptr<Direct3D11Device> device) {
       FT_Render_Glyph(ftFace->glyph, FT_RENDER_MODE_NORMAL);
       if (ftFace->glyph->bitmap.buffer == nullptr)
         continue;
-      uint8_t *copyGlyph =
-          new uint8_t[ftFace->glyph->bitmap.pitch * ftFace->glyph->bitmap.rows];
-      memcpy(copyGlyph, ftFace->glyph->bitmap.buffer,
-             ftFace->glyph->bitmap.pitch * ftFace->glyph->bitmap.rows);
-      Glyphs.push_back(std::unique_ptr<IImage>(new ImageOwned(
+      Glyphs.push_back(CreateImage_CopyPixels(
           ftFace->glyph->bitmap.width, ftFace->glyph->bitmap.rows,
-          ftFace->glyph->bitmap.pitch, DXGI_FORMAT_R8_UNORM, copyGlyph)));
+          ftFace->glyph->bitmap.pitch, DXGI_FORMAT_R8_UNORM,
+          ftFace->glyph->bitmap.buffer));
     }
     FT_Done_FreeType(ftLibrary);
   }
@@ -148,8 +145,9 @@ TRYAGAIN : {
     cursorX += glyph->GetWidth();
     lineHeight = max(lineHeight, glyph->GetHeight());
   }
-  std::unique_ptr<IImage> atlasImage = std::unique_ptr<IImage>(new ImageOwned(
-      atlasWidth, atlasHeight, atlasWidth, DXGI_FORMAT_R8_UNORM, atlasData));
+  std::unique_ptr<IImage> atlasImage = std::unique_ptr<IImage>(
+      CreateImage_AutoDelete(atlasWidth, atlasHeight, atlasWidth,
+                             DXGI_FORMAT_R8_UNORM, atlasData));
   ////////////////////////////////////////////////////////////////////////////////
   // We're going to draw this texture to the screen using a compute shader.
   // If we were doing this properly we'd probably want to use textured

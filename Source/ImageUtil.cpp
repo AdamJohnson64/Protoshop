@@ -598,46 +598,46 @@ void Image_Fill_Sample(void *data, uint32_t width, uint32_t height,
   Image_Fill_Sample(ImageBGRA{data, width, height, stride});
 }
 
-std::shared_ptr<IImage> Image_BrickAlbedo(uint32_t width, uint32_t height) {
+std::unique_ptr<IImage> Image_BrickAlbedo(uint32_t width, uint32_t height) {
   void *data = new uint8_t[4 * width * height];
   Image_Fill_BrickAlbedo(ImageBGRA{data, width, height, 4 * width});
-  return std::shared_ptr<ImageOwned>(new ImageOwned(
+  return std::unique_ptr<IImage>(CreateImage_AutoDelete(
       width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }
 
-std::shared_ptr<IImage> Image_BrickDepth(uint32_t width, uint32_t height) {
+std::unique_ptr<IImage> Image_BrickDepth(uint32_t width, uint32_t height) {
   void *data = new uint8_t[4 * width * height];
   Image_Fill_BrickDepth(ImageBGRA{data, width, height, 4 * width});
-  return std::shared_ptr<ImageOwned>(new ImageOwned(
+  return std::unique_ptr<IImage>(CreateImage_AutoDelete(
       width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }
 
-std::shared_ptr<IImage> Image_BrickNormal(uint32_t width, uint32_t height) {
+std::unique_ptr<IImage> Image_BrickNormal(uint32_t width, uint32_t height) {
   void *data = new uint8_t[4 * width * height];
   Image_Fill_BrickNormal(ImageBGRA{data, width, height, 4 * width});
-  return std::shared_ptr<ImageOwned>(new ImageOwned(
+  return std::unique_ptr<IImage>(CreateImage_AutoDelete(
       width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }
 
-std::shared_ptr<IImage> Image_Commodore64(uint32_t width, uint32_t height) {
+std::unique_ptr<IImage> Image_Commodore64(uint32_t width, uint32_t height) {
   void *data = new uint8_t[4 * width * height];
   Image_Fill_Commodore64(ImageBGRA{data, width, height, 4 * width});
-  return std::shared_ptr<ImageOwned>(new ImageOwned(
+  return std::unique_ptr<IImage>(CreateImage_AutoDelete(
       width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }
 
-std::shared_ptr<IImage> Image_Sample(uint32_t width, uint32_t height) {
+std::unique_ptr<IImage> Image_Sample(uint32_t width, uint32_t height) {
   void *data = new uint8_t[4 * width * height];
   Image_Fill_Sample(ImageBGRA{data, width, height, 4 * width});
-  return std::shared_ptr<ImageOwned>(new ImageOwned(
+  return std::unique_ptr<IImage>(CreateImage_AutoDelete(
       width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }
 
-std::shared_ptr<IImage> Image_SolidColor(uint32_t width, uint32_t height,
+std::unique_ptr<IImage> Image_SolidColor(uint32_t width, uint32_t height,
                                          uint32_t color) {
   void *data = new uint8_t[4 * width * height];
   Image_Fill_Color(ImageBGRA{data, width, height, 4 * width},
                    *reinterpret_cast<PixelBGRA *>(&color));
-  return std::shared_ptr<ImageOwned>(new ImageOwned(
+  return std::unique_ptr<IImage>(CreateImage_AutoDelete(
       width, height, 4 * width, DXGI_FORMAT_B8G8R8A8_UNORM, data));
 }

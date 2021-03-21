@@ -101,9 +101,6 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device);
 std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device);
 
-std::shared_ptr<Object>
-CreateSample_FreeTypeGlyphDump();
-
 std::function<void()>
 CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device);
 
