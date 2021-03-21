@@ -6,6 +6,7 @@
 
 class IImage {
 public:
+  virtual ~IImage() = default;
   virtual uint32_t GetWidth() const = 0;
   virtual uint32_t GetHeight() const = 0;
   virtual uint32_t GetStride() const = 0;
