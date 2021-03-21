@@ -7,6 +7,7 @@
 #include "Core_OpenVR.h"
 #include "Core_VK.h"
 #include "Core_Window.h"
+#include "ImageUtil.h"
 #include "Sample_Manifest.h"
 #include <Windows.h>
 #include <functional>
@@ -24,7 +25,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Object> D3D11ComputeCanvas = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeCanvas(deviceD3D11));
     std::shared_ptr<Object> D3D11DrawingContext = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContext(deviceD3D11));
     std::shared_ptr<Object> D3D11DXGICapture = CreateNewWindow(deviceD3D11, CreateSample_D3D11DXGICapture(deviceD3D11));
-    std::shared_ptr<Object> D3D11FreeType = CreateNewWindow(deviceD3D11, CreateSample_D3D11FreeType(deviceD3D11));
+    std::shared_ptr<Object> D3D11FreeType = CreateNewWindow(deviceD3D11, CreateSample_Image_FreeTypeAtlas());
     std::shared_ptr<Object> D3D11MarchingTetrahedra = CreateNewWindow(deviceD3D11, CreateSample_D3D11MarchingTetrahedra(deviceD3D11));
     //std::shared_ptr<Object> D3D11LightProbe = CreateNewWindow(deviceD3D11, CreateSample_D3D11LightProbe(deviceD3D11));
     std::shared_ptr<Object> D3D11LightProbeCross = CreateNewWindow(deviceD3D11, CreateSample_D3D11LightProbeCross(deviceD3D11));
@@ -35,7 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Object> D3D11SceneDefault = CreateNewWindow(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11, Scene_Default()));
     std::shared_ptr<Object> D3D11SceneSponza = CreateNewWindow(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11, Scene_Sponza()));
     std::shared_ptr<Object> D3D11SceneShadowMap = CreateNewWindow(deviceD3D11, CreateSample_D3D11ShadowMap(deviceD3D11));
-    std::shared_ptr<Object> D3D11ShowTexture = CreateNewWindow(deviceD3D11, CreateSample_D3D11ShowTexture(deviceD3D11));
+    std::shared_ptr<Object> D3D11ShowTexture = CreateNewWindow(deviceD3D11, Image_Commodore64(320, 200));
     std::shared_ptr<Object> D3D11Tessellation = CreateNewWindow(deviceD3D11, CreateSample_D3D11Tessellation(deviceD3D11));
     //std::shared_ptr<Object> D3D11Voxel = CreateNewWindow(deviceD3D11, CreateSample_D3D11Voxel(deviceD3D11));
     //std::shared_ptr<Object> D3D11VoxelPlanet = CreateNewWindow(deviceD3D11, CreateSample_D3D11VoxelPlanet(deviceD3D11));

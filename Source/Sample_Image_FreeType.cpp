@@ -1,17 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Sample - Direct3D 11 FreeType
+// Sample - FreeType Atlas
 ///////////////////////////////////////////////////////////////////////////////
-// Let's draw some really nice-looking text...
+// Pack a font onto a texture atlas using FreeType as the backend rasterizer.
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "Core_D3D.h"
-#include "Core_D3D11.h"
-#include "Core_D3D11Util.h"
-#include "Core_D3DCompiler.h"
 #include "Core_IImage.h"
-#include "SampleResources.h"
 #include <algorithm>
-#include <d3d11.h>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -19,8 +13,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-std::function<void(const SampleResourcesD3D11 &)>
-CreateSample_D3D11FreeType(std::shared_ptr<Direct3D11Device> device) {
+std::unique_ptr<IImage> CreateSample_Image_FreeTypeAtlas() {
   ////////////////////////////////////////////////////////////////////////////////
   // Extract all glyphs from the font and store in IImages.
   std::vector<std::unique_ptr<IImage>> Glyphs;
@@ -145,52 +138,6 @@ TRYAGAIN : {
     cursorX += glyph->GetWidth();
     lineHeight = max(lineHeight, glyph->GetHeight());
   }
-  std::unique_ptr<IImage> atlasImage = std::unique_ptr<IImage>(
-      CreateImage_AutoDelete(atlasWidth, atlasHeight, atlasWidth,
-                             DXGI_FORMAT_R8_UNORM, atlasData));
-  ////////////////////////////////////////////////////////////////////////////////
-  // We're going to draw this texture to the screen using a compute shader.
-  // If we were doing this properly we'd probably want to use textured
-  // triangles and generate a vertex buffer with quads mapped out of an atlas.
-  // But...we're lazy. So, no.
-  ////////////////////////////////////////////////////////////////////////////////
-  // Create a compute shader.
-  CComPtr<ID3D11ComputeShader> shaderCompute;
-  {
-    CComPtr<ID3DBlob> blobCS = CompileShader("cs_5_0", "main", R"SHADER(
-    RWTexture2D<float4> renderTarget;
-    Texture2D<float4> userImage;
-
-    [numthreads(1, 1, 1)]
-    void main(uint3 dispatchThreadId : SV_DispatchThreadID)
-    {
-    float r = userImage.Load(int3(dispatchThreadId.xy, 0)).r;
-    renderTarget[dispatchThreadId.xy] = float4(r, r, r, 1);
-    })SHADER");
-    TRYD3D(device->GetID3D11Device()->CreateComputeShader(
-        blobCS->GetBufferPointer(), blobCS->GetBufferSize(), nullptr,
-        &shaderCompute));
-  }
-  CComPtr<ID3D11ShaderResourceView> srvImage =
-      D3D11_Create_SRV(device->GetID3D11DeviceContext(), atlasImage.get());
-  return [=](const SampleResourcesD3D11 &sampleResources) {
-    {
-      D3D11_TEXTURE2D_DESC descBackbuffer = {};
-      sampleResources.BackBufferTexture->GetDesc(&descBackbuffer);
-      CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
-          D3D11_Create_UAV_From_Texture2D(device->GetID3D11Device(),
-                                          sampleResources.BackBufferTexture);
-      device->GetID3D11DeviceContext()->ClearState();
-      // Beginning of rendering.
-      device->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
-          0, 1, &uavBackbuffer.p, nullptr);
-      device->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr, 0);
-      device->GetID3D11DeviceContext()->CSSetShaderResources(0, 1, &srvImage.p);
-      device->GetID3D11DeviceContext()->Dispatch(descBackbuffer.Width,
-                                                 descBackbuffer.Height, 1);
-      device->GetID3D11DeviceContext()->ClearState();
-      device->GetID3D11DeviceContext()->Flush();
-    }
-    device->GetID3D11DeviceContext()->Flush();
-  };
+  return CreateImage_AutoDelete(atlasWidth, atlasHeight, atlasWidth,
+                                DXGI_FORMAT_R8_UNORM, atlasData);
 }

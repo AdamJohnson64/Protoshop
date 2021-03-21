@@ -4,6 +4,7 @@
 #include "Core_D3D11Util.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
+#include "Core_D3DCompiler.h"
 #include "Core_DXGI.h"
 #include "Core_Math.h"
 #include "Core_Object.h"
@@ -528,6 +529,49 @@ CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
                 std::function<void(const SampleResourcesD3D11 &)> fnRender) {
   return std::shared_ptr<Object>(
       new WindowRenderToD3D11(deviceD3D11, fnRender));
+}
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
+                std::shared_ptr<IImage> image) {
+  // Create a compute shader.
+  CComPtr<ID3D11ComputeShader> shaderCompute;
+  {
+    CComPtr<ID3DBlob> blobCS = CompileShader("cs_5_0", "main", R"SHADER(
+RWTexture2D<float4> renderTarget;
+Texture2D<float4> userImage;
+
+[numthreads(1, 1, 1)]
+void main(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    renderTarget[dispatchThreadId.xy] = userImage.Load(int3(dispatchThreadId.xy, 0));
+})SHADER");
+    TRYD3D(deviceD3D11->GetID3D11Device()->CreateComputeShader(
+        blobCS->GetBufferPointer(), blobCS->GetBufferSize(), nullptr,
+        &shaderCompute));
+  }
+  CComPtr<ID3D11ShaderResourceView> srvImage =
+      D3D11_Create_SRV(deviceD3D11->GetID3D11DeviceContext(), image.get());
+  return CreateNewWindow(
+      deviceD3D11, [=](const SampleResourcesD3D11 &sampleResources) {
+        D3D11_TEXTURE2D_DESC descBackbuffer = {};
+        sampleResources.BackBufferTexture->GetDesc(&descBackbuffer);
+        CComPtr<ID3D11UnorderedAccessView> uavBackbuffer =
+            D3D11_Create_UAV_From_Texture2D(deviceD3D11->GetID3D11Device(),
+                                            sampleResources.BackBufferTexture);
+        deviceD3D11->GetID3D11DeviceContext()->ClearState();
+        // Beginning of rendering.
+        deviceD3D11->GetID3D11DeviceContext()->CSSetUnorderedAccessViews(
+            0, 1, &uavBackbuffer.p, nullptr);
+        deviceD3D11->GetID3D11DeviceContext()->CSSetShader(shaderCompute,
+                                                           nullptr, 0);
+        deviceD3D11->GetID3D11DeviceContext()->CSSetShaderResources(
+            0, 1, &srvImage.p);
+        deviceD3D11->GetID3D11DeviceContext()->Dispatch(
+            descBackbuffer.Width, descBackbuffer.Height, 1);
+        deviceD3D11->GetID3D11DeviceContext()->ClearState();
+        deviceD3D11->GetID3D11DeviceContext()->Flush();
+      });
 }
 
 std::shared_ptr<Object>

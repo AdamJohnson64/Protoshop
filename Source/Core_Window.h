@@ -2,6 +2,7 @@
 
 #include "Core_D3D11.h"
 #include "Core_D3D12.h"
+#include "Core_IImage.h"
 #include "Core_Math.h"
 #include "Core_OpenGL.h"
 #include "Core_VK.h"
@@ -14,6 +15,10 @@
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
                 std::function<void(const SampleResourcesD3D11 &)> fnRender);
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
+                std::shared_ptr<IImage> image);
 
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D12Device> device,

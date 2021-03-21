@@ -27,9 +27,6 @@ std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11DXGICapture(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(const SampleResourcesD3D11 &)>
-CreateSample_D3D11FreeType(std::shared_ptr<Direct3D11Device> device);
-
-std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11LightProbe(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(const SampleResourcesD3D11 &)>
@@ -56,9 +53,6 @@ CreateSample_D3D11Scene(std::shared_ptr<Direct3D11Device> device,
 
 std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11ShadowMap(std::shared_ptr<Direct3D11Device> device);
-
-std::function<void(const SampleResourcesD3D11 &)>
-CreateSample_D3D11ShowTexture(std::shared_ptr<Direct3D11Device> device);
 
 std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Tessellation(std::shared_ptr<Direct3D11Device> device);
@@ -100,6 +94,8 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device);
 
 std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device);
+
+std::unique_ptr<IImage> CreateSample_Image_FreeTypeAtlas();
 
 std::function<void()>
 CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device);
