@@ -24,6 +24,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Object> D3D11ComputeCanvas = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeCanvas(deviceD3D11));
     std::shared_ptr<Object> D3D11DrawingContext = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContext(deviceD3D11));
     std::shared_ptr<Object> D3D11DXGICapture = CreateNewWindow(deviceD3D11, CreateSample_D3D11DXGICapture(deviceD3D11));
+    std::shared_ptr<Object> D3D11FreeType = CreateNewWindow(deviceD3D11, CreateSample_D3D11FreeType(deviceD3D11));
     std::shared_ptr<Object> D3D11MarchingTetrahedra = CreateNewWindow(deviceD3D11, CreateSample_D3D11MarchingTetrahedra(deviceD3D11));
     //std::shared_ptr<Object> D3D11LightProbe = CreateNewWindow(deviceD3D11, CreateSample_D3D11LightProbe(deviceD3D11));
     std::shared_ptr<Object> D3D11LightProbeCross = CreateNewWindow(deviceD3D11, CreateSample_D3D11LightProbeCross(deviceD3D11));
