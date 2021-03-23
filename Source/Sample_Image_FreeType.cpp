@@ -7,5 +7,5 @@
 #include "Core_FontAtlas.h"
 
 std::unique_ptr<IImage> CreateSample_Image_FreeTypeAtlas() {
-  return std::move(CreateFreeTypeFont()->AtlasImage);
+  return std::move(CreateFreeTypeFont()->Atlas);
 }

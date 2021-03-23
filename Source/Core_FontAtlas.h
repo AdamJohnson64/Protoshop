@@ -5,13 +5,20 @@
 #include <stdint.h>
 
 struct BitmapRegion {
-  uint32_t X, Y, Width, Height;
+  int32_t X, Y;
+  int32_t Width, Height;
 };
 
-class AtlasFontASCII {
+struct GlyphMetadata {
+  BitmapRegion Image;
+  int32_t OffsetX, OffsetY;
+  int32_t AdvanceX;
+};
+
+class FontASCII {
 public:
-  std::unique_ptr<IImage> AtlasImage;
-  BitmapRegion ASCIIToGlyphRegion[128];
+  std::unique_ptr<IImage> Atlas;
+  GlyphMetadata ASCIIToGlyph[128];
 };
 
-std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont();
+std::unique_ptr<FontASCII> CreateFreeTypeFont();

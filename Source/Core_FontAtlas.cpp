@@ -7,11 +7,11 @@
 #include FT_FREETYPE_H
 
 struct AtlasGlyphExtract {
-  std::unique_ptr<IImage> GlyphImage;
-  BitmapRegion GlyphRegion;
+  std::unique_ptr<IImage> Image;
+  GlyphMetadata Metadata;
 };
 
-std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
+std::unique_ptr<FontASCII> CreateFreeTypeFont() {
   ////////////////////////////////////////////////////////////////////////////////
   // Extract all glyphs from the font and store in IImages.
   // We're only dealing with ASCII here.
@@ -30,7 +30,7 @@ std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
     FT_New_Face(ftLibrary,
                 "Submodules\\roboto\\src\\hinted\\Roboto-Regular.ttf", 0,
                 &ftFace);
-    FT_Set_Char_Size(ftFace, 0, 36 * 64, 300, 300);
+    FT_Set_Char_Size(ftFace, 0, 12 * 64, 300, 300);
     ////////////////////////////////////////////////////////////////////////////////
     // Dump out every glyph from bog standard ASCII in this font.
     allGlyphs.resize(ftFace->num_glyphs);
@@ -38,16 +38,22 @@ std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
       FT_Long glyphIndex = FT_Get_Char_Index(ftFace, asciiChar);
       // If we've already emitted this glyph then ignore it.
       if (glyphIndex < 0 || glyphIndex > ftFace->num_glyphs ||
-          allGlyphs[glyphIndex].GlyphImage != nullptr)
+          allGlyphs[glyphIndex].Image != nullptr)
         continue;
       // Map this character to its glyph.
       mapASCIIToGlyph[asciiChar] = glyphIndex;
-      // Prepare the glyph bitmap.
+      // Prepare the glyph.
       FT_Load_Glyph(ftFace, glyphIndex, FT_LOAD_DEFAULT);
+      // Collect glyph metadata.
+      allGlyphs[glyphIndex].Metadata.OffsetX = ftFace->glyph->bitmap_left;
+      allGlyphs[glyphIndex].Metadata.OffsetY = ftFace->glyph->bitmap_top;
+      allGlyphs[glyphIndex].Metadata.AdvanceX =
+          ftFace->glyph->metrics.horiAdvance / 64;
+      // Render the glyph bitmap.
       FT_Render_Glyph(ftFace->glyph, FT_RENDER_MODE_NORMAL);
       if (ftFace->glyph->bitmap.buffer == nullptr)
         continue;
-      allGlyphs[glyphIndex].GlyphImage = CreateImage_CopyPixels(
+      allGlyphs[glyphIndex].Image = CreateImage_CopyPixels(
           ftFace->glyph->bitmap.width, ftFace->glyph->bitmap.rows,
           ftFace->glyph->bitmap.pitch, DXGI_FORMAT_R8_UNORM,
           ftFace->glyph->bitmap.buffer);
@@ -71,7 +77,7 @@ std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
     allSortedGlyphs.erase(std::remove_if(allSortedGlyphs.begin(),
                                          allSortedGlyphs.end(),
                                          [=](const AtlasGlyphExtract *elem) {
-                                           return elem->GlyphImage == nullptr;
+                                           return elem->Image == nullptr;
                                          }),
                           allSortedGlyphs.end());
     ////////////////////////////////////////////////////////////////////////////////
@@ -81,10 +87,9 @@ std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
     // tall glyph that wastes a lot of atlas height.
     std::function<bool(AtlasGlyphExtract *, AtlasGlyphExtract *)> lessFunction =
         [&](const AtlasGlyphExtract *lhs, const AtlasGlyphExtract *rhs) {
-          return lhs->GlyphImage->GetHeight() < rhs->GlyphImage->GetHeight() ||
-                 (lhs->GlyphImage->GetHeight() ==
-                      rhs->GlyphImage->GetHeight() &&
-                  lhs->GlyphImage->GetWidth() < rhs->GlyphImage->GetWidth());
+          return lhs->Image->GetHeight() < rhs->Image->GetHeight() ||
+                 (lhs->Image->GetHeight() == rhs->Image->GetHeight() &&
+                  lhs->Image->GetWidth() < rhs->Image->GetWidth());
         };
     std::sort(allSortedGlyphs.begin(), allSortedGlyphs.end(), lessFunction);
     // Now flip it around so we have the largest first (exits sooner).
@@ -103,15 +108,15 @@ std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
     for (auto &iterGlyph : allSortedGlyphs) {
       // If the next glyph will spill over the bitmap width then start a new
       // line.
-      if (cursorX + iterGlyph->GlyphImage->GetWidth() > atlasWidth) {
+      if (cursorX + iterGlyph->Image->GetWidth() > atlasWidth) {
         cursorX = 0;
         cursorY = cursorY + lineHeight;
         lineHeight = 0;
       }
       // If the next glyph will spill over the bitmap size then resize the
       // bitmap slightly.
-      if (cursorX + iterGlyph->GlyphImage->GetWidth() > atlasWidth ||
-          cursorY + iterGlyph->GlyphImage->GetHeight() > atlasHeight) {
+      if (cursorX + iterGlyph->Image->GetWidth() > atlasWidth ||
+          cursorY + iterGlyph->Image->GetHeight() > atlasHeight) {
         atlasWidth += 1;
         atlasHeight += 1;
         // atlasWidth *= 2;
@@ -123,35 +128,38 @@ std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
         goto TRYAGAIN;
       }
       // Record the position and size of this glyph.
-      iterGlyph->GlyphRegion.X = cursorX;
-      iterGlyph->GlyphRegion.Y = cursorY;
-      iterGlyph->GlyphRegion.Width = iterGlyph->GlyphImage->GetWidth();
-      iterGlyph->GlyphRegion.Height = iterGlyph->GlyphImage->GetHeight();
+      iterGlyph->Metadata.Image.X = cursorX;
+      iterGlyph->Metadata.Image.Y = cursorY;
+      iterGlyph->Metadata.Image.Width = iterGlyph->Image->GetWidth();
+      iterGlyph->Metadata.Image.Height = iterGlyph->Image->GetHeight();
+      iterGlyph->Metadata.OffsetX = iterGlyph->Metadata.OffsetX;
+      iterGlyph->Metadata.OffsetY = iterGlyph->Metadata.OffsetY;
+      iterGlyph->Metadata.AdvanceX = iterGlyph->Metadata.AdvanceX;
       // Update our cursor, move right, and expand the line if necessary.
-      cursorX += iterGlyph->GlyphImage->GetWidth();
-      lineHeight = max(lineHeight, iterGlyph->GlyphImage->GetHeight());
+      cursorX += iterGlyph->Image->GetWidth();
+      lineHeight = max(lineHeight, iterGlyph->Image->GetHeight());
     }
   }
   }
   ////////////////////////////////////////////////////////////////////////////////
   // This is the final font we will emit.
-  std::unique_ptr<AtlasFontASCII> result(new AtlasFontASCII());
+  std::unique_ptr<FontASCII> result(new FontASCII());
   ////////////////////////////////////////////////////////////////////////////////
   // Now use the recorded locations to pack the image.
   uint8_t *atlasBitmap = new uint8_t[atlasWidth * atlasHeight];
   memset(atlasBitmap, 0, atlasWidth * atlasHeight);
   for (const auto &iterGlyph : allGlyphs) {
-    if (iterGlyph.GlyphImage == nullptr)
+    if (iterGlyph.Image == nullptr)
       continue;
     // Copy this glyph into the atlas.
-    for (int y = 0; y < iterGlyph.GlyphImage->GetHeight(); ++y) {
+    for (int y = 0; y < iterGlyph.Image->GetHeight(); ++y) {
       const uint8_t *copyFromRaster =
-          static_cast<const uint8_t *>(iterGlyph.GlyphImage->GetData()) +
-          iterGlyph.GlyphImage->GetStride() * y;
+          static_cast<const uint8_t *>(iterGlyph.Image->GetData()) +
+          iterGlyph.Image->GetStride() * y;
       uint8_t *copyToRaster =
-          atlasBitmap + atlasWidth * (iterGlyph.GlyphRegion.Y + y);
-      memcpy(copyToRaster + iterGlyph.GlyphRegion.X, copyFromRaster,
-             iterGlyph.GlyphImage->GetWidth());
+          atlasBitmap + atlasWidth * (iterGlyph.Metadata.Image.Y + y);
+      memcpy(copyToRaster + iterGlyph.Metadata.Image.X, copyFromRaster,
+             iterGlyph.Image->GetWidth());
     }
   }
   ////////////////////////////////////////////////////////////////////////////////
@@ -159,16 +167,15 @@ std::unique_ptr<AtlasFontASCII> CreateFreeTypeFont() {
   for (int indexASCII = 0; indexASCII < 128; ++indexASCII) {
     int glyphIndex = mapASCIIToGlyph[indexASCII];
     if (glyphIndex >= 0 && glyphIndex < allGlyphs.size()) {
-      result->ASCIIToGlyphRegion[indexASCII] =
-          allGlyphs[glyphIndex].GlyphRegion;
+      result->ASCIIToGlyph[indexASCII] = allGlyphs[glyphIndex].Metadata;
     } else {
-      result->ASCIIToGlyphRegion[indexASCII].X = 0;
-      result->ASCIIToGlyphRegion[indexASCII].Y = 0;
-      result->ASCIIToGlyphRegion[indexASCII].Width = 0;
-      result->ASCIIToGlyphRegion[indexASCII].Height = 0;
+      result->ASCIIToGlyph[indexASCII].Image.X = 0;
+      result->ASCIIToGlyph[indexASCII].Image.Y = 0;
+      result->ASCIIToGlyph[indexASCII].Image.Width = 0;
+      result->ASCIIToGlyph[indexASCII].Image.Height = 0;
     }
   }
-  result->AtlasImage = CreateImage_AutoDelete(
-      atlasWidth, atlasHeight, atlasWidth, DXGI_FORMAT_R8_UNORM, atlasBitmap);
+  result->Atlas = CreateImage_AutoDelete(atlasWidth, atlasHeight, atlasWidth,
+                                         DXGI_FORMAT_R8_UNORM, atlasBitmap);
   return result;
 }

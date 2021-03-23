@@ -13,7 +13,17 @@
 
 std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Font(std::shared_ptr<Direct3D11Device> device) {
+  struct Constants {
+    Matrix44 TransformScreenToClip;
+  };
+  CComPtr<ID3D11Buffer> bufferConstants = D3D11_Create_Buffer(
+      device->GetID3D11Device(), D3D11_BIND_CONSTANT_BUFFER, sizeof(Constants));
   const char *szShaderCode = R"SHADER(
+cbuffer Constants
+{
+    float4x4 TransformScreenToClip;
+};
+
 struct Vertex
 {
     float4 Position : SV_Position;
@@ -25,7 +35,7 @@ Texture2D<float4> TextureFont : register(t0);
 Vertex mainVS(Vertex vin)
 {
 Vertex vout;
-vout.Position = vin.Position;
+vout.Position = mul(TransformScreenToClip, vin.Position);
 vout.Texcoord = vin.Texcoord;
 return vout;
 }
@@ -70,28 +80,43 @@ float4 mainPS(Vertex vin) : SV_Target
   }
   ////////////////////////////////////////////////////////////////////////////////
   // Create the font atlas map.
-  std::unique_ptr<AtlasFontASCII> theFont = CreateFreeTypeFont();
-  CComPtr<ID3D11ShaderResourceView> srvFont = D3D11_Create_SRV(
-      device->GetID3D11DeviceContext(), theFont->AtlasImage.get());
+  std::unique_ptr<FontASCII> theFont = CreateFreeTypeFont();
+  CComPtr<ID3D11ShaderResourceView> srvFont =
+      D3D11_Create_SRV(device->GetID3D11DeviceContext(), theFont->Atlas.get());
   ////////////////////////////////////////////////////////////////////////////////
   // Create a vertex buffer.
   CComPtr<ID3D11Buffer> bufferVertex;
   std::vector<Vertex> vertices;
   {
-    std::function<void(char)> drawChar = [&](char c){
-      const BitmapRegion& r = theFont->ASCIIToGlyphRegion[c];
-      float minU = r.X;
-      float maxU = r.X + r.Width;
-      float minV = r.Y;
-      float maxV = r.Y + r.Height;
-      vertices.push_back({{-1, 1}, {minU, minV}});
-      vertices.push_back({{1, 1}, {maxU, minV}});
-      vertices.push_back({{1, -1}, {maxU, maxV}});
-      vertices.push_back({{1, -1}, {maxU, maxV}});
-      vertices.push_back({{-1, -1}, {minU, maxV}});
-      vertices.push_back({{-1, 1}, {minU, minV}});
-    };
-    drawChar('@');
+    std::function<void(const Vector2 &, char)> drawChar =
+        [&](const Vector2 &location, char c) {
+          const GlyphMetadata &r = theFont->ASCIIToGlyph[c];
+          float minU = r.Image.X;
+          float maxU = r.Image.X + r.Image.Width;
+          float minV = r.Image.Y;
+          float maxV = r.Image.Y + r.Image.Height;
+          float minX = location.X + r.OffsetX;
+          float maxX = minX + r.Image.Width;
+          float minY = location.Y - r.OffsetY;
+          float maxY = minY + r.Image.Height;
+          vertices.push_back({{minX, minY}, {minU, minV}});
+          vertices.push_back({{maxX, minY}, {maxU, minV}});
+          vertices.push_back({{maxX, maxY}, {maxU, maxV}});
+          vertices.push_back({{maxX, maxY}, {maxU, maxV}});
+          vertices.push_back({{minX, maxY}, {minU, maxV}});
+          vertices.push_back({{minX, minY}, {minU, minV}});
+        };
+    std::function<void(const Vector2 &, const char *)> drawString =
+        [&](const Vector2 &location, const char *text) {
+          float cursorX = location.X;
+          while (*text != 0) {
+            drawChar({cursorX, location.Y}, *text);
+            const GlyphMetadata &r = theFont->ASCIIToGlyph[*text];
+            cursorX += r.AdvanceX;
+            ++text;
+          }
+        };
+    drawString({0, 64}, "How To Render Text Using FreeType!");
     bufferVertex =
         D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER,
                             sizeof(Vertex) * vertices.size(), &vertices[0]);
@@ -102,6 +127,18 @@ float4 mainPS(Vertex vin) : SV_Target
     CComPtr<ID3D11RenderTargetView> rtvBackbuffer =
         D3D11_Create_RTV_From_Texture2D(device->GetID3D11Device(),
                                         sampleResources.BackBufferTexture);
+    ////////////////////////////////////////////////////////////////////////////////
+    // Update constant buffer.
+    {
+      Constants data = {};
+      data.TransformScreenToClip = Identity<float>;
+      data.TransformScreenToClip.M11 = 2.0f / descBackbuffer.Width;
+      data.TransformScreenToClip.M22 = -2.0f / descBackbuffer.Height;
+      data.TransformScreenToClip.M41 = -1;
+      data.TransformScreenToClip.M42 = 1;
+      device->GetID3D11DeviceContext()->UpdateSubresource(bufferConstants, 0,
+                                                          nullptr, &data, 0, 0);
+    }
     device->GetID3D11DeviceContext()->ClearState();
     ////////////////////////////////////////////////////////////////////////////////
     // Beginning of rendering.
@@ -116,6 +153,8 @@ float4 mainPS(Vertex vin) : SV_Target
     ////////////////////////////////////////////////////////////////////////////////
     // Setup and draw.
     device->GetID3D11DeviceContext()->VSSetShader(shaderVertex, nullptr, 0);
+    device->GetID3D11DeviceContext()->VSSetConstantBuffers(0, 1,
+                                                           &bufferConstants.p);
     device->GetID3D11DeviceContext()->PSSetShader(shaderPixel, nullptr, 0);
     device->GetID3D11DeviceContext()->PSSetShaderResources(0, 1, &srvFont.p);
     device->GetID3D11DeviceContext()->IASetPrimitiveTopology(
