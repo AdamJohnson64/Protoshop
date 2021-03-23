@@ -16,6 +16,7 @@
     <ClInclude Include="Source\Core_DXGI.h" />
     <ClInclude Include="Source\Core_DXGIUtil.h" />
     <ClInclude Include="Source\Core_DXRUtil.h" />
+    <ClInclude Include="Source\Core_FontAtlas.h" />
     <ClInclude Include="Source\Core_IImage.h" />
     <ClInclude Include="Source\Core_Math.h" />
     <ClInclude Include="Source\Core_Object.h" />
@@ -51,6 +52,7 @@
     <ClCompile Include="Source\Core_DXGI.cpp" />
     <ClCompile Include="Source\Core_DXGIUtil.cpp" />
     <ClCompile Include="Source\Core_DXRUtil.cpp" />
+    <ClCompile Include="Source\Core_FontAtlas.cpp" />
     <ClCompile Include="Source\Core_IImage.cpp" />
     <ClCompile Include="Source\Core_Math.cpp" />
     <ClCompile Include="Source\Core_OpenGL.cpp" />
@@ -66,6 +68,7 @@
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
     <ClCompile Include="Source\Sample_D3D11DXGICapture.cpp" />
+    <ClCompile Include="Source\Sample_D3D11Font.cpp" />
     <ClCompile Include="Source\Sample_Image_FreeType.cpp" />
     <ClCompile Include="Source\Sample_D3D11MarchingTetrahedra.cpp" />
     <ClCompile Include="Source\Sample_D3D11LightProbe.cpp" />
