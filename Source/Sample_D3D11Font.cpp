@@ -13,6 +13,19 @@
 
 std::function<void(const SampleResourcesD3D11 &)>
 CreateSample_D3D11Font(std::shared_ptr<Direct3D11Device> device) {
+  CComPtr<ID3D11BlendState> blendState;
+  {
+    D3D11_BLEND_DESC desc = {};
+    desc.RenderTarget[0].BlendEnable = TRUE;
+    desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    desc.RenderTarget[0].DestBlend = D3D11_BLEND_DEST_ALPHA;
+    desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    TRYD3D(device->GetID3D11Device()->CreateBlendState(&desc, &blendState.p));
+  }
   struct Constants {
     Matrix44 TransformScreenToClip;
   };
@@ -42,8 +55,8 @@ return vout;
 
 float4 mainPS(Vertex vin) : SV_Target
 {
-    float3 texelFont = TextureFont.Load(float3(vin.Texcoord, 0)).rgb;
-    return float4(texelFont, 1);
+    float a = TextureFont.Load(float3(vin.Texcoord, 0)).r;
+    return float4(1, 1, 1, a);
 })SHADER";
   struct Vertex {
     Vector2 Position;
@@ -97,7 +110,7 @@ float4 mainPS(Vertex vin) : SV_Target
             if (*text == 0x0A) {
               // Carriage Return + Line Feed.
               cursor.X = location.X;
-              cursor.Y += theFont->OffsetLine; 
+              cursor.Y += theFont->OffsetLine;
             } else if (*text == 0x0D) {
               // Carriage Return Only.
               cursor.X = location.X;
@@ -149,8 +162,10 @@ float4 mainPS(Vertex vin) : SV_Target
     device->GetID3D11DeviceContext()->ClearState();
     ////////////////////////////////////////////////////////////////////////////////
     // Beginning of rendering.
+    device->GetID3D11DeviceContext()->OMSetBlendState(blendState, nullptr,
+                                                      0xFFFFFFFF);
     device->GetID3D11DeviceContext()->ClearRenderTargetView(
-        rtvBackbuffer, &std::array<FLOAT, 4>{0.1f, 0.1f, 0.1f, 1.0f}[0]);
+        rtvBackbuffer, &std::array<FLOAT, 4>{0.5f, 0.0f, 0.0f, 1.0f}[0]);
     device->GetID3D11DeviceContext()->ClearDepthStencilView(
         sampleResources.DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
     device->GetID3D11DeviceContext()->RSSetViewports(
