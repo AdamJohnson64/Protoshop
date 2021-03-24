@@ -88,35 +88,42 @@ float4 mainPS(Vertex vin) : SV_Target
   CComPtr<ID3D11Buffer> bufferVertex;
   std::vector<Vertex> vertices;
   {
-    std::function<void(const Vector2 &, char)> drawChar =
-        [&](const Vector2 &location, char c) {
-          const GlyphMetadata &r = theFont->ASCIIToGlyph[c];
-          float minU = r.Image.X;
-          float maxU = r.Image.X + r.Image.Width;
-          float minV = r.Image.Y;
-          float maxV = r.Image.Y + r.Image.Height;
-          float minX = location.X + r.OffsetX;
-          float maxX = minX + r.Image.Width;
-          float minY = location.Y - r.OffsetY;
-          float maxY = minY + r.Image.Height;
-          vertices.push_back({{minX, minY}, {minU, minV}});
-          vertices.push_back({{maxX, minY}, {maxU, minV}});
-          vertices.push_back({{maxX, maxY}, {maxU, maxV}});
-          vertices.push_back({{maxX, maxY}, {maxU, maxV}});
-          vertices.push_back({{minX, maxY}, {minU, maxV}});
-          vertices.push_back({{minX, minY}, {minU, minV}});
-        };
     std::function<void(const Vector2 &, const char *)> drawString =
         [&](const Vector2 &location, const char *text) {
-          float cursorX = location.X;
+          Vector2 cursor = {};
+          cursor.X = location.X;
+          cursor.Y = location.Y;
           while (*text != 0) {
-            drawChar({cursorX, location.Y}, *text);
-            const GlyphMetadata &r = theFont->ASCIIToGlyph[*text];
-            cursorX += r.AdvanceX;
+            if (*text == 0x0A) {
+              // Carriage Return + Line Feed.
+              cursor.X = location.X;
+              cursor.Y += theFont->OffsetLine; 
+            } else if (*text == 0x0D) {
+              // Carriage Return Only.
+              cursor.X = location.X;
+            } else {
+              const GlyphMetadata &r = theFont->ASCIIToGlyph[*text];
+              float minU = r.Image.X;
+              float maxU = r.Image.X + r.Image.Width;
+              float minV = r.Image.Y;
+              float maxV = r.Image.Y + r.Image.Height;
+              float minX = cursor.X + r.OffsetX;
+              float maxX = minX + r.Image.Width;
+              float minY = cursor.Y - r.OffsetY;
+              float maxY = minY + r.Image.Height;
+              vertices.push_back({{minX, minY}, {minU, minV}});
+              vertices.push_back({{maxX, minY}, {maxU, minV}});
+              vertices.push_back({{maxX, maxY}, {maxU, maxV}});
+              vertices.push_back({{maxX, maxY}, {maxU, maxV}});
+              vertices.push_back({{minX, maxY}, {minU, maxV}});
+              vertices.push_back({{minX, minY}, {minU, minV}});
+              cursor.X += r.AdvanceX;
+            }
             ++text;
           }
         };
-    drawString({0, 64}, "How To Render Text Using FreeType!");
+    drawString({0, 64}, "How To Render Text Using FreeType!\nNow With "
+                        "Multiline Support! woo...");
     bufferVertex =
         D3D11_Create_Buffer(device->GetID3D11Device(), D3D11_BIND_VERTEX_BUFFER,
                             sizeof(Vertex) * vertices.size(), &vertices[0]);

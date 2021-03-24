@@ -20,6 +20,9 @@ std::unique_ptr<FontASCII> CreateFreeTypeFont() {
   for (int initmap = 0; initmap < 128; ++initmap) {
     mapASCIIToGlyph[initmap] = -1;
   }
+  ////////////////////////////////////////////////////////////////////////////////
+  // This is the final font we will emit.
+  std::unique_ptr<FontASCII> result(new FontASCII());
   {
     ////////////////////////////////////////////////////////////////////////////////
     // Set up the FreeType library.
@@ -30,7 +33,15 @@ std::unique_ptr<FontASCII> CreateFreeTypeFont() {
     FT_New_Face(ftLibrary,
                 "Submodules\\roboto\\src\\hinted\\Roboto-Regular.ttf", 0,
                 &ftFace);
-    FT_Set_Char_Size(ftFace, 0, 12 * 64, 300, 300);
+    FT_UInt fontSize = 14;
+    FT_UInt fontDPI = 300;
+    FT_Set_Char_Size(ftFace, 0, fontSize * 64, 300, 300);
+    ////////////////////////////////////////////////////////////////////////////////
+    // Line height calculation.
+    // This is the pixel height to advance for one line.
+    float fontPixelSize = fontSize * fontDPI / 72.0f;
+    float fontGridSize = ftFace->height * fontPixelSize / ftFace->units_per_EM;
+    result->OffsetLine = fontGridSize;
     ////////////////////////////////////////////////////////////////////////////////
     // Dump out every glyph from bog standard ASCII in this font.
     allGlyphs.resize(ftFace->num_glyphs);
@@ -141,9 +152,6 @@ std::unique_ptr<FontASCII> CreateFreeTypeFont() {
     }
   }
   }
-  ////////////////////////////////////////////////////////////////////////////////
-  // This is the final font we will emit.
-  std::unique_ptr<FontASCII> result(new FontASCII());
   ////////////////////////////////////////////////////////////////////////////////
   // Now use the recorded locations to pack the image.
   uint8_t *atlasBitmap = new uint8_t[atlasWidth * atlasHeight];

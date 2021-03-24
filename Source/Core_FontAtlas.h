@@ -18,6 +18,7 @@ struct GlyphMetadata {
 class FontASCII {
 public:
   std::unique_ptr<IImage> Atlas;
+  int32_t OffsetLine;
   GlyphMetadata ASCIIToGlyph[128];
 };
 
