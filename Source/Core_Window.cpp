@@ -281,73 +281,68 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
                 std::function<void(const SampleResourcesD3D12UAV &)> fnRender) {
-  std::shared_ptr<WindowPaintFunction> window(new WindowPaintFunction());
-  std::shared_ptr<DXGISwapChain> DXGISwapChain =
-      CreateDXGISwapChain(deviceD3D12, window->m_hWindow);
-  // Interposing UAV surface; we initialize this upon render.
   CComPtr<ID3D12Resource1> uavResource;
   uint32_t uavWidth;
   uint32_t uavHeight;
-  // Then the painting function...
-  window->m_OnPaint = [=]() mutable {
-    CComPtr<ID3D12Resource> resourceBackbuffer;
-    // CComPtr<ID3D12Resource1> resourceTarget;
-    if (uavResource == nullptr || uavWidth != RENDERTARGET_WIDTH ||
-        uavHeight != RENDERTARGET_HEIGHT) {
-      uavResource.Release();
-      D3D12_HEAP_PROPERTIES descHeapProperties = {};
-      descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-      D3D12_RESOURCE_DESC descResource = {};
-      descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-      descResource.Width = RENDERTARGET_WIDTH;
-      descResource.Height = RENDERTARGET_HEIGHT;
-      descResource.DepthOrArraySize = 1;
-      descResource.MipLevels = 1;
-      descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-      descResource.SampleDesc.Count = 1;
-      descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-      TRYD3D(deviceD3D12->m_pDevice->CreateCommittedResource(
-          &descHeapProperties, D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES,
-          &descResource, D3D12_RESOURCE_STATE_COMMON, nullptr,
-          __uuidof(ID3D12Resource1), (void **)&uavResource.p));
-      uavResource->SetName(L"Direct3D 12 Interposing UAV");
-      uavWidth = RENDERTARGET_WIDTH;
-      uavHeight = RENDERTARGET_HEIGHT;
-    }
-    SampleResourcesD3D12UAV sampleResources = {};
-    sampleResources.TransformWorldToClip =
-        TransformWorldToView * TransformViewToClip;
-    sampleResources.TransformWorldToView = TransformWorldToView;
-    sampleResources.BackBufferResource = uavResource;
-    fnRender(sampleResources);
-    TRYD3D(DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
-        DXGISwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
-        __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
-    ////////////////////////////////////////////////////////////////////////////////
-    // Copy the interposing UAV to the backbuffer texture.
-    D3D12_Run_Synchronously(
-        deviceD3D12.get(), [&](ID3D12GraphicsCommandList4 *commandList) {
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(
-                     uavResource, D3D12_RESOURCE_STATE_COMMON,
-                     D3D12_RESOURCE_STATE_COPY_SOURCE));
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
-                                              D3D12_RESOURCE_STATE_COMMON,
-                                              D3D12_RESOURCE_STATE_COPY_DEST));
-          commandList->CopyResource(resourceBackbuffer, uavResource);
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(uavResource,
-                                              D3D12_RESOURCE_STATE_COPY_SOURCE,
-                                              D3D12_RESOURCE_STATE_COMMON));
-          commandList->ResourceBarrier(
-              1, &Make_D3D12_RESOURCE_BARRIER(resourceBackbuffer,
-                                              D3D12_RESOURCE_STATE_COPY_DEST,
-                                              D3D12_RESOURCE_STATE_COMMON));
-        });
-    DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
-  };
-  return std::shared_ptr<Object>(window);
+  std::function<void(const SampleResourcesD3D12RTV &)> fnCreateUAVAndRender =
+      [=](const SampleResourcesD3D12RTV &rtvResources) mutable {
+        // Create an interposing UAV surface.
+        if (uavResource == nullptr || uavWidth != RENDERTARGET_WIDTH ||
+            uavHeight != RENDERTARGET_HEIGHT) {
+          uavResource.Release();
+          D3D12_HEAP_PROPERTIES descHeapProperties = {};
+          descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+          D3D12_RESOURCE_DESC descResource = {};
+          descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+          descResource.Width = RENDERTARGET_WIDTH;
+          descResource.Height = RENDERTARGET_HEIGHT;
+          descResource.DepthOrArraySize = 1;
+          descResource.MipLevels = 1;
+          descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+          descResource.SampleDesc.Count = 1;
+          descResource.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+          TRYD3D(deviceD3D12->m_pDevice->CreateCommittedResource(
+              &descHeapProperties,
+              D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES, &descResource,
+              D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource1),
+              (void **)&uavResource.p));
+          uavResource->SetName(L"Direct3D 12 Interposing UAV");
+          uavWidth = RENDERTARGET_WIDTH;
+          uavHeight = RENDERTARGET_HEIGHT;
+        }
+        SampleResourcesD3D12UAV uavResources = {};
+        uavResources.TransformWorldToClip =
+            TransformWorldToView * TransformViewToClip;
+        uavResources.TransformWorldToView = TransformWorldToView;
+        uavResources.BackBufferResource = uavResource;
+        fnRender(uavResources);
+        ////////////////////////////////////////////////////////////////////////////////
+        // Copy the interposing UAV to the backbuffer texture.
+        D3D12_Run_Synchronously(
+            deviceD3D12.get(), [&](ID3D12GraphicsCommandList4 *commandList) {
+              commandList->ResourceBarrier(
+                  1, &Make_D3D12_RESOURCE_BARRIER(
+                         uavResource, D3D12_RESOURCE_STATE_COMMON,
+                         D3D12_RESOURCE_STATE_COPY_SOURCE));
+              commandList->ResourceBarrier(
+                  1,
+                  &Make_D3D12_RESOURCE_BARRIER(rtvResources.BackBufferResource,
+                                               D3D12_RESOURCE_STATE_COMMON,
+                                               D3D12_RESOURCE_STATE_COPY_DEST));
+              commandList->CopyResource(rtvResources.BackBufferResource,
+                                        uavResource);
+              commandList->ResourceBarrier(
+                  1, &Make_D3D12_RESOURCE_BARRIER(
+                         uavResource, D3D12_RESOURCE_STATE_COPY_SOURCE,
+                         D3D12_RESOURCE_STATE_COMMON));
+              commandList->ResourceBarrier(
+                  1,
+                  &Make_D3D12_RESOURCE_BARRIER(rtvResources.BackBufferResource,
+                                               D3D12_RESOURCE_STATE_COPY_DEST,
+                                               D3D12_RESOURCE_STATE_COMMON));
+            });
+      };
+  return CreateNewWindow(deviceD3D12, fnCreateUAVAndRender);
 }
 
 std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<OpenGLDevice> deviceOGL,
