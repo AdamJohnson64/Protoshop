@@ -88,46 +88,6 @@ DXR_Create_Signature_LOCAL_4x32(ID3D12Device *device) {
   return DXR_Create_Signature(device, descSignature);
 }
 
-CComPtr<ID3D12RootSignature>
-DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12Device *device) {
-  std::array<D3D12_DESCRIPTOR_RANGE, 3> descDescriptorRange;
-  descDescriptorRange[0].BaseShaderRegister = 0;
-  descDescriptorRange[0].NumDescriptors = 1;
-  descDescriptorRange[0].RegisterSpace = 0;
-  descDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-  descDescriptorRange[0].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  descDescriptorRange[1].BaseShaderRegister = 0;
-  descDescriptorRange[1].NumDescriptors = 1;
-  descDescriptorRange[1].RegisterSpace = 0;
-  descDescriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-  descDescriptorRange[1].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  descDescriptorRange[2].BaseShaderRegister = 0;
-  descDescriptorRange[2].NumDescriptors = 1;
-  descDescriptorRange[2].RegisterSpace = 0;
-  descDescriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-  descDescriptorRange[2].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  std::array<D3D12_ROOT_PARAMETER, 2> descRootParameter = {};
-  descRootParameter[0].ParameterType =
-      D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-  descRootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-  descRootParameter[0].DescriptorTable.NumDescriptorRanges = 3;
-  descRootParameter[0].DescriptorTable.pDescriptorRanges =
-      &descDescriptorRange[0];
-  descRootParameter[1].ParameterType =
-      D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-  descRootParameter[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-  descRootParameter[1].Constants.ShaderRegister = 1;
-  descRootParameter[1].Constants.Num32BitValues = 4;
-  D3D12_ROOT_SIGNATURE_DESC descSignature = {};
-  descSignature.NumParameters = 2;
-  descSignature.pParameters = &descRootParameter[0];
-  descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-  return DXR_Create_Signature(device, descSignature);
-}
-
 D3D12_RAYTRACING_INSTANCE_DESC
 Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transformObjectToWorld,
                                     int hitgroup,

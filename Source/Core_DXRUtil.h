@@ -21,12 +21,6 @@ DXR_Create_Signature_LOCAL_4x32(ID3D12Device *device);
 CComPtr<ID3D12RootSignature>
 DXR_Create_Signature_LOCAL_1SRV(ID3D12Device *device);
 
-// Create a DXR LOCAL root signature that combines all the register allocations
-// from above. Ideally you wouldn't use this but if you want to avoid dealing
-// with a GLOBAL root signature at all then this is viable.
-CComPtr<ID3D12RootSignature>
-DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12Device *device);
-
 D3D12_RAYTRACING_INSTANCE_DESC
 Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transform, int hitgroup,
                                     D3D12_GPU_VIRTUAL_ADDRESS blas);
