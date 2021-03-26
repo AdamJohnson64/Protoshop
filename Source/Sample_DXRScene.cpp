@@ -49,7 +49,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroup0 = {};
-    descHitGroup0.HitGroupExport = L"HitGroup0";
+    descHitGroup0.HitGroupExport = L"HitGroupCheckerboardMesh";
     descHitGroup0.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
     descHitGroup0.ClosestHitShaderImport = L"MaterialCheckerboard";
     descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
@@ -57,7 +57,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroup1 = {};
-    descHitGroup1.HitGroupExport = L"HitGroup1";
+    descHitGroup1.HitGroupExport = L"HitGroupRedPlasticMesh";
     descHitGroup1.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
     descHitGroup1.ClosestHitShaderImport = L"MaterialRedPlastic";
     descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
@@ -75,7 +75,8 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     ++setupSubobject;
 
     const WCHAR *shaderExports[] = {L"RayGenerationMVPClip", L"Miss",
-                                    L"HitGroup0", L"HitGroup1"};
+                                    L"HitGroupCheckerboardMesh",
+                                    L"HitGroupRedPlasticMesh"};
 
     D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
     descSubobjectExports.NumExports = _countof(shaderExports);
@@ -149,13 +150,15 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
            stateObjectProperties->GetShaderIdentifier(L"Miss"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 2 - Hit Shader 1
-    memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroup0"),
-           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    memcpy(
+        &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
+        stateObjectProperties->GetShaderIdentifier(L"HitGroupCheckerboardMesh"),
+        D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 3 - Hit Shader 2
-    memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroup1"),
-           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    memcpy(
+        &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
+        stateObjectProperties->GetShaderIdentifier(L"HitGroupRedPlasticMesh"),
+        D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     resourceShaderTable = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize,

@@ -43,9 +43,12 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].pDesc = &descShaderConfig;
     ++setupSubobject;
 
-    const WCHAR *shaderExports[] = {
-        L"RayGenerationMVPClip", L"Miss",           L"HitGroupPlane",
-        L"HitGroupSphere",       L"IntersectPlane", L"IntersectSphere"};
+    const WCHAR *shaderExports[] = {L"RayGenerationMVPClip",
+                                    L"Miss",
+                                    L"HitGroupAmbientOcclusionPlane",
+                                    L"HitGroupAmbientOcclusionSphere",
+                                    L"IntersectPlane",
+                                    L"IntersectSphere"};
     D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
     descSubobjectExports.NumExports = _countof(shaderExports);
     descSubobjectExports.pExports = shaderExports;
@@ -69,7 +72,7 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupPlane = {};
-    descHitGroupPlane.HitGroupExport = L"HitGroupPlane";
+    descHitGroupPlane.HitGroupExport = L"HitGroupAmbientOcclusionPlane";
     descHitGroupPlane.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupPlane.ClosestHitShaderImport = L"MaterialAmbientOcclusion";
     descHitGroupPlane.IntersectionShaderImport = L"IntersectPlane";
@@ -78,7 +81,7 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupSphere = {};
-    descHitGroupSphere.HitGroupExport = L"HitGroupSphere";
+    descHitGroupSphere.HitGroupExport = L"HitGroupAmbientOcclusionSphere";
     descHitGroupSphere.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupSphere.ClosestHitShaderImport = L"MaterialAmbientOcclusion";
     descHitGroupSphere.IntersectionShaderImport = L"IntersectSphere";
@@ -134,11 +137,13 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 2 - Hit Shader 1
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlane"),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupAmbientOcclusionPlane"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 3 - Hit Shader 2
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupSphere"),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupAmbientOcclusionSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     resourceShaderTable = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,

@@ -53,9 +53,12 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].pDesc = &descShaderConfig;
     ++setupSubobject;
 
-    const WCHAR *shaderExports[] = {L"RayGenerationMVPClip", L"Miss",
-                                    L"HitGroupCheckerboard", L"HitGroupPlastic",
-                                    L"HitGroupGlass",        L"IntersectPlane",
+    const WCHAR *shaderExports[] = {L"RayGenerationMVPClip",
+                                    L"Miss",
+                                    L"HitGroupCheckerboardPlane",
+                                    L"HitGroupPlasticSphere",
+                                    L"HitGroupGlassSphere",
+                                    L"IntersectPlane",
                                     L"IntersectSphere"};
     D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
     descSubobjectExports.NumExports = _countof(shaderExports);
@@ -95,7 +98,7 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupCheckerboard = {};
-    descHitGroupCheckerboard.HitGroupExport = L"HitGroupCheckerboard";
+    descHitGroupCheckerboard.HitGroupExport = L"HitGroupCheckerboardPlane";
     descHitGroupCheckerboard.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupCheckerboard.ClosestHitShaderImport = L"MaterialCheckerboard";
     descHitGroupCheckerboard.IntersectionShaderImport = L"IntersectPlane";
@@ -104,7 +107,7 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupRedPlastic = {};
-    descHitGroupRedPlastic.HitGroupExport = L"HitGroupPlastic";
+    descHitGroupRedPlastic.HitGroupExport = L"HitGroupPlasticSphere";
     descHitGroupRedPlastic.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupRedPlastic.ClosestHitShaderImport = L"MaterialPlastic";
     descHitGroupRedPlastic.IntersectionShaderImport = L"IntersectSphere";
@@ -113,7 +116,7 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupGlass = {};
-    descHitGroupGlass.HitGroupExport = L"HitGroupGlass";
+    descHitGroupGlass.HitGroupExport = L"HitGroupGlassSphere";
     descHitGroupGlass.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupGlass.ClosestHitShaderImport = L"MaterialGlass";
     descHitGroupGlass.IntersectionShaderImport = L"IntersectSphere";
@@ -172,32 +175,33 @@ CreateSample_DXRWhitted(std::shared_ptr<Direct3D12Device> device) {
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 2 - Hit Shader 1
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupCheckerboard"),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupCheckerboardPlane"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 3 - Hit Shader 2
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"),
+           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlasticSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1] +
         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = albedoRed;
     // Shader Index 4 - Hit Shader 3
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 2],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"),
+           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlasticSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 2] +
         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = albedoGreen;
     // Shader Index 5 - Hit Shader 4
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 3],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"),
+           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlasticSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 3] +
         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = albedoBlue;
     // Shader Index 6 - Hit Shader 5
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 4],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupGlass"),
+           stateObjectProperties->GetShaderIdentifier(L"HitGroupGlassSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 4] +

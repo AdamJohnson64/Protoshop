@@ -64,9 +64,12 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].pDesc = &descShaderConfig;
     ++setupSubobject;
 
-    const WCHAR *shaderExports[] = {
-        L"RayGenerationMVPClip", L"Miss",           L"HitGroupCheckerboard",
-        L"HitGroupPlastic",      L"IntersectPlane", L"IntersectSphere"};
+    const WCHAR *shaderExports[] = {L"RayGenerationMVPClip",
+                                    L"Miss",
+                                    L"HitGroupCheckerboardPlane",
+                                    L"HitGroupPlasticSphere",
+                                    L"IntersectPlane",
+                                    L"IntersectSphere"};
     D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
     descSubobjectExports.NumExports = _countof(shaderExports);
     descSubobjectExports.pExports = shaderExports;
@@ -105,7 +108,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupCheckerboard = {};
-    descHitGroupCheckerboard.HitGroupExport = L"HitGroupCheckerboard";
+    descHitGroupCheckerboard.HitGroupExport = L"HitGroupCheckerboardPlane";
     descHitGroupCheckerboard.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupCheckerboard.ClosestHitShaderImport = L"MaterialCheckerboard";
     descHitGroupCheckerboard.IntersectionShaderImport = L"IntersectPlane";
@@ -114,7 +117,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupRedPlastic = {};
-    descHitGroupRedPlastic.HitGroupExport = L"HitGroupPlastic";
+    descHitGroupRedPlastic.HitGroupExport = L"HitGroupPlasticSphere";
     descHitGroupRedPlastic.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupRedPlastic.ClosestHitShaderImport = L"MaterialPlastic";
     descHitGroupRedPlastic.IntersectionShaderImport = L"IntersectSphere";
@@ -178,7 +181,8 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 2 - Hit Shader 1
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupCheckerboard"),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupCheckerboardPlane"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0 +
                            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES],
@@ -187,7 +191,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
            sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
     // Shader Index 3 - Hit Shader 2
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlastic"),
+           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlasticSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     resourceShaderTable = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,

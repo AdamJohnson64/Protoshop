@@ -61,8 +61,8 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
 
     const WCHAR *shaderExports[] = {
         L"RayGenerationMVPClip",   L"Miss",
-        L"HitGroupPlane",          L"HitGroupSphereDiffuse",
-        L"HitGroupSphereEmissive", L"IntersectPlane",
+        L"HitGroupDiffusePlane",   L"HitGroupDiffuseSphere",
+        L"HitGroupEmissiveSphere", L"IntersectPlane",
         L"IntersectSphere"};
     D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
     descSubobjectExports.NumExports = _countof(shaderExports);
@@ -106,7 +106,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupPlane = {};
-    descHitGroupPlane.HitGroupExport = L"HitGroupPlane";
+    descHitGroupPlane.HitGroupExport = L"HitGroupDiffusePlane";
     descHitGroupPlane.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupPlane.ClosestHitShaderImport = L"MaterialDiffuse";
     descHitGroupPlane.IntersectionShaderImport = L"IntersectPlane";
@@ -115,7 +115,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupSphereDiffuse = {};
-    descHitGroupSphereDiffuse.HitGroupExport = L"HitGroupSphereDiffuse";
+    descHitGroupSphereDiffuse.HitGroupExport = L"HitGroupDiffuseSphere";
     descHitGroupSphereDiffuse.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupSphereDiffuse.ClosestHitShaderImport = L"MaterialDiffuse";
     descHitGroupSphereDiffuse.IntersectionShaderImport = L"IntersectSphere";
@@ -124,7 +124,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     ++setupSubobject;
 
     D3D12_HIT_GROUP_DESC descHitGroupSphereEmissive = {};
-    descHitGroupSphereEmissive.HitGroupExport = L"HitGroupSphereEmissive";
+    descHitGroupSphereEmissive.HitGroupExport = L"HitGroupEmissiveSphere";
     descHitGroupSphereEmissive.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
     descHitGroupSphereEmissive.ClosestHitShaderImport = L"MaterialEmissive";
     descHitGroupSphereEmissive.IntersectionShaderImport = L"IntersectSphere";
@@ -184,14 +184,14 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 2 - Hit Shader 1
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupPlane"),
+           stateObjectProperties->GetShaderIdentifier(L"HitGroupDiffusePlane"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0] +
         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) = albedoWhite;
     // Shader Index 3 - Hit Shader 2
     memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupSphereDiffuse"),
+           stateObjectProperties->GetShaderIdentifier(L"HitGroupDiffuseSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1] +
@@ -199,7 +199,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     // Shader Index 4 - Hit Shader 3
     memcpy(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 2],
-        stateObjectProperties->GetShaderIdentifier(L"HitGroupSphereEmissive"),
+        stateObjectProperties->GetShaderIdentifier(L"HitGroupEmissiveSphere"),
         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 2] +
@@ -207,7 +207,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     // Shader Index 5 - Hit Shader 4
     memcpy(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 3],
-        stateObjectProperties->GetShaderIdentifier(L"HitGroupSphereEmissive"),
+        stateObjectProperties->GetShaderIdentifier(L"HitGroupEmissiveSphere"),
         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 3] +
@@ -215,7 +215,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     // Shader Index 6 - Hit Shader 5
     memcpy(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 4],
-        stateObjectProperties->GetShaderIdentifier(L"HitGroupSphereEmissive"),
+        stateObjectProperties->GetShaderIdentifier(L"HitGroupEmissiveSphere"),
         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(
         &shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 4] +
