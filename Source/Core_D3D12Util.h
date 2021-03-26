@@ -11,6 +11,14 @@
 // Create* resource construction functions.
 ///////////////////////////////////////////////////////////////////////////////
 
+D3D12_CONSTANT_BUFFER_VIEW_DESC
+Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(D3D12_GPU_VIRTUAL_ADDRESS BufferLocation,
+                                     UINT SizeInBytes);
+
+D3D12_CONSTANT_BUFFER_VIEW_DESC
+Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(ID3D12Resource *bufferResource,
+                                     UINT SizeInBytes);
+
 D3D12_RECT Make_D3D12_RECT(LONG width, LONG height);
 
 D3D12_RENDER_TARGET_VIEW_DESC
@@ -19,6 +27,12 @@ Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault();
 D3D12_RESOURCE_BARRIER Make_D3D12_RESOURCE_BARRIER(ID3D12Resource *resource,
                                                    D3D12_RESOURCE_STATES from,
                                                    D3D12_RESOURCE_STATES to);
+
+D3D12_SHADER_RESOURCE_VIEW_DESC
+Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_Texture2D(DXGI_FORMAT Format);
+
+D3D12_UNORDERED_ACCESS_VIEW_DESC
+Make_D3D12_UNORDERED_ACCESS_VIEW_DESC_For_Texture2D();
 
 D3D12_VIEWPORT Make_D3D12_VIEWPORT(FLOAT width, FLOAT height);
 

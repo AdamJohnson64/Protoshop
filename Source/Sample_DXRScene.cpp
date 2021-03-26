@@ -190,7 +190,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
           1; // HACK: HARD CODE THE MATERIAL TO INDEX 1 (Barycentric visual)
       instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
           *instance.TransformObjectToWorld, materialID,
-          factoryBLAS(instance.Mesh.get())->GetGPUVirtualAddress());
+          factoryBLAS(instance.Mesh.get()));
       instanceDescs[i].InstanceID = i;
     }
     resourceTLAS =
@@ -230,34 +230,21 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
           device->m_pDevice->GetDescriptorHandleIncrementSize(
               D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
       // Create the UAV for the raytracer output.
-      {
-        D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-        desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        device->m_pDevice->CreateUnorderedAccessView(
-            sampleResources.BackBufferResource, nullptr, &desc, descriptorBase);
-        descriptorBase.ptr += descriptorElementSize;
-      }
+      device->m_pDevice->CreateUnorderedAccessView(
+          sampleResources.BackBufferResource, nullptr,
+          &Make_D3D12_UNORDERED_ACCESS_VIEW_DESC_For_Texture2D(),
+          descriptorBase);
+      descriptorBase.ptr += descriptorElementSize;
       // Create the SRV for the acceleration structure.
-      {
-        D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-        desc.Format = DXGI_FORMAT_UNKNOWN;
-        desc.ViewDimension =
-            D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-        desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        desc.RaytracingAccelerationStructure.Location =
-            resourceTLAS->GetGPUVirtualAddress();
-        device->m_pDevice->CreateShaderResourceView(nullptr, &desc,
-                                                    descriptorBase);
-        descriptorBase.ptr += descriptorElementSize;
-      }
+      device->m_pDevice->CreateShaderResourceView(
+          nullptr, &Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_TLAS(resourceTLAS),
+          descriptorBase);
+      descriptorBase.ptr += descriptorElementSize;
       // Create the CBV for the scene constants.
-      {
-        D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
-        desc.BufferLocation = resourceConstants->GetGPUVirtualAddress();
-        desc.SizeInBytes = 256;
-        device->m_pDevice->CreateConstantBufferView(&desc, descriptorBase);
-        descriptorBase.ptr += descriptorElementSize;
-      }
+      device->m_pDevice->CreateConstantBufferView(
+          &Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(resourceConstants, 256),
+          descriptorBase);
+      descriptorBase.ptr += descriptorElementSize;
     }
     ////////////////////////////////////////////////////////////////////////////////
     // RAYTRACE - Finally call the raytracer and generate the frame.

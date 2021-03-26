@@ -200,68 +200,18 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
   CComPtr<ID3D12Resource> resourceTexture =
       D3D12_Create_Sample_Texture(device.get());
   ////////////////////////////////////////////////////////////////////////////////
-  // Create AABBs.
-  CComPtr<ID3D12Resource> resourceAABB = D3D12_Create_Buffer(
-      device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
-      sizeof(D3D12_RAYTRACING_AABB), sizeof(D3D12_RAYTRACING_AABB),
-      &Make_D3D12_RAYTRACING_AABB(-1, -1, -1, 1, 1, 1));
-  ////////////////////////////////////////////////////////////////////////////////
   // BLAS - Build the bottom level acceleration structure.
-  CComPtr<ID3D12Resource1> resourceBLAS;
-  {
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO
-    descRaytracingPrebuild = {};
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
-    descRaytracingInputs = {};
-    descRaytracingInputs.Type =
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-    descRaytracingInputs.NumDescs = 1;
-    descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-    D3D12_RAYTRACING_GEOMETRY_DESC descGeometry[1] = {};
-    descGeometry[0].Type =
-        D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
-    descGeometry[0].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-    descGeometry[0].AABBs.AABBCount = 1;
-    descGeometry[0].AABBs.AABBs.StartAddress =
-        resourceAABB->GetGPUVirtualAddress();
-    descGeometry[0].AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB);
-    descRaytracingInputs.pGeometryDescs = &descGeometry[0];
-    device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(
-        &descRaytracingInputs, &descRaytracingPrebuild);
-    // Create the output and scratch buffers.
-    resourceBLAS = D3D12_Create_Buffer(
-        device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-        descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-    CComPtr<ID3D12Resource1> ResourceASScratch;
-    ResourceASScratch = D3D12_Create_Buffer(
-        device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-        descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-    // Build the acceleration structure.
-    D3D12_Run_Synchronously(
-        device.get(), [&](ID3D12GraphicsCommandList5 *UploadBLASCommandList) {
-          D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
-          descBuild.DestAccelerationStructureData =
-              resourceBLAS->GetGPUVirtualAddress();
-          descBuild.Inputs = descRaytracingInputs;
-          descBuild.ScratchAccelerationStructureData =
-              ResourceASScratch->GetGPUVirtualAddress();
-          UploadBLASCommandList->BuildRaytracingAccelerationStructure(
-              &descBuild, 0, nullptr);
-        });
-  }
+  CComPtr<ID3D12Resource1> resourceBLAS = DXRCreateBLAS(
+      device.get(), Make_D3D12_RAYTRACING_AABB(-1, -1, -1, 1, 1, 1));
   ////////////////////////////////////////////////////////////////////////////////
   // TLAS - Build the top level acceleration structure.
   CComPtr<ID3D12Resource1> resourceTLAS;
   {
     std::array<D3D12_RAYTRACING_INSTANCE_DESC, 5> DxrInstance = {};
     DxrInstance[0] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-        CreateMatrixScale(Vector3{10, 1, 10}), 0,
-        resourceBLAS->GetGPUVirtualAddress());
+        CreateMatrixScale(Vector3{10, 1, 10}), 0, resourceBLAS);
     DxrInstance[1] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-        CreateMatrixTranslate(Vector3{0, 1, 0}), 1,
-        resourceBLAS->GetGPUVirtualAddress());
+        CreateMatrixTranslate(Vector3{0, 1, 0}), 1, resourceBLAS);
     resourceTLAS =
         DXRCreateTLAS(device.get(), &DxrInstance[0], DxrInstance.size());
   }
@@ -292,49 +242,24 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
       D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =
           descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
       // Create the UAV for the raytracer output.
-      {
-        D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-        desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        device->m_pDevice->CreateUnorderedAccessView(
-            sampleResources.BackBufferResource, nullptr, &desc,
-            descriptorBase + descriptorOffsetGlobals +
-                descriptorElementSize * 0);
-      }
+      device->m_pDevice->CreateUnorderedAccessView(
+          sampleResources.BackBufferResource, nullptr,
+          &Make_D3D12_UNORDERED_ACCESS_VIEW_DESC_For_Texture2D(),
+          descriptorBase + descriptorOffsetGlobals + descriptorElementSize * 0);
       // Create the SRV for the acceleration structure.
-      {
-        D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-        desc.Format = DXGI_FORMAT_UNKNOWN;
-        desc.ViewDimension =
-            D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-        desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        desc.RaytracingAccelerationStructure.Location =
-            resourceTLAS->GetGPUVirtualAddress();
-        device->m_pDevice->CreateShaderResourceView(
-            nullptr, &desc,
-            descriptorBase + descriptorOffsetGlobals +
-                descriptorElementSize * 1);
-      }
+      device->m_pDevice->CreateShaderResourceView(
+          nullptr, &Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_TLAS(resourceTLAS),
+          descriptorBase + descriptorOffsetGlobals + descriptorElementSize * 1);
       // Create the CBV for the scene constants.
-      {
-        D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
-        desc.BufferLocation = resourceConstants->GetGPUVirtualAddress();
-        desc.SizeInBytes = 256;
-        device->m_pDevice->CreateConstantBufferView(
-            &desc, descriptorBase + descriptorOffsetGlobals +
-                       descriptorElementSize * 2);
-      }
+      device->m_pDevice->CreateConstantBufferView(
+          &Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(resourceConstants, 256),
+          descriptorBase + descriptorOffsetGlobals + descriptorElementSize * 2);
       // Create the SRV for the texture.
-      {
-        D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-        desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-        desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        desc.Texture2D.MipLevels = 1;
-        device->m_pDevice->CreateShaderResourceView(
-            resourceTexture, &desc,
-            descriptorBase + descriptorOffsetLocals +
-                descriptorElementSize * 0);
-      }
+      device->m_pDevice->CreateShaderResourceView(
+          resourceTexture,
+          &Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_Texture2D(
+              DXGI_FORMAT_B8G8R8A8_UNORM),
+          descriptorBase + descriptorOffsetLocals + descriptorElementSize * 0);
     }
     ////////////////////////////////////////////////////////////////////////////////
     // RAYTRACE - Finally call the raytracer and generate the frame.

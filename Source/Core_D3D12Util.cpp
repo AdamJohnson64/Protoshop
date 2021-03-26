@@ -8,6 +8,22 @@
 #include <atlbase.h>
 #include <functional>
 
+D3D12_CONSTANT_BUFFER_VIEW_DESC
+Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(D3D12_GPU_VIRTUAL_ADDRESS BufferLocation,
+                                     UINT SizeInBytes) {
+  D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
+  desc.BufferLocation = BufferLocation;
+  desc.SizeInBytes = SizeInBytes;
+  return desc;
+}
+
+D3D12_CONSTANT_BUFFER_VIEW_DESC
+Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(ID3D12Resource *resource,
+                                     UINT SizeInBytes) {
+  return Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(resource->GetGPUVirtualAddress(),
+                                              SizeInBytes);
+}
+
 D3D12_RECT Make_D3D12_RECT(LONG width, LONG height) {
   D3D12_RECT desc = {};
   desc.right = width;
@@ -23,15 +39,33 @@ Make_D3D12_RENDER_TARGET_VIEW_DESC_SwapChainDefault() {
   return desc;
 }
 
-D3D12_RESOURCE_BARRIER Make_D3D12_RESOURCE_BARRIER(ID3D12Resource *resource,
-                                                   D3D12_RESOURCE_STATES from,
-                                                   D3D12_RESOURCE_STATES to) {
+D3D12_RESOURCE_BARRIER
+Make_D3D12_RESOURCE_BARRIER(ID3D12Resource *bufferResource,
+                            D3D12_RESOURCE_STATES from,
+                            D3D12_RESOURCE_STATES to) {
   D3D12_RESOURCE_BARRIER desc = {};
   desc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-  desc.Transition.pResource = resource;
+  desc.Transition.pResource = bufferResource;
   desc.Transition.StateBefore = from;
   desc.Transition.StateAfter = to;
   desc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+  return desc;
+}
+
+D3D12_SHADER_RESOURCE_VIEW_DESC
+Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_Texture2D(DXGI_FORMAT Format) {
+  D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+  desc.Format = Format;
+  desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+  desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  desc.Texture2D.MipLevels = 1;
+  return desc;
+}
+
+D3D12_UNORDERED_ACCESS_VIEW_DESC
+Make_D3D12_UNORDERED_ACCESS_VIEW_DESC_For_Texture2D() {
+  D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+  desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
   return desc;
 }
 

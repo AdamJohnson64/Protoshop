@@ -145,18 +145,16 @@ float4 main() : SV_Target
       for (int i = 0; i < scene.size(); ++i) {
         const Instance &instance = scene[i];
         {
-          D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
-          desc.BufferLocation =
-              factoryConstants(instance.TransformObjectToWorld.get())
-                  ->GetGPUVirtualAddress();
-          desc.SizeInBytes = 256;
           D3D12_CPU_DESCRIPTOR_HANDLE handle =
               descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart();
           handle.ptr =
               handle.ptr + device->m_pDevice->GetDescriptorHandleIncrementSize(
                                D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) *
                                i;
-          device->m_pDevice->CreateConstantBufferView(&desc, handle);
+          device->m_pDevice->CreateConstantBufferView(
+              &Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(
+                  factoryConstants(instance.TransformObjectToWorld.get()), 256),
+              handle);
         }
         D3D12_GPU_DESCRIPTOR_HANDLE handle =
             descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart();

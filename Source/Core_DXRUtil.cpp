@@ -131,7 +131,7 @@ DXR_Create_Signature_LOCAL_1UAV1SRV1CBV4x32(ID3D12Device *device) {
 D3D12_RAYTRACING_INSTANCE_DESC
 Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transformObjectToWorld,
                                     int hitgroup,
-                                    D3D12_GPU_VIRTUAL_ADDRESS tlas) {
+                                    D3D12_GPU_VIRTUAL_ADDRESS blas) {
   D3D12_RAYTRACING_INSTANCE_DESC o = {};
   o.Transform[0][0] = transformObjectToWorld.M11;
   o.Transform[1][0] = transformObjectToWorld.M12;
@@ -147,8 +147,15 @@ Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transformObjectToWorld,
   o.Transform[2][3] = transformObjectToWorld.M43;
   o.InstanceMask = 0xFF;
   o.InstanceContributionToHitGroupIndex = hitgroup;
-  o.AccelerationStructure = tlas;
+  o.AccelerationStructure = blas;
   return o;
+}
+
+D3D12_RAYTRACING_INSTANCE_DESC
+Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transform, int hitgroup,
+                                    ID3D12Resource *blasResource) {
+  return Make_D3D12_RAYTRACING_INSTANCE_DESC(
+      transform, hitgroup, blasResource->GetGPUVirtualAddress());
 }
 
 D3D12_RAYTRACING_AABB Make_D3D12_RAYTRACING_AABB(FLOAT minX, FLOAT minY,
@@ -162,6 +169,54 @@ D3D12_RAYTRACING_AABB Make_D3D12_RAYTRACING_AABB(FLOAT minX, FLOAT minY,
   o.MaxY = maxY;
   o.MaxZ = maxZ;
   return o;
+}
+
+D3D12_SHADER_RESOURCE_VIEW_DESC
+Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_TLAS(
+    D3D12_GPU_VIRTUAL_ADDRESS Location) {
+  D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+  desc.Format = DXGI_FORMAT_UNKNOWN;
+  desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+  desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  desc.RaytracingAccelerationStructure.Location = Location;
+  return desc;
+}
+
+D3D12_SHADER_RESOURCE_VIEW_DESC
+Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_TLAS(ID3D12Resource *bufferResource) {
+  return Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_TLAS(
+      bufferResource->GetGPUVirtualAddress());
+}
+
+CComPtr<ID3D12Resource1> DXRCreateAccelerationStructure(
+    Direct3D12Device *device,
+    const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS &inputs) {
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO
+  descRaytracingPrebuild = {};
+  device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(
+      &inputs, &descRaytracingPrebuild);
+  // Create the output and scratch buffers.
+  CComPtr<ID3D12Resource1> ResourceBLAS = D3D12_Create_Buffer(
+      device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+      D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+      descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+  CComPtr<ID3D12Resource1> ResourceASScratch = D3D12_Create_Buffer(
+      device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+      D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+      descRaytracingPrebuild.ResultDataMaxSizeInBytes);
+  // Build the acceleration structure.
+  D3D12_Run_Synchronously(
+      device, [&](ID3D12GraphicsCommandList5 *UploadBLASCommandList) {
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
+        descBuild.DestAccelerationStructureData =
+            ResourceBLAS->GetGPUVirtualAddress();
+        descBuild.Inputs = inputs;
+        descBuild.ScratchAccelerationStructureData =
+            ResourceASScratch->GetGPUVirtualAddress();
+        UploadBLASCommandList->BuildRaytracingAccelerationStructure(&descBuild,
+                                                                    0, nullptr);
+      });
+  return ResourceBLAS;
 }
 
 CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device *device,
@@ -183,56 +238,51 @@ CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device *device,
         DXGI_FORMAT_Size(indexFormat) * indexCount, indices);
   }
   // Now create and initialize the BLAS with this data.
-  CComPtr<ID3D12Resource1> ResourceBLAS;
-  {
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO
-    descRaytracingPrebuild = {};
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs =
-        {};
-    descRaytracingInputs.Type =
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-    descRaytracingInputs.NumDescs = 1;
-    descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-    D3D12_RAYTRACING_GEOMETRY_DESC descGeometry = {};
-    descGeometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-    descGeometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-    descGeometry.Triangles.IndexFormat = indexFormat;
-    descGeometry.Triangles.VertexFormat = vertexFormat;
-    descGeometry.Triangles.IndexCount = indexCount;
-    descGeometry.Triangles.VertexCount = vertexCount;
-    descGeometry.Triangles.IndexBuffer =
-        ResourceIndices != nullptr ? ResourceIndices->GetGPUVirtualAddress()
-                                   : 0;
-    descGeometry.Triangles.VertexBuffer.StartAddress =
-        ResourceVertices->GetGPUVirtualAddress();
-    descGeometry.Triangles.VertexBuffer.StrideInBytes =
-        DXGI_FORMAT_Size(vertexFormat);
-    descRaytracingInputs.pGeometryDescs = &descGeometry;
-    device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(
-        &descRaytracingInputs, &descRaytracingPrebuild);
-    // Create the output and scratch buffers.
-    ResourceBLAS = D3D12_Create_Buffer(
-        device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-        descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-    CComPtr<ID3D12Resource1> ResourceASScratch = D3D12_Create_Buffer(
-        device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-        descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-    // Build the acceleration structure.
-    D3D12_Run_Synchronously(
-        device, [&](ID3D12GraphicsCommandList5 *UploadBLASCommandList) {
-          D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
-          descBuild.DestAccelerationStructureData =
-              ResourceBLAS->GetGPUVirtualAddress();
-          descBuild.Inputs = descRaytracingInputs;
-          descBuild.ScratchAccelerationStructureData =
-              ResourceASScratch->GetGPUVirtualAddress();
-          UploadBLASCommandList->BuildRaytracingAccelerationStructure(
-              &descBuild, 0, nullptr);
-        });
-  }
-  return ResourceBLAS;
+  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs =
+      {};
+  descRaytracingInputs.Type =
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+  descRaytracingInputs.NumDescs = 1;
+  descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+  D3D12_RAYTRACING_GEOMETRY_DESC descGeometry = {};
+  descGeometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+  descGeometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+  descGeometry.Triangles.IndexFormat = indexFormat;
+  descGeometry.Triangles.VertexFormat = vertexFormat;
+  descGeometry.Triangles.IndexCount = indexCount;
+  descGeometry.Triangles.VertexCount = vertexCount;
+  descGeometry.Triangles.IndexBuffer =
+      ResourceIndices != nullptr ? ResourceIndices->GetGPUVirtualAddress() : 0;
+  descGeometry.Triangles.VertexBuffer.StartAddress =
+      ResourceVertices->GetGPUVirtualAddress();
+  descGeometry.Triangles.VertexBuffer.StrideInBytes =
+      DXGI_FORMAT_Size(vertexFormat);
+  descRaytracingInputs.pGeometryDescs = &descGeometry;
+  return DXRCreateAccelerationStructure(device, descRaytracingInputs);
+}
+
+CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device *device,
+                                       const D3D12_RAYTRACING_AABB &aabb) {
+  CComPtr<ID3D12Resource> resourceAABB = D3D12_Create_Buffer(
+      device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
+      sizeof(D3D12_RAYTRACING_AABB), sizeof(D3D12_RAYTRACING_AABB), &aabb);
+  // Now create and initialize the BLAS with this data.
+  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
+  descRaytracingInputs = {};
+  descRaytracingInputs.Type =
+      D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+  descRaytracingInputs.NumDescs = 1;
+  descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+  D3D12_RAYTRACING_GEOMETRY_DESC descGeometry[1] = {};
+  descGeometry[0].Type =
+      D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+  descGeometry[0].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+  descGeometry[0].AABBs.AABBCount = 1;
+  descGeometry[0].AABBs.AABBs.StartAddress =
+      resourceAABB->GetGPUVirtualAddress();
+  descGeometry[0].AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB);
+  descRaytracingInputs.pGeometryDescs = &descGeometry[0];
+  return DXRCreateAccelerationStructure(device, descRaytracingInputs);
 }
 
 CComPtr<ID3D12Resource1>
@@ -251,8 +301,6 @@ DXRCreateTLAS(Direct3D12Device *device,
   ////////////////////////////////////////////////////////////////////////////////
   CComPtr<ID3D12Resource1> ResourceTLAS;
   {
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO
-    descRaytracingPrebuild = {};
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs =
         {};
     descRaytracingInputs.Type =
@@ -261,30 +309,7 @@ DXRCreateTLAS(Direct3D12Device *device,
     descRaytracingInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     descRaytracingInputs.InstanceDescs =
         ResourceInstance->GetGPUVirtualAddress();
-    device->m_pDevice->GetRaytracingAccelerationStructurePrebuildInfo(
-        &descRaytracingInputs, &descRaytracingPrebuild);
-    // Create the output and scratch buffers.
-    ResourceTLAS = D3D12_Create_Buffer(
-        device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-        descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-    CComPtr<ID3D12Resource1> ResourceASScratch;
-    ResourceASScratch = D3D12_Create_Buffer(
-        device->m_pDevice, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-        descRaytracingPrebuild.ResultDataMaxSizeInBytes);
-    // Build the acceleration structure.
-    D3D12_Run_Synchronously(
-        device, [&](ID3D12GraphicsCommandList4 *UploadTLASCommandList) {
-          D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC descBuild = {};
-          descBuild.DestAccelerationStructureData =
-              ResourceTLAS->GetGPUVirtualAddress();
-          descBuild.Inputs = descRaytracingInputs;
-          descBuild.ScratchAccelerationStructureData =
-              ResourceASScratch->GetGPUVirtualAddress();
-          UploadTLASCommandList->BuildRaytracingAccelerationStructure(
-              &descBuild, 0, nullptr);
-        });
+    ResourceTLAS = DXRCreateAccelerationStructure(device, descRaytracingInputs);
   }
   return ResourceTLAS;
 }
