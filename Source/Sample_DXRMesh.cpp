@@ -52,18 +52,6 @@ CreateSample_DXRMesh(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].pDesc = &descShaderConfig;
     ++setupSubobject;
 
-    const WCHAR *shaderExports[] = {L"RayGenerationMVPClip", L"Miss",
-                                    L"HitGroup"};
-    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
-    descSubobjectExports.NumExports = _countof(shaderExports);
-    descSubobjectExports.pExports = &shaderExports[0];
-    descSubobjectExports.pSubobjectToAssociate =
-        &descSubobject[setupSubobject - 1];
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-    descSubobject[setupSubobject].pDesc = &descSubobjectExports;
-    ++setupSubobject;
-
     descSubobject[setupSubobject].Type =
         D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
     descSubobject[setupSubobject].pDesc = &rootSignatureGLOBAL.p;

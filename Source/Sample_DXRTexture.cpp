@@ -64,22 +64,6 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].pDesc = &descShaderConfig;
     ++setupSubobject;
 
-    const WCHAR *shaderExports[] = {L"RayGenerationMVPClip",
-                                    L"Miss",
-                                    L"HitGroupCheckerboardPlane",
-                                    L"HitGroupPlasticSphere",
-                                    L"IntersectPlane",
-                                    L"IntersectSphere"};
-    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
-    descSubobjectExports.NumExports = _countof(shaderExports);
-    descSubobjectExports.pExports = shaderExports;
-    descSubobjectExports.pSubobjectToAssociate =
-        &descSubobject[setupSubobject - 1];
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-    descSubobject[setupSubobject].pDesc = &descSubobjectExports;
-    ++setupSubobject;
-
     descSubobject[setupSubobject].Type =
         D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
     descSubobject[setupSubobject].pDesc = &rootSignatureGLOBAL.p;
@@ -88,16 +72,6 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].Type =
         D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
     descSubobject[setupSubobject].pDesc = &rootSignatureLOCAL.p;
-    ++setupSubobject;
-
-    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descShaderRootSignature = {};
-    descShaderRootSignature.NumExports = _countof(shaderExports);
-    descShaderRootSignature.pExports = shaderExports;
-    descShaderRootSignature.pSubobjectToAssociate =
-        &descSubobject[setupSubobject - 1];
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-    descSubobject[setupSubobject].pDesc = &descShaderRootSignature;
     ++setupSubobject;
 
     D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};

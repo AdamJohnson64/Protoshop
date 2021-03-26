@@ -59,21 +59,6 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].pDesc = &descShaderConfig;
     ++setupSubobject;
 
-    const WCHAR *shaderExports[] = {
-        L"RayGenerationMVPClip",   L"Miss",
-        L"HitGroupDiffusePlane",   L"HitGroupDiffuseSphere",
-        L"HitGroupEmissiveSphere", L"IntersectPlane",
-        L"IntersectSphere"};
-    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descSubobjectExports = {};
-    descSubobjectExports.NumExports = _countof(shaderExports);
-    descSubobjectExports.pExports = shaderExports;
-    descSubobjectExports.pSubobjectToAssociate =
-        &descSubobject[setupSubobject - 1];
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-    descSubobject[setupSubobject].pDesc = &descSubobjectExports;
-    ++setupSubobject;
-
     // NOTE: This sample has both a GLOBAL and LOCAL root signature.
     // We'll be using the GLOBAL signature to pass raytracing buffers and
     // constants into every shader. The LOCAL signature will just host a few
@@ -86,16 +71,6 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     descSubobject[setupSubobject].Type =
         D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
     descSubobject[setupSubobject].pDesc = &rootSignatureLOCAL.p;
-    ++setupSubobject;
-
-    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION descShaderRootSignature = {};
-    descShaderRootSignature.NumExports = _countof(shaderExports);
-    descShaderRootSignature.pExports = shaderExports;
-    descShaderRootSignature.pSubobjectToAssociate =
-        &descSubobject[setupSubobject - 1];
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
-    descSubobject[setupSubobject].pDesc = &descShaderRootSignature;
     ++setupSubobject;
 
     D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
