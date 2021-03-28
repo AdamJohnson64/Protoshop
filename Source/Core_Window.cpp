@@ -43,6 +43,7 @@ class WindowPaintFunction : public Object {
 public:
   HWND m_hWindow;
   std::function<void()> m_OnPaint;
+  std::function<void(char)> m_OnKeyDown;
 
 public:
   WindowPaintFunction() {
@@ -98,6 +99,12 @@ private:
     }
     if (uMsg == WM_CLOSE) {
       PostQuitMessage(0);
+      return 0;
+    }
+    if (uMsg == WM_KEYDOWN) {
+      if (window->m_OnKeyDown) {
+        window->m_OnKeyDown(static_cast<char>(wParam));
+      }
       return 0;
     }
     if (uMsg == WM_MOUSEMOVE) {
@@ -169,48 +176,62 @@ public:
   }
 };
 
+std::shared_ptr<Object> CreateNewWindow(const SampleRequestD3D11 &request) {
+  std::shared_ptr<WindowPaintFunction> window(new WindowPaintFunction());
+  std::shared_ptr<DXGISwapChain> DXGISwapChain =
+      CreateDXGISwapChain(request.Device, window->m_hWindow);
+  // If the client requested render via D3D11 then we'll patch a swap chain in
+  // here and thunk through to their provided render function.
+  if (request.Render) {
+    window->m_OnPaint = [=]() {
+      CComPtr<ID3D11Texture2D> textureBackbuffer;
+      TRYD3D(DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
+          0, __uuidof(ID3D11Texture2D), (void **)&textureBackbuffer.p));
+      D3D11_TEXTURE2D_DESC descBackbuffer = {};
+      textureBackbuffer->GetDesc(&descBackbuffer);
+      CComPtr<ID3D11Texture2D> textureDepth;
+      {
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = descBackbuffer.Width;
+        desc.Height = descBackbuffer.Height;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        desc.SampleDesc.Count = 1;
+        desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+        TRYD3D(request.Device->GetID3D11Device()->CreateTexture2D(
+            &desc, nullptr, &textureDepth));
+      }
+      CComPtr<ID3D11DepthStencilView> dsvDepth;
+      {
+        D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
+        desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        TRYD3D(request.Device->GetID3D11Device()->CreateDepthStencilView(
+            textureDepth, &desc, &dsvDepth));
+      }
+      SampleResourcesD3D11 sampleResources = {};
+      sampleResources.BackBufferTexture = textureBackbuffer;
+      sampleResources.DepthStencilView = dsvDepth;
+      sampleResources.TransformWorldToClip =
+          TransformWorldToView * TransformViewToClip;
+      sampleResources.TransformWorldToView = TransformWorldToView;
+      request.Render(sampleResources);
+      DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
+    };
+  }
+  if (request.KeyDown) {
+    window->m_OnKeyDown = request.KeyDown;
+  }
+  return std::shared_ptr<Object>(window);
+}
+
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
                 std::function<void(const SampleResourcesD3D11 &)> fnRender) {
-  std::shared_ptr<WindowPaintFunction> window(new WindowPaintFunction());
-  std::shared_ptr<DXGISwapChain> DXGISwapChain =
-      CreateDXGISwapChain(deviceD3D11, window->m_hWindow);
-  window->m_OnPaint = [=]() {
-    CComPtr<ID3D11Texture2D> textureBackbuffer;
-    TRYD3D(DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
-        0, __uuidof(ID3D11Texture2D), (void **)&textureBackbuffer.p));
-    D3D11_TEXTURE2D_DESC descBackbuffer = {};
-    textureBackbuffer->GetDesc(&descBackbuffer);
-    CComPtr<ID3D11Texture2D> textureDepth;
-    {
-      D3D11_TEXTURE2D_DESC desc = {};
-      desc.Width = descBackbuffer.Width;
-      desc.Height = descBackbuffer.Height;
-      desc.ArraySize = 1;
-      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-      desc.SampleDesc.Count = 1;
-      desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-      TRYD3D(deviceD3D11->GetID3D11Device()->CreateTexture2D(&desc, nullptr,
-                                                             &textureDepth));
-    }
-    CComPtr<ID3D11DepthStencilView> dsvDepth;
-    {
-      D3D11_DEPTH_STENCIL_VIEW_DESC desc = {};
-      desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-      desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-      TRYD3D(deviceD3D11->GetID3D11Device()->CreateDepthStencilView(
-          textureDepth, &desc, &dsvDepth));
-    }
-    SampleResourcesD3D11 sampleResources = {};
-    sampleResources.BackBufferTexture = textureBackbuffer;
-    sampleResources.DepthStencilView = dsvDepth;
-    sampleResources.TransformWorldToClip =
-        TransformWorldToView * TransformViewToClip;
-    sampleResources.TransformWorldToView = TransformWorldToView;
-    fnRender(sampleResources);
-    DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
-  };
-  return std::shared_ptr<Object>(window);
+  SampleRequestD3D11 request = {};
+  request.Device = deviceD3D11;
+  request.Render = fnRender;
+  return CreateNewWindow(request);
 }
 
 std::shared_ptr<Object>
@@ -254,6 +275,15 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
         deviceD3D11->GetID3D11DeviceContext()->ClearState();
         deviceD3D11->GetID3D11DeviceContext()->Flush();
       });
+}
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
+                std::function<void(SampleRequestD3D11 &)> client) {
+  SampleRequestD3D11 request;
+  request.Device = deviceD3D11;
+  client(request);
+  return CreateNewWindow(request);
 }
 
 std::shared_ptr<Object>

@@ -28,6 +28,7 @@
     <ClInclude Include="Source\ImageUtil.h" />
     <ClInclude Include="Source\Image_HDR.h" />
     <ClInclude Include="Source\Image_TGA.h" />
+    <ClInclude Include="Source\SampleRequest.h" />
     <ClInclude Include="Source\SampleResources.h" />
     <ClInclude Include="Source\MutableMap.h" />
     <ClInclude Include="Source\Scene_IMaterial.h" />
@@ -69,6 +70,7 @@
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
     <ClCompile Include="Source\Sample_D3D11DXGICapture.cpp" />
     <ClCompile Include="Source\Sample_D3D11Font.cpp" />
+    <ClCompile Include="Source\Sample_D3D11Keyboard.cpp" />
     <ClCompile Include="Source\Sample_Image_FreeType.cpp" />
     <ClCompile Include="Source\Sample_D3D11MarchingTetrahedra.cpp" />
     <ClCompile Include="Source\Sample_D3D11LightProbe.cpp" />

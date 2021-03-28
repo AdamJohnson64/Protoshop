@@ -6,6 +6,7 @@
 #include "Core_Math.h"
 #include "Core_OpenGL.h"
 #include "Core_VK.h"
+#include "SampleRequest.h"
 #include "SampleResources.h"
 #include <d3d11.h>
 #include <d3d12.h>
@@ -30,6 +31,10 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> device,
 
 std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<OpenGLDevice> device,
                                         std::function<void()> fnRender);
+
+std::shared_ptr<Object>
+CreateNewWindow(std::shared_ptr<Direct3D11Device> device,
+                std::function<void(SampleRequestD3D11 &)> request);
 
 #if VULKAN_INSTALLED
 std::shared_ptr<Object>
