@@ -103,10 +103,6 @@ private:
       return 0;
     }
     if (uMsg == WM_CLOSE) {
-      // Our external lambdas may capture shared resources; disconnect
-      // everything here so that we clean up promptly.
-      window->m_OnPaint = nullptr;
-      window->m_OnKeyDown = nullptr;
       PostQuitMessage(0);
       return 0;
     }
@@ -186,7 +182,8 @@ public:
 };
 
 std::shared_ptr<Object> CreateNewWindow(const SampleRequestD3D11 &request) {
-  std::shared_ptr<WindowPaintFunction> window(new WindowPaintFunction());
+  WindowPaintFunction *window = new WindowPaintFunction();
+  std::shared_ptr<WindowPaintFunction> windowShared(window);
   std::shared_ptr<DXGISwapChain> DXGISwapChain =
       CreateDXGISwapChain(request.Device, window->m_hWindow);
   // If the client requested render via D3D11 then we'll patch a swap chain in
@@ -248,7 +245,7 @@ std::shared_ptr<Object> CreateNewWindow(const SampleRequestD3D11 &request) {
   if (request.KeyDown) {
     window->m_OnKeyDown = request.KeyDown;
   }
-  return std::shared_ptr<Object>(window);
+  return windowShared;
 }
 
 std::shared_ptr<Object>
