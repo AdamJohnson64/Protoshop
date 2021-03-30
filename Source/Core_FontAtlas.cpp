@@ -187,3 +187,36 @@ std::unique_ptr<FontASCII> CreateFreeTypeFont() {
                                          DXGI_FORMAT_R8_UNORM, atlasBitmap);
   return result;
 }
+
+void EmitTextQuads(const FontASCII &font, std::vector<VertexTex> &vertices,
+                   const Vector2 &location, const std::string_view &text) {
+  Vector2 cursor = {};
+  cursor.X = location.X;
+  cursor.Y = location.Y;
+  for (unsigned char c : text)
+    if (c == 0x0A) {
+      // Carriage Return + Line Feed.
+      cursor.X = location.X;
+      cursor.Y += font.OffsetLine;
+    } else if (c == 0x0D) {
+      // Carriage Return Only.
+      cursor.X = location.X;
+    } else {
+      const GlyphMetadata &r = font.ASCIIToGlyph[c];
+      float minU = r.Image.X;
+      float maxU = r.Image.X + r.Image.Width;
+      float minV = r.Image.Y;
+      float maxV = r.Image.Y + r.Image.Height;
+      float minX = cursor.X + r.OffsetX;
+      float maxX = minX + r.Image.Width;
+      float minY = cursor.Y - r.OffsetY;
+      float maxY = minY + r.Image.Height;
+      vertices.push_back({{minX, minY}, {minU, minV}});
+      vertices.push_back({{maxX, minY}, {maxU, minV}});
+      vertices.push_back({{maxX, maxY}, {maxU, maxV}});
+      vertices.push_back({{maxX, maxY}, {maxU, maxV}});
+      vertices.push_back({{minX, maxY}, {minU, maxV}});
+      vertices.push_back({{minX, minY}, {minU, minV}});
+      cursor.X += r.AdvanceX;
+    }
+}

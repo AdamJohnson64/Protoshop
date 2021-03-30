@@ -26,6 +26,11 @@ struct VertexCol {
   unsigned int Color;
 };
 
+struct VertexTex {
+  Vector2 Position;
+  Vector2 Texcoord;
+};
+
 struct VertexVS {
   Vector3 Position;
   Vector3 Normal;

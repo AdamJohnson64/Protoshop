@@ -4,6 +4,8 @@
 #include <atlbase.h>
 #include <d3d11.h>
 
+D3D11_BLEND_DESC Make_D3D11_BLEND_DESC_DefaultAlphaBlend();
+
 D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultBorder();
 
 D3D11_SAMPLER_DESC Make_D3D11_SAMPLER_DESC_DefaultWrap();
