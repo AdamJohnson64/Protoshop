@@ -190,6 +190,7 @@ std::shared_ptr<Object> CreateNewWindow(const SampleRequestD3D11 &request) {
   // here and thunk through to their provided render function.
   if (request.Render) {
     window->m_OnPaint = [=]() {
+      Matrix44 aspectAdjust = Identity<float>;
       {
         int32_t windowWidth = 0;
         int32_t windowHeight = 0;
@@ -205,6 +206,13 @@ std::shared_ptr<Object> CreateNewWindow(const SampleRequestD3D11 &request) {
             descSwapChain.BufferDesc.Height != windowHeight) {
           DXGISwapChain->GetIDXGISwapChain()->ResizeBuffers(
               2, windowWidth, windowHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
+        }
+        if (windowWidth > windowHeight) {
+          aspectAdjust = CreateMatrixScale(
+              Vector3{1, 1.0f * windowWidth / windowHeight, 1});
+        } else {
+          aspectAdjust = CreateMatrixScale(
+              Vector3{1.0f * windowHeight / windowWidth, 1, 1});
         }
       }
       CComPtr<ID3D11Texture2D> textureBackbuffer;
@@ -236,8 +244,9 @@ std::shared_ptr<Object> CreateNewWindow(const SampleRequestD3D11 &request) {
       sampleResources.BackBufferTexture = textureBackbuffer;
       sampleResources.DepthStencilView = dsvDepth;
       sampleResources.TransformWorldToClip =
-          TransformWorldToView * TransformViewToClip;
-      sampleResources.TransformWorldToView = TransformWorldToView;
+          TransformWorldToView * TransformViewToClip * aspectAdjust;
+      sampleResources.TransformWorldToView =
+          TransformWorldToView * aspectAdjust;
       request.Render(sampleResources);
       DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
     };
@@ -317,6 +326,7 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
   std::shared_ptr<DXGISwapChain> DXGISwapChain =
       CreateDXGISwapChain(deviceD3D12, window->m_hWindow);
   window->m_OnPaint = [=]() {
+    Matrix44 aspectAdjust = Identity<float>;
     {
       int32_t windowWidth = 0;
       int32_t windowHeight = 0;
@@ -334,6 +344,13 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
         DXGISwapChain->GetIDXGISwapChain()->ResizeBuffers(
             2, windowWidth, windowHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
       }
+      if (windowWidth > windowHeight) {
+        aspectAdjust =
+            CreateMatrixScale(Vector3{1, 1.0f * windowWidth / windowHeight, 1});
+      } else {
+        aspectAdjust =
+            CreateMatrixScale(Vector3{1.0f * windowHeight / windowWidth, 1, 1});
+      }
     }
     CComPtr<ID3D12Resource> resourceBackbuffer;
     TRYD3D(DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
@@ -341,8 +358,8 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
         __uuidof(ID3D12Resource), (void **)&resourceBackbuffer));
     SampleResourcesD3D12RTV sampleResources = {};
     sampleResources.TransformWorldToClip =
-        TransformWorldToView * TransformViewToClip;
-    sampleResources.TransformWorldToView = TransformWorldToView;
+        TransformWorldToView * TransformViewToClip * aspectAdjust;
+    sampleResources.TransformWorldToView = TransformWorldToView * aspectAdjust;
     sampleResources.BackBufferResource = resourceBackbuffer;
     fnRender(sampleResources);
     DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
@@ -385,9 +402,8 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
           uavHeight = descBackbuffer.Height;
         }
         SampleResourcesD3D12UAV uavResources = {};
-        uavResources.TransformWorldToClip =
-            TransformWorldToView * TransformViewToClip;
-        uavResources.TransformWorldToView = TransformWorldToView;
+        uavResources.TransformWorldToClip = rtvResources.TransformWorldToClip;
+        uavResources.TransformWorldToView = rtvResources.TransformWorldToView;
         uavResources.BackBufferResource = uavResource;
         fnRender(uavResources);
         ////////////////////////////////////////////////////////////////////////////////
