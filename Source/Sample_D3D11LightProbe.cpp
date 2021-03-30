@@ -103,8 +103,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
       Constants constants;
       constants.TransformClipToWorld =
           Invert(sampleResources.TransformWorldToClip);
-      constants.WindowDimensions = {static_cast<float>(RENDERTARGET_WIDTH),
-                                    static_cast<float>(RENDERTARGET_HEIGHT)};
+      constants.WindowDimensions = {static_cast<float>(descBackbuffer.Width),
+                                    static_cast<float>(descBackbuffer.Height)};
       device->GetID3D11DeviceContext()->UpdateSubresource(
           bufferConstants, 0, nullptr, &constants, 0, 0);
     }

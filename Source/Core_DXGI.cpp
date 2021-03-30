@@ -11,12 +11,20 @@
 class DXGISwapChainImpl : public DXGISwapChain {
 public:
   DXGISwapChainImpl(std::shared_ptr<Direct3D11Device> device, HWND hWnd) {
+    int32_t windowWidth = 0;
+    int32_t windowHeight = 0;
+    {
+      RECT clientRect = {};
+      GetClientRect(hWnd, &clientRect);
+      windowWidth = clientRect.right - clientRect.left;
+      windowHeight = clientRect.bottom - clientRect.top;
+    }
     CComPtr<IDXGIFactory7> pDXGIFactory;
     TRYD3D(CreateDXGIFactory(__uuidof(IDXGIFactory7), (void **)&pDXGIFactory));
     {
       DXGI_SWAP_CHAIN_DESC1 descSwapChain = {};
-      descSwapChain.Width = RENDERTARGET_WIDTH;
-      descSwapChain.Height = RENDERTARGET_HEIGHT;
+      descSwapChain.Width = windowWidth;
+      descSwapChain.Height = windowHeight;
       descSwapChain.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
       descSwapChain.SampleDesc.Count = 1;
       descSwapChain.BufferUsage =
@@ -37,12 +45,20 @@ public:
   }
   DXGISwapChainImpl(std::shared_ptr<Direct3D12Device> device, HWND hWnd)
       : pDevice12(device) {
+    int32_t windowWidth = 0;
+    int32_t windowHeight = 0;
+    {
+      RECT clientRect = {};
+      GetClientRect(hWnd, &clientRect);
+      windowWidth = clientRect.right - clientRect.left;
+      windowHeight = clientRect.bottom - clientRect.top;
+    }
     CComPtr<IDXGIFactory7> pDXGIFactory;
     TRYD3D(CreateDXGIFactory(__uuidof(IDXGIFactory7), (void **)&pDXGIFactory));
     {
       DXGI_SWAP_CHAIN_DESC1 descSwapChain = {};
-      descSwapChain.Width = RENDERTARGET_WIDTH;
-      descSwapChain.Height = RENDERTARGET_HEIGHT;
+      descSwapChain.Width = windowWidth;
+      descSwapChain.Height = windowHeight;
       descSwapChain.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
       descSwapChain.SampleDesc.Count = 1;
       descSwapChain.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;

@@ -16,6 +16,9 @@
 #include <functional>
 #include <memory>
 
+static const int RENDERTARGET_WIDTH = 1024;
+static const int RENDERTARGET_HEIGHT = 1024;
+
 static bool g_MouseDown = false;
 static int g_MouseX = 0;
 static int g_MouseY = 0;
@@ -93,11 +96,17 @@ private:
       return 0;
     }
     if (uMsg == WM_PAINT) {
-      window->m_OnPaint();
+      if (window->m_OnPaint != nullptr) {
+        window->m_OnPaint();
+      }
       ValidateRect(hWnd, nullptr);
       return 0;
     }
     if (uMsg == WM_CLOSE) {
+      // Our external lambdas may capture shared resources; disconnect
+      // everything here so that we clean up promptly.
+      window->m_OnPaint = nullptr;
+      window->m_OnKeyDown = nullptr;
       PostQuitMessage(0);
       return 0;
     }
@@ -184,6 +193,23 @@ std::shared_ptr<Object> CreateNewWindow(const SampleRequestD3D11 &request) {
   // here and thunk through to their provided render function.
   if (request.Render) {
     window->m_OnPaint = [=]() {
+      {
+        int32_t windowWidth = 0;
+        int32_t windowHeight = 0;
+        {
+          RECT clientRect = {};
+          GetClientRect(window->m_hWindow, &clientRect);
+          windowWidth = clientRect.right - clientRect.left;
+          windowHeight = clientRect.bottom - clientRect.top;
+        }
+        DXGI_SWAP_CHAIN_DESC descSwapChain = {};
+        DXGISwapChain->GetIDXGISwapChain()->GetDesc(&descSwapChain);
+        if (descSwapChain.BufferDesc.Width != windowWidth ||
+            descSwapChain.BufferDesc.Height != windowHeight) {
+          DXGISwapChain->GetIDXGISwapChain()->ResizeBuffers(
+              2, windowWidth, windowHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
+        }
+      }
       CComPtr<ID3D11Texture2D> textureBackbuffer;
       TRYD3D(DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
           0, __uuidof(ID3D11Texture2D), (void **)&textureBackbuffer.p));
@@ -293,6 +319,24 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
   std::shared_ptr<DXGISwapChain> DXGISwapChain =
       CreateDXGISwapChain(deviceD3D12, window->m_hWindow);
   window->m_OnPaint = [=]() {
+    {
+      int32_t windowWidth = 0;
+      int32_t windowHeight = 0;
+      {
+        RECT clientRect = {};
+        GetClientRect(window->m_hWindow, &clientRect);
+        windowWidth = clientRect.right - clientRect.left;
+        windowHeight = clientRect.bottom - clientRect.top;
+      }
+      DXGI_SWAP_CHAIN_DESC descSwapChain = {};
+      DXGISwapChain->GetIDXGISwapChain()->GetDesc(&descSwapChain);
+      if (descSwapChain.BufferDesc.Width != windowWidth ||
+          descSwapChain.BufferDesc.Height != windowHeight) {
+        D3D12_Wait_For_GPU_Idle(deviceD3D12.get());
+        DXGISwapChain->GetIDXGISwapChain()->ResizeBuffers(
+            2, windowWidth, windowHeight, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
+      }
+    }
     CComPtr<ID3D12Resource> resourceBackbuffer;
     TRYD3D(DXGISwapChain->GetIDXGISwapChain()->GetBuffer(
         DXGISwapChain->GetIDXGISwapChain()->GetCurrentBackBufferIndex(),
@@ -312,20 +356,22 @@ std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
                 std::function<void(const SampleResourcesD3D12UAV &)> fnRender) {
   CComPtr<ID3D12Resource1> uavResource;
-  uint32_t uavWidth;
-  uint32_t uavHeight;
+  uint32_t uavWidth = 0;
+  uint32_t uavHeight = 0;
   std::function<void(const SampleResourcesD3D12RTV &)> fnCreateUAVAndRender =
       [=](const SampleResourcesD3D12RTV &rtvResources) mutable {
+        D3D12_RESOURCE_DESC descBackbuffer =
+            rtvResources.BackBufferResource->GetDesc();
         // Create an interposing UAV surface.
-        if (uavResource == nullptr || uavWidth != RENDERTARGET_WIDTH ||
-            uavHeight != RENDERTARGET_HEIGHT) {
+        if (uavResource == nullptr || uavWidth != descBackbuffer.Width ||
+            uavHeight != descBackbuffer.Height) {
           uavResource.Release();
           D3D12_HEAP_PROPERTIES descHeapProperties = {};
           descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
           D3D12_RESOURCE_DESC descResource = {};
           descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-          descResource.Width = RENDERTARGET_WIDTH;
-          descResource.Height = RENDERTARGET_HEIGHT;
+          descResource.Width = descBackbuffer.Width;
+          descResource.Height = descBackbuffer.Height;
           descResource.DepthOrArraySize = 1;
           descResource.MipLevels = 1;
           descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -337,8 +383,8 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
               D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource1),
               (void **)&uavResource.p));
           uavResource->SetName(L"Direct3D 12 Interposing UAV");
-          uavWidth = RENDERTARGET_WIDTH;
-          uavHeight = RENDERTARGET_HEIGHT;
+          uavWidth = descBackbuffer.Width;
+          uavHeight = descBackbuffer.Height;
         }
         SampleResourcesD3D12UAV uavResources = {};
         uavResources.TransformWorldToClip =
@@ -419,6 +465,14 @@ CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
   std::shared_ptr<DXGISwapChain> DXGISwapChain =
       CreateDXGISwapChain(deviceD3D12, window->m_hWindow);
   window->m_OnPaint = [=]() {
+    int32_t windowWidth = 0;
+    int32_t windowHeight = 0;
+    {
+      RECT clientRect = {};
+      GetClientRect(window->m_hWindow, &clientRect);
+      windowWidth = clientRect.right - clientRect.left;
+      windowHeight = clientRect.bottom - clientRect.top;
+    }
     // We can't directly use the image from DXGI, probably because it's a
     // D3D9Ex image. Create a shared D3D12 image to use as our render target
     // and copy it back later.
@@ -428,8 +482,8 @@ CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
       descHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
       D3D12_RESOURCE_DESC descResource = {};
       descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-      descResource.Width = RENDERTARGET_WIDTH;
-      descResource.Height = RENDERTARGET_HEIGHT;
+      descResource.Width = windowWidth;
+      descResource.Height = windowHeight;
       descResource.DepthOrArraySize = 1;
       descResource.MipLevels = 1;
       descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -475,8 +529,8 @@ CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
           structureChain = {
               vk::ImageCreateInfo(
                   {}, vk::ImageType::e2D, vk::Format::eR8G8B8A8Unorm,
-                  {static_cast<uint32_t>(RENDERTARGET_WIDTH),
-                   static_cast<uint32_t>(RENDERTARGET_HEIGHT), 1},
+                  {static_cast<uint32_t>(windowWidth),
+                   static_cast<uint32_t>(windowHeight), 1},
                   1, 1, vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
                   vk::ImageUsageFlagBits::eTransferDst |
                       vk::ImageUsageFlagBits::eColorAttachment,

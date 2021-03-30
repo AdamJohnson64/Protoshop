@@ -19,6 +19,9 @@
 #include <memory>
 #include <string>
 
+static const int RENDERTARGET_WIDTH = 1024;
+static const int RENDERTARGET_HEIGHT = 1024;
+
 class Sample_D3D11ShaderToy : public Object {
 private:
   const int defaultCodeWidth = 512;
