@@ -18,18 +18,6 @@
 #include <array>
 #include <atlbase.h>
 
-/*
-class ResourceWithView {
-  CComPtr<ID3D12Resource> Resource;
-  std::function<void(const D3D12_CPU_DESCRIPTOR_HANDLE&)> CreateView;
-};
-
-class DescriptorHeapManager {
-public:
-  std::vector<ResourceWithView> Resources;
-};
-*/
-
 D3D12_CPU_DESCRIPTOR_HANDLE operator+(D3D12_CPU_DESCRIPTOR_HANDLE h,
                                       int offset) {
   h.ptr += offset;
@@ -75,67 +63,49 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
   }
   ////////////////////////////////////////////////////////////////////////////////
   // SHADER TABLE - Create a table of all shaders for the raytracer.
-  //
-  // Our shader entry is a shader function entrypoint + 4x32bit values in
-  // the signature.
-  const uint32_t shaderEntrySize =
-      AlignUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES +
-                  sizeof(D3D12_GPU_DESCRIPTOR_HANDLE),
-              D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-  // Ray Generation shader comes first, aligned as necessary.
-  const uint32_t descriptorOffsetRayGenerationShader = 0;
-  // Miss shader comes next.
-  const uint32_t descriptorOffsetMissShader =
-      AlignUp(descriptorOffsetRayGenerationShader + shaderEntrySize,
-              D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-  // Then all the HitGroup shaders.
-  const uint32_t descriptorOffsetHitGroup =
-      AlignUp(descriptorOffsetMissShader + shaderEntrySize,
-              D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-  // The total size of the table we expect.
-  const uint32_t shaderTableSize =
-      descriptorOffsetHitGroup + shaderEntrySize * 2;
   ////////////////////////////////////////////////////////////////////////////////
-  // Now build this table.
+  // This is where we locate all the CBVSRVUAV descriptors in the heap.
   const uint32_t descriptorElementSize =
       device->m_pDevice->GetDescriptorHandleIncrementSize(
           D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   const uint32_t descriptorOffsetGlobals = 0;
   const uint32_t descriptorOffsetLocals =
       descriptorOffsetGlobals + descriptorElementSize * 3;
+  // Now create the SBT buffer.
   CComPtr<ID3D12Resource1> resourceShaderTable;
+  RaytracingSBTHelper sbtHelper(4, 1);
   {
     CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
     TRYD3D(pipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(
         &stateObjectProperties));
-    std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
-    memset(&shaderTableCPU[0], 0, shaderTableSize);
+    std::unique_ptr<uint8_t[]> sbtData(
+        new uint8_t[sbtHelper.GetShaderTableSize()]);
+    memset(sbtData.get(), 0, sbtHelper.GetShaderTableSize());
     // Shader Index 0 - Ray Generation Shader
-    memcpy(&shaderTableCPU[descriptorOffsetRayGenerationShader],
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(0),
            stateObjectProperties->GetShaderIdentifier(L"RayGenerationMVPClip"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 1 - Miss Shader
-    memcpy(&shaderTableCPU[descriptorOffsetMissShader],
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(1),
            stateObjectProperties->GetShaderIdentifier(L"Miss"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 2 - Hit Shader 1
-    memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(2),
            stateObjectProperties->GetShaderIdentifier(
                L"HitGroupCheckerboardPlane"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0 +
-                           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES],
+    memcpy(sbtData.get() + sbtHelper.GetShaderRootArgumentOffset(2, 0),
            &(descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart() +
              descriptorOffsetLocals),
            sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
     // Shader Index 3 - Hit Shader 2
-    memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(3),
            stateObjectProperties->GetShaderIdentifier(L"HitGroupPlasticSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     resourceShaderTable = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize,
-        &shaderTableCPU[0]);
+        D3D12_RESOURCE_STATE_COMMON, sbtHelper.GetShaderTableSize(),
+        sbtHelper.GetShaderTableSize(), sbtData.get());
     resourceShaderTable->SetName(L"DXR Shader Table");
   }
   ////////////////////////////////////////////////////////////////////////////////
@@ -220,17 +190,19 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
             D3D12_DISPATCH_RAYS_DESC desc = {};
             desc.RayGenerationShaderRecord.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
-                descriptorOffsetRayGenerationShader;
-            desc.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
+                sbtHelper.GetShaderIdentifierOffset(0);
+            desc.RayGenerationShaderRecord.SizeInBytes =
+                sbtHelper.GetShaderEntrySize();
             desc.MissShaderTable.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
-                descriptorOffsetMissShader;
-            desc.MissShaderTable.SizeInBytes = shaderEntrySize;
+                sbtHelper.GetShaderIdentifierOffset(1);
+            desc.MissShaderTable.SizeInBytes = sbtHelper.GetShaderEntrySize();
             desc.HitGroupTable.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
-                descriptorOffsetHitGroup;
-            desc.HitGroupTable.SizeInBytes = shaderEntrySize;
-            desc.HitGroupTable.StrideInBytes = shaderEntrySize;
+                sbtHelper.GetShaderIdentifierOffset(2);
+            desc.HitGroupTable.SizeInBytes = sbtHelper.GetShaderEntrySize() * 2;
+            desc.HitGroupTable.StrideInBytes = sbtHelper.GetShaderEntrySize();
+            ;
             desc.Width = descTarget.Width;
             desc.Height = descTarget.Height;
             desc.Depth = 1;

@@ -3,6 +3,7 @@
 #include "Core_Math.h"
 #include <atlbase.h>
 #include <d3d12.h>
+#include <memory>
 #include <vector>
 
 class Direct3D12Device;
@@ -89,3 +90,30 @@ public:
 
 const D3D12_STATE_OBJECT_DESC *
 ConfigureRaytracerPipeline(SimpleRaytracerPipelineSetup &setup);
+
+class RaytracingSBTHelper {
+public:
+  RaytracingSBTHelper(size_t countShaders, size_t countCBVSRVUAV);
+  // Get the size of a single SBT entry.
+  size_t GetShaderEntrySize() const;
+  // Get the total byte size of the shader table.
+  size_t GetShaderTableSize() const;
+  // Get the offset of an SBT entry.
+  // At this location we would normally expect to find the shader identifier as
+  // extracted from the pipeline.
+  size_t GetShaderIdentifierOffset(uint32_t shaderIndex) const;
+  // Get the offset of the first root argument of a shader entry.
+  // The bytes following the shader identifier are expected to be pointers into
+  // a descriptor heap and define the arguments for the shader entry. Shader
+  // arguments could be CBVs, SRVs (textures?) or UAVs.
+  size_t GetShaderRootArgumentBaseOffset(uint32_t shaderIndex) const;
+  // Get the offset of the n-th root argument of a shader entry.
+  // Each entry is sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) bytes forming a GPU
+  // pointer into a descriptor heap.
+  size_t GetShaderRootArgumentOffset(uint32_t shaderIndex,
+                                     uint32_t argumentIndex) const;
+
+private:
+  size_t m_shaderEntrySize;
+  size_t m_shaderTableSize;
+};

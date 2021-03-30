@@ -316,3 +316,38 @@ ConfigureRaytracerPipeline(SimpleRaytracerPipelineSetup &setup) {
   setup.descStateObject.pSubobjects = &setup.descSubobjects[0];
   return &setup.descStateObject;
 }
+
+RaytracingSBTHelper::RaytracingSBTHelper(size_t countShaders,
+                                         size_t countCBVSRVUAV) {
+  m_shaderEntrySize =
+      AlignUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES +
+                  sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) * countCBVSRVUAV,
+              D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+  m_shaderTableSize = m_shaderEntrySize * countShaders;
+}
+
+size_t RaytracingSBTHelper::GetShaderEntrySize() const {
+  return m_shaderEntrySize;
+}
+
+size_t RaytracingSBTHelper::GetShaderTableSize() const {
+  return m_shaderTableSize;
+}
+
+size_t
+RaytracingSBTHelper::GetShaderIdentifierOffset(uint32_t shaderIndex) const {
+  return m_shaderEntrySize * shaderIndex;
+}
+
+size_t RaytracingSBTHelper::GetShaderRootArgumentBaseOffset(
+    uint32_t shaderIndex) const {
+  return GetShaderIdentifierOffset(shaderIndex) +
+         D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+}
+
+size_t
+RaytracingSBTHelper::GetShaderRootArgumentOffset(uint32_t shaderIndex,
+                                                 uint32_t argumentIndex) const {
+  return GetShaderRootArgumentBaseOffset(shaderIndex) +
+         sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) * argumentIndex;
+}
