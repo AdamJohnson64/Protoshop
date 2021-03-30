@@ -94,7 +94,6 @@
     <ClCompile Include="Source\Sample_DXRTexture.cpp" />
     <ClCompile Include="Source\Sample_DXRWhitted.cpp" />
     <ClCompile Include="Source\Sample_OpenGLBasic.cpp" />
-    <ClCompile Include="Source\Sample_D3D11ShaderToy.cpp" />
     <ClCompile Include="Source\Sample_VKBasic.cpp" />
     <ClCompile Include="Source\Scene_InstanceTable.cpp" />
     <ClCompile Include="Source\Scene_MeshOBJ.cpp" />
