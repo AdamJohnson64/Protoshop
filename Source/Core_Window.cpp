@@ -312,7 +312,8 @@ CreateNewWindow(std::shared_ptr<Direct3D11Device> deviceD3D11,
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
                 std::function<void(const SampleResourcesD3D12RTV &)> fnRender) {
-  std::shared_ptr<WindowPaintFunction> window(new WindowPaintFunction());
+  WindowPaintFunction *window = new WindowPaintFunction();
+  std::shared_ptr<WindowPaintFunction> windowShared(window);
   std::shared_ptr<DXGISwapChain> DXGISwapChain =
       CreateDXGISwapChain(deviceD3D12, window->m_hWindow);
   window->m_OnPaint = [=]() {
@@ -346,7 +347,7 @@ CreateNewWindow(std::shared_ptr<Direct3D12Device> deviceD3D12,
     fnRender(sampleResources);
     DXGISwapChain->GetIDXGISwapChain()->Present(0, 0);
   };
-  return std::shared_ptr<Object>(window);
+  return windowShared;
 }
 
 std::shared_ptr<Object>
