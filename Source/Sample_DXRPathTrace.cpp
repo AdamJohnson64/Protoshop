@@ -36,84 +36,27 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
   // PIPELINE - Build the pipeline with all ray shaders.
   CComPtr<ID3D12StateObject> pipelineStateObject;
   {
-    uint32_t setupSubobject = 0;
-
-    std::array<D3D12_STATE_SUBOBJECT, 16> descSubobject = {};
-
-    D3D12_DXIL_LIBRARY_DESC descLibrary = {};
-    descLibrary.DXILLibrary.pShaderBytecode = g_dxr_shader;
-    descLibrary.DXILLibrary.BytecodeLength = sizeof(g_dxr_shader);
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
-    descSubobject[setupSubobject].pDesc = &descLibrary;
-    ++setupSubobject;
-
-    D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig = {};
-    descShaderConfig.MaxPayloadSizeInBytes = sizeof(float[3]) + sizeof(float) +
-                                             sizeof(int) +
-                                             sizeof(int); // Size of RayPayload
-    descShaderConfig.MaxAttributeSizeInBytes =
-        D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
-    descSubobject[setupSubobject].pDesc = &descShaderConfig;
-    ++setupSubobject;
-
-    // NOTE: This sample has both a GLOBAL and LOCAL root signature.
-    // We'll be using the GLOBAL signature to pass raytracing buffers and
-    // constants into every shader. The LOCAL signature will just host a few
-    // material constants that we vary per instance.
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-    descSubobject[setupSubobject].pDesc = &rootSignatureGLOBAL.p;
-    ++setupSubobject;
-
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
-    descSubobject[setupSubobject].pDesc = &rootSignatureLOCAL.p;
-    ++setupSubobject;
-
-    D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
-    descPipelineConfig.MaxTraceRecursionDepth = 2;
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
-    descSubobject[setupSubobject].pDesc = &descPipelineConfig;
-    ++setupSubobject;
-
-    D3D12_HIT_GROUP_DESC descHitGroupPlane = {};
-    descHitGroupPlane.HitGroupExport = L"HitGroupDiffusePlane";
-    descHitGroupPlane.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-    descHitGroupPlane.ClosestHitShaderImport = L"MaterialDiffuse";
-    descHitGroupPlane.IntersectionShaderImport = L"IntersectPlane";
-    descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-    descSubobject[setupSubobject].pDesc = &descHitGroupPlane;
-    ++setupSubobject;
-
-    D3D12_HIT_GROUP_DESC descHitGroupSphereDiffuse = {};
-    descHitGroupSphereDiffuse.HitGroupExport = L"HitGroupDiffuseSphere";
-    descHitGroupSphereDiffuse.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-    descHitGroupSphereDiffuse.ClosestHitShaderImport = L"MaterialDiffuse";
-    descHitGroupSphereDiffuse.IntersectionShaderImport = L"IntersectSphere";
-    descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-    descSubobject[setupSubobject].pDesc = &descHitGroupSphereDiffuse;
-    ++setupSubobject;
-
-    D3D12_HIT_GROUP_DESC descHitGroupSphereEmissive = {};
-    descHitGroupSphereEmissive.HitGroupExport = L"HitGroupEmissiveSphere";
-    descHitGroupSphereEmissive.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-    descHitGroupSphereEmissive.ClosestHitShaderImport = L"MaterialEmissive";
-    descHitGroupSphereEmissive.IntersectionShaderImport = L"IntersectSphere";
-    descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-    descSubobject[setupSubobject].pDesc = &descHitGroupSphereEmissive;
-    ++setupSubobject;
-
-    D3D12_STATE_OBJECT_DESC descStateObject = {};
-    descStateObject.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
-    descStateObject.NumSubobjects = setupSubobject;
-    descStateObject.pSubobjects = &descSubobject[0];
-    TRYD3D(device->m_pDevice->CreateStateObject(&descStateObject,
-                                                __uuidof(ID3D12StateObject),
-                                                (void **)&pipelineStateObject));
+    SimpleRaytracerPipelineSetup setup = {};
+    setup.GlobalRootSignature = rootSignatureGLOBAL.p;
+    setup.LocalRootSignature = rootSignatureLOCAL.p;
+    setup.pShaderBytecode = g_dxr_shader;
+    setup.BytecodeLength = sizeof(g_dxr_shader);
+    setup.MaxPayloadSizeInBytes = sizeof(float[3]) + sizeof(float) +
+                                  sizeof(int) +
+                                  sizeof(int); // Size of RayPayload
+    setup.MaxTraceRecursionDepth = 2;
+    setup.HitGroups.push_back({L"HitGroupDiffusePlane",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"MaterialDiffuse", L"IntersectPlane"});
+    setup.HitGroups.push_back(
+        {L"HitGroupDiffuseSphere", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+         nullptr, L"MaterialDiffuse", L"IntersectSphere"});
+    setup.HitGroups.push_back(
+        {L"HitGroupEmissiveSphere", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+         nullptr, L"MaterialEmissive", L"IntersectSphere"});
+    TRYD3D(device->m_pDevice->CreateStateObject(
+        ConfigureRaytracerPipeline(setup), __uuidof(ID3D12StateObject),
+        (void **)&pipelineStateObject));
     pipelineStateObject->SetName(L"DXR Pipeline State");
   }
   ////////////////////////////////////////////////////////////////////////////////

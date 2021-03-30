@@ -18,6 +18,18 @@
 #include <array>
 #include <atlbase.h>
 
+/*
+class ResourceWithView {
+  CComPtr<ID3D12Resource> Resource;
+  std::function<void(const D3D12_CPU_DESCRIPTOR_HANDLE&)> CreateView;
+};
+
+class DescriptorHeapManager {
+public:
+  std::vector<ResourceWithView> Resources;
+};
+*/
+
 D3D12_CPU_DESCRIPTOR_HANDLE operator+(D3D12_CPU_DESCRIPTOR_HANDLE h,
                                       int offset) {
   h.ptr += offset;
@@ -42,70 +54,23 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
   // PIPELINE - Build the pipeline with all ray shaders.
   CComPtr<ID3D12StateObject> pipelineStateObject;
   {
-    uint32_t setupSubobject = 0;
-
-    std::array<D3D12_STATE_SUBOBJECT, 16> descSubobject = {};
-
-    D3D12_DXIL_LIBRARY_DESC descLibrary = {};
-    descLibrary.DXILLibrary.pShaderBytecode = g_dxr_shader;
-    descLibrary.DXILLibrary.BytecodeLength = sizeof(g_dxr_shader);
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
-    descSubobject[setupSubobject].pDesc = &descLibrary;
-    ++setupSubobject;
-
-    D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig = {};
-    descShaderConfig.MaxPayloadSizeInBytes =
-        sizeof(float[3]); // Size of RayPayload
-    descShaderConfig.MaxAttributeSizeInBytes =
-        D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
-    descSubobject[setupSubobject].pDesc = &descShaderConfig;
-    ++setupSubobject;
-
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-    descSubobject[setupSubobject].pDesc = &rootSignatureGLOBAL.p;
-    ++setupSubobject;
-
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
-    descSubobject[setupSubobject].pDesc = &rootSignatureLOCAL.p;
-    ++setupSubobject;
-
-    D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
-    descPipelineConfig.MaxTraceRecursionDepth = 4;
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
-    descSubobject[setupSubobject].pDesc = &descPipelineConfig;
-    ++setupSubobject;
-
-    D3D12_HIT_GROUP_DESC descHitGroupCheckerboard = {};
-    descHitGroupCheckerboard.HitGroupExport = L"HitGroupCheckerboardPlane";
-    descHitGroupCheckerboard.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-    descHitGroupCheckerboard.ClosestHitShaderImport = L"MaterialCheckerboard";
-    descHitGroupCheckerboard.IntersectionShaderImport = L"IntersectPlane";
-    descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-    descSubobject[setupSubobject].pDesc = &descHitGroupCheckerboard;
-    ++setupSubobject;
-
-    D3D12_HIT_GROUP_DESC descHitGroupRedPlastic = {};
-    descHitGroupRedPlastic.HitGroupExport = L"HitGroupPlasticSphere";
-    descHitGroupRedPlastic.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-    descHitGroupRedPlastic.ClosestHitShaderImport = L"MaterialPlastic";
-    descHitGroupRedPlastic.IntersectionShaderImport = L"IntersectSphere";
-    descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-    descSubobject[setupSubobject].pDesc = &descHitGroupRedPlastic;
-    ++setupSubobject;
-
-    D3D12_STATE_OBJECT_DESC descStateObject = {};
-    descStateObject.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
-    descStateObject.NumSubobjects = setupSubobject;
-    descStateObject.pSubobjects = &descSubobject[0];
-    TRYD3D(device->m_pDevice->CreateStateObject(&descStateObject,
-                                                __uuidof(ID3D12StateObject),
-                                                (void **)&pipelineStateObject));
+    SimpleRaytracerPipelineSetup setup = {};
+    setup.GlobalRootSignature = rootSignatureGLOBAL.p;
+    setup.LocalRootSignature = rootSignatureLOCAL.p;
+    setup.pShaderBytecode = g_dxr_shader;
+    setup.BytecodeLength = sizeof(g_dxr_shader);
+    setup.MaxPayloadSizeInBytes = sizeof(float[3]);
+    setup.MaxTraceRecursionDepth = 4;
+    setup.HitGroups.push_back({L"HitGroupCheckerboardPlane",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"MaterialCheckerboard",
+                               L"IntersectPlane"});
+    setup.HitGroups.push_back(
+        {L"HitGroupPlasticSphere", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+         nullptr, L"MaterialPlastic", L"IntersectSphere"});
+    TRYD3D(device->m_pDevice->CreateStateObject(
+        ConfigureRaytracerPipeline(setup), __uuidof(ID3D12StateObject),
+        (void **)&pipelineStateObject));
     pipelineStateObject->SetName(L"DXR Pipeline State");
   }
   ////////////////////////////////////////////////////////////////////////////////

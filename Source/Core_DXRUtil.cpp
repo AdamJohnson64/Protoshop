@@ -273,3 +273,46 @@ DXRCreateTLAS(Direct3D12Device *device,
   }
   return ResourceTLAS;
 }
+
+const D3D12_STATE_OBJECT_DESC *
+ConfigureRaytracerPipeline(SimpleRaytracerPipelineSetup &setup) {
+  setup.descSubobjects.clear();
+
+  setup.descSubobjects.push_back(
+      {D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE,
+       &setup.GlobalRootSignature});
+  setup.descSubobjects.push_back(
+      {D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE,
+       &setup.LocalRootSignature});
+
+  setup.descLibrary = {};
+  setup.descLibrary.DXILLibrary.pShaderBytecode = setup.pShaderBytecode;
+  setup.descLibrary.DXILLibrary.BytecodeLength = setup.BytecodeLength;
+  setup.descSubobjects.push_back(
+      {D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &setup.descLibrary});
+
+  setup.descShaderConfig = {};
+  setup.descShaderConfig.MaxPayloadSizeInBytes = setup.MaxPayloadSizeInBytes;
+  setup.descShaderConfig.MaxAttributeSizeInBytes =
+      D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
+  setup.descSubobjects.push_back(
+      {D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG,
+       &setup.descShaderConfig});
+
+  setup.descPipelineConfig = {};
+  setup.descPipelineConfig.MaxTraceRecursionDepth =
+      setup.MaxTraceRecursionDepth;
+  setup.descSubobjects.push_back(
+      {D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG,
+       &setup.descPipelineConfig});
+
+  for (const auto &h : setup.HitGroups) {
+    setup.descSubobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &h});
+  }
+
+  setup.descStateObject = {};
+  setup.descStateObject.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+  setup.descStateObject.NumSubobjects = setup.descSubobjects.size();
+  setup.descStateObject.pSubobjects = &setup.descSubobjects[0];
+  return &setup.descStateObject;
+}

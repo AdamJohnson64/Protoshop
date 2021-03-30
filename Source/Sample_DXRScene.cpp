@@ -36,63 +36,21 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   // PIPELINE - Build the pipeline with all ray shaders.
   CComPtr<ID3D12StateObject> pipelineStateObject;
   {
-    uint32_t setupSubobject = 0;
-
-    std::array<D3D12_STATE_SUBOBJECT, 256> descSubobject = {};
-
-    D3D12_DXIL_LIBRARY_DESC descLibrary = {};
-    descLibrary.DXILLibrary.pShaderBytecode = g_dxr_shader;
-    descLibrary.DXILLibrary.BytecodeLength = sizeof(g_dxr_shader);
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
-    descSubobject[setupSubobject].pDesc = &descLibrary;
-    ++setupSubobject;
-
-    D3D12_HIT_GROUP_DESC descHitGroup0 = {};
-    descHitGroup0.HitGroupExport = L"HitGroupCheckerboardMesh";
-    descHitGroup0.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-    descHitGroup0.ClosestHitShaderImport = L"MaterialCheckerboard";
-    descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-    descSubobject[setupSubobject].pDesc = &descHitGroup0;
-    ++setupSubobject;
-
-    D3D12_HIT_GROUP_DESC descHitGroup1 = {};
-    descHitGroup1.HitGroupExport = L"HitGroupRedPlasticMesh";
-    descHitGroup1.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-    descHitGroup1.ClosestHitShaderImport = L"MaterialRedPlastic";
-    descSubobject[setupSubobject].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
-    descSubobject[setupSubobject].pDesc = &descHitGroup1;
-    ++setupSubobject;
-
-    D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig = {};
-    descShaderConfig.MaxPayloadSizeInBytes =
-        sizeof(float[3]); // Size of RayPayload
-    descShaderConfig.MaxAttributeSizeInBytes =
-        D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
-    descSubobject[setupSubobject].pDesc = &descShaderConfig;
-    ++setupSubobject;
-
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-    descSubobject[setupSubobject].pDesc = &rootSignatureGLOBAL.p;
-    ++setupSubobject;
-
-    D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig = {};
-    descPipelineConfig.MaxTraceRecursionDepth = 1;
-    descSubobject[setupSubobject].Type =
-        D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
-    descSubobject[setupSubobject].pDesc = &descPipelineConfig;
-    ++setupSubobject;
-
-    D3D12_STATE_OBJECT_DESC descStateObject = {};
-    descStateObject.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
-    descStateObject.NumSubobjects = setupSubobject;
-    descStateObject.pSubobjects = &descSubobject[0];
-    TRYD3D(device->m_pDevice->CreateStateObject(&descStateObject,
-                                                __uuidof(ID3D12StateObject),
-                                                (void **)&pipelineStateObject));
+    SimpleRaytracerPipelineSetup setup = {};
+    setup.GlobalRootSignature = rootSignatureGLOBAL.p;
+    setup.pShaderBytecode = g_dxr_shader;
+    setup.BytecodeLength = sizeof(g_dxr_shader);
+    setup.MaxPayloadSizeInBytes = sizeof(float[3]); // Size of RayPayload
+    setup.MaxTraceRecursionDepth = 1;
+    setup.HitGroups.push_back({L"HitGroupCheckerboardMesh",
+                               D3D12_HIT_GROUP_TYPE_TRIANGLES, nullptr,
+                               L"MaterialCheckerboard", nullptr});
+    setup.HitGroups.push_back({L"HitGroupRedPlasticMesh",
+                               D3D12_HIT_GROUP_TYPE_TRIANGLES, nullptr,
+                               L"MaterialRedPlastic", nullptr});
+    TRYD3D(device->m_pDevice->CreateStateObject(
+        ConfigureRaytracerPipeline(setup), __uuidof(ID3D12StateObject),
+        (void **)&pipelineStateObject));
     pipelineStateObject->SetName(L"DXR Pipeline State");
   }
   ////////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,7 @@
 #include "Core_Math.h"
 #include <atlbase.h>
 #include <d3d12.h>
+#include <vector>
 
 class Direct3D12Device;
 
@@ -65,3 +66,26 @@ CComPtr<ID3D12Resource1>
 DXRCreateTLAS(Direct3D12Device *device,
               const D3D12_RAYTRACING_INSTANCE_DESC *instances,
               int instanceCount);
+
+class SimpleRaytracerPipelineSetup {
+public:
+  ////////////////////////////////////////////////////////////////////////////////
+  // Be sure to configure these user-defined settings.
+  ID3D12RootSignature *GlobalRootSignature;
+  ID3D12RootSignature *LocalRootSignature;
+  const void *pShaderBytecode;
+  SIZE_T BytecodeLength;
+  int MaxPayloadSizeInBytes;
+  int MaxTraceRecursionDepth;
+  std::vector<D3D12_HIT_GROUP_DESC> HitGroups;
+  ////////////////////////////////////////////////////////////////////////////////
+  // Members below are configured automatically.
+  D3D12_DXIL_LIBRARY_DESC descLibrary;
+  D3D12_RAYTRACING_SHADER_CONFIG descShaderConfig;
+  D3D12_RAYTRACING_PIPELINE_CONFIG descPipelineConfig;
+  std::vector<D3D12_STATE_SUBOBJECT> descSubobjects;
+  D3D12_STATE_OBJECT_DESC descStateObject;
+};
+
+const D3D12_STATE_OBJECT_DESC *
+ConfigureRaytracerPipeline(SimpleRaytracerPipelineSetup &setup);
