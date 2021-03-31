@@ -2,11 +2,22 @@
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_Util.h"
-#include "ImageUtil.h"
 #include <array>
 #include <assert.h>
 #include <atlbase.h>
 #include <functional>
+
+D3D12_CPU_DESCRIPTOR_HANDLE operator+(D3D12_CPU_DESCRIPTOR_HANDLE h,
+                                      int offset) {
+  h.ptr += offset;
+  return h;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE operator+(D3D12_GPU_DESCRIPTOR_HANDLE h,
+                                      int offset) {
+  h.ptr += offset;
+  return h;
+}
 
 D3D12_CONSTANT_BUFFER_VIEW_DESC
 Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(D3D12_GPU_VIRTUAL_ADDRESS BufferLocation,
@@ -253,17 +264,16 @@ D3D12_Create_Buffer(Direct3D12Device *device, D3D12_RESOURCE_FLAGS flags,
   return pD3D12Resource;
 }
 
-CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device *device) {
+CComPtr<ID3D12Resource> D3D12_Create_Texture(Direct3D12Device *device,
+                                             IImage *image) {
   CComPtr<ID3D12Resource> resource;
-  const uint32_t imageWidth = 256;
-  const uint32_t imageHeight = 256;
   {
     D3D12_HEAP_PROPERTIES descHeap = {};
     descHeap.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC descResource = {};
     descResource.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    descResource.Width = imageWidth;
-    descResource.Height = imageHeight;
+    descResource.Width = image->GetWidth();
+    descResource.Height = image->GetHeight();
     descResource.DepthOrArraySize = 1;
     descResource.MipLevels = 1;
     descResource.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -277,14 +287,14 @@ CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device *device) {
     uint8_t B, G, R, A;
   };
   const uint32_t pixelWidth = sizeof(PixelBGRA);
-  const uint32_t imageStride =
-      AlignUp(pixelWidth * imageWidth, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+  const uint32_t imageStride = AlignUp(pixelWidth * image->GetWidth(),
+                                       D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
   {
     D3D12_HEAP_PROPERTIES descHeap = {};
     descHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
     D3D12_RESOURCE_DESC descResource = {};
     descResource.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    descResource.Width = imageStride * imageHeight;
+    descResource.Width = imageStride * image->GetHeight();
     descResource.Height = 1;
     descResource.DepthOrArraySize = 1;
     descResource.MipLevels = 1;
@@ -298,7 +308,12 @@ CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device *device) {
         __uuidof(ID3D12Resource), (void **)&pResourceUpload.p));
     void *pData = {};
     TRYD3D(pResourceUpload->Map(0, nullptr, &pData));
-    Image_Fill_Sample(pData, imageWidth, imageHeight, imageStride);
+    for (int y = 0; y < image->GetHeight(); ++y) {
+      const void *src = static_cast<const uint8_t *>(image->GetData()) +
+                        image->GetStride() * y;
+      void *dst = static_cast<uint8_t *>(pData) + imageStride * y;
+      memcpy(dst, src, pixelWidth * image->GetWidth());
+    }
     pResourceUpload->Unmap(0, nullptr);
     // Copy this staging buffer to the GPU-only buffer.
     D3D12_Run_Synchronously(
@@ -308,8 +323,8 @@ CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device *device) {
           srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
           srcLocation.PlacedFootprint.Footprint.Format =
               DXGI_FORMAT_B8G8R8A8_UNORM;
-          srcLocation.PlacedFootprint.Footprint.Width = imageWidth;
-          srcLocation.PlacedFootprint.Footprint.Height = imageHeight;
+          srcLocation.PlacedFootprint.Footprint.Width = image->GetWidth();
+          srcLocation.PlacedFootprint.Footprint.Height = image->GetHeight();
           srcLocation.PlacedFootprint.Footprint.Depth = 1;
           srcLocation.PlacedFootprint.Footprint.RowPitch = imageStride;
           D3D12_TEXTURE_COPY_LOCATION dstLocation = {};

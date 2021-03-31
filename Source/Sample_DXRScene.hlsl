@@ -2,6 +2,8 @@
 #include "Sample_DXR_RaySimple.inc"
 #include "Sample_DXR_Shaders.inc"
 
+Texture2D myTexture : register(t1);
+
 [shader("closesthit")]
 void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
@@ -17,8 +19,7 @@ void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes
 }
 
 [shader("closesthit")]
-void MaterialRedPlastic(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+void MaterialTextured(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-    // Make the meshes easier to see by rendering the barycentric coordinates.
-    rayPayload.Color = float3(1 - intersectionAttributes.Normal.x - intersectionAttributes.Normal.y, intersectionAttributes.Normal.xy);
+    rayPayload.Color = SampleTextureBilinear(myTexture, float2(intersectionAttributes.Normal.x, intersectionAttributes.Normal.y)).rgb;
 }

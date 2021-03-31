@@ -1,8 +1,15 @@
 #pragma once
 
 #include "Core_D3D12.h"
+#include "Core_IImage.h"
 #include <atlbase.h>
 #include <functional>
+
+D3D12_CPU_DESCRIPTOR_HANDLE operator+(D3D12_CPU_DESCRIPTOR_HANDLE h,
+                                      int offset);
+
+D3D12_GPU_DESCRIPTOR_HANDLE operator+(D3D12_GPU_DESCRIPTOR_HANDLE h,
+                                      int offset);
 
 ///////////////////////////////////////////////////////////////////////////////
 // These handy functions can be used to initialize a selection of D3D12
@@ -85,7 +92,8 @@ D3D12_Create_Buffer(Direct3D12Device *device, D3D12_RESOURCE_FLAGS flags,
                     D3D12_RESOURCE_STATES state, uint32_t bufferSize,
                     uint32_t dataSize, const void *data);
 
-CComPtr<ID3D12Resource> D3D12_Create_Sample_Texture(Direct3D12Device *device);
+CComPtr<ID3D12Resource> D3D12_Create_Texture(Direct3D12Device *device,
+                                             IImage *image);
 
 // Wait for a D3D12 device to finish queue execution and become idle.
 void D3D12_Wait_For_GPU_Idle(Direct3D12Device *device);

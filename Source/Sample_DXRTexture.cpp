@@ -13,22 +13,11 @@
 #include "Core_DXRUtil.h"
 #include "Core_Math.h"
 #include "Core_Util.h"
+#include "ImageUtil.h"
 #include "SampleResources.h"
 #include "generated.Sample_DXRTexture.dxr.h"
 #include <array>
 #include <atlbase.h>
-
-D3D12_CPU_DESCRIPTOR_HANDLE operator+(D3D12_CPU_DESCRIPTOR_HANDLE h,
-                                      int offset) {
-  h.ptr += offset;
-  return h;
-}
-
-D3D12_GPU_DESCRIPTOR_HANDLE operator+(D3D12_GPU_DESCRIPTOR_HANDLE h,
-                                      int offset) {
-  h.ptr += offset;
-  return h;
-}
 
 std::function<void(const SampleResourcesD3D12UAV &)>
 CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
@@ -111,7 +100,7 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
   ////////////////////////////////////////////////////////////////////////////////
   // Create the test texture.
   CComPtr<ID3D12Resource> resourceTexture =
-      D3D12_Create_Sample_Texture(device.get());
+      D3D12_Create_Texture(device.get(), Image_Sample(256, 256).get());
   ////////////////////////////////////////////////////////////////////////////////
   // BLAS - Build the bottom level acceleration structure.
   CComPtr<ID3D12Resource1> resourceBLAS = DXRCreateBLAS(
