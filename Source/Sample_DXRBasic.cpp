@@ -126,7 +126,6 @@ CreateSample_DXRBasic(std::shared_ptr<Direct3D12Device> device) {
     //
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     auto persistBLAS = resourceBLAS;
-    auto persistTLAS = resourceTLAS;
     ////////////////////////////////////////////////////////////////////////////////
     // Establish resource views.
     {
