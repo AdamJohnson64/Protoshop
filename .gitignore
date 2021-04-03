@@ -3,6 +3,7 @@
 !/.gitignore
 !/.gitmodules
 !/LICENSE.txt
+!/README.md
 !/*.props
 !/*.targets
 !/*.vcxproj
