@@ -43,6 +43,8 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   UINT descriptorElementSize =
       device->m_pDevice->GetDescriptorHandleIncrementSize(
           D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  // Our global signature has a cheeky SRV on the end; start the globals at 4.
+  int descriptorOffsetLocals = 4;
   ////////////////////////////////////////////////////////////////////////////////
   // PIPELINE - Build the pipeline with all ray shaders.
   CComPtr<ID3D12StateObject> pipelineStateObject;
@@ -114,7 +116,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     std::shared_ptr<TextureWithView> newTexture(new TextureWithView());
     newTexture->resource = D3D12_Create_Texture(device.get(), image.get());
     // Inject a view of this texture into the descriptor heap.
-    int descriptorIndexToUse = 3 + countTexture;
+    int descriptorIndexToUse = descriptorOffsetLocals + countTexture;
     device->m_pDevice->CreateShaderResourceView(
         newTexture->resource,
         &Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_Texture2D(
@@ -154,8 +156,13 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   };
   ////////////////////////////////////////////////////////////////////////////////
   // BLAS - Build the bottom level acceleration structures.
-  MutableMap<const IMesh *, CComPtr<ID3D12Resource1>> factoryBLAS;
-  factoryBLAS.fnGenerator = [=](const IMesh *mesh) {
+  std::vector<Vector2> concatenatedUVs;
+  struct MeshWithAttributes {
+    CComPtr<ID3D12Resource1> resourceBLAS;
+    uint32_t indexIntoConcatenatedUVs;
+  };
+  MutableMap<const IMesh *, MeshWithAttributes> factoryBLAS;
+  factoryBLAS.fnGenerator = [&](const IMesh *mesh) {
     int sizeVertex = sizeof(float[3]) * mesh->getVertexCount();
     std::unique_ptr<int8_t[]> dataVertex(new int8_t[sizeVertex]);
     mesh->copyVertices(reinterpret_cast<Vector3 *>(dataVertex.get()),
@@ -164,9 +171,27 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     std::unique_ptr<int8_t[]> dataIndex(new int8_t[sizeIndices]);
     mesh->copyIndices(reinterpret_cast<uint32_t *>(dataIndex.get()),
                       sizeof(uint32_t));
-    return DXRCreateBLAS(device.get(), dataVertex.get(), mesh->getVertexCount(),
-                         DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
-                         mesh->getIndexCount(), DXGI_FORMAT_R32_UINT);
+    int sizeTexcoord = sizeof(Vector2) * mesh->getVertexCount();
+    std::unique_ptr<int8_t> dataTexcoord(new int8_t[sizeTexcoord]);
+    mesh->copyTexcoords(dataTexcoord.get(), sizeof(Vector2));
+    MeshWithAttributes newMesh = {};
+    // Record the current index into the concatenated UVs.
+    newMesh.indexIntoConcatenatedUVs = concatenatedUVs.size();
+    newMesh.resourceBLAS =
+        DXRCreateBLAS(device.get(), dataVertex.get(), mesh->getVertexCount(),
+                      DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
+                      mesh->getIndexCount(), DXGI_FORMAT_R32_UINT);
+    ////////////////////////////////////////////////////////////////////////////////
+    // Add these UVs to our concatenated buffer.
+    int indexCount = mesh->getIndexCount();
+    const uint32_t *bufferIndex =
+        reinterpret_cast<const uint32_t *>(dataIndex.get());
+    const Vector2 *bufferTexcoord =
+        reinterpret_cast<const Vector2 *>(dataTexcoord.get());
+    for (int i = 0; i < indexCount; ++i) {
+      concatenatedUVs.push_back(bufferTexcoord[bufferIndex[i]]);
+    }
+    return newMesh;
   };
   ////////////////////////////////////////////////////////////////////////////////
   // TLAS - Build the top level acceleration structure.
@@ -177,14 +202,21 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     for (int i = 0; i < scene.size(); ++i) {
       const Instance &instance = scene[i];
       uint32_t materialID = factoryMaterial(instance.Material.get());
+      const MeshWithAttributes &theMesh = factoryBLAS(instance.Mesh.get());
       instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-          *instance.TransformObjectToWorld, materialID,
-          factoryBLAS(instance.Mesh.get()));
-      instanceDescs[i].InstanceID = i;
+          *instance.TransformObjectToWorld, materialID, theMesh.resourceBLAS);
+      // We're using InstanceID to look up into the concatenated attributes.
+      instanceDescs[i].InstanceID = theMesh.indexIntoConcatenatedUVs;
     }
     resourceTLAS =
         DXRCreateTLAS(device.get(), &instanceDescs[0], instanceDescs.size());
   }
+  ////////////////////////////////////////////////////////////////////////////////
+  // Upload the concatenated UVs.
+  CComPtr<ID3D12Resource1> resourceConcatenatedUVs = D3D12_Create_Buffer(
+      device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+      D3D12_RESOURCE_STATE_COMMON, sizeof(Vector2) * concatenatedUVs.size(),
+      sizeof(Vector2) * concatenatedUVs.size(), &concatenatedUVs[0]);
   ////////////////////////////////////////////////////////////////////////////////
   // Create the completed shader table
   resourceShaderTable = D3D12_Create_Buffer(
@@ -227,6 +259,16 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
       device->m_pDevice->CreateConstantBufferView(
           &Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(resourceConstants, 256),
           descriptorBase + descriptorElementSize * 2);
+      // Create the SRV for the concatenated UVs.
+      D3D12_SHADER_RESOURCE_VIEW_DESC descSRVConcatenatedUVs = {};
+      descSRVConcatenatedUVs.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+      descSRVConcatenatedUVs.Shader4ComponentMapping =
+          D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+      descSRVConcatenatedUVs.Buffer.NumElements = concatenatedUVs.size();
+      descSRVConcatenatedUVs.Buffer.StructureByteStride = sizeof(Vector2);
+      device->m_pDevice->CreateShaderResourceView(
+          resourceConcatenatedUVs.p, &descSRVConcatenatedUVs,
+          descriptorBase + descriptorElementSize * 3);
     }
     ////////////////////////////////////////////////////////////////////////////////
     // RAYTRACE - Finally call the raytracer and generate the frame.

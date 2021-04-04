@@ -22,7 +22,7 @@ DXR_Create_Signature(ID3D12Device *device,
 
 CComPtr<ID3D12RootSignature>
 DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device *device) {
-  std::array<D3D12_DESCRIPTOR_RANGE, 3> descDescriptorRange;
+  std::array<D3D12_DESCRIPTOR_RANGE, 4> descDescriptorRange;
   descDescriptorRange[0].BaseShaderRegister = 0;
   descDescriptorRange[0].NumDescriptors = 1;
   descDescriptorRange[0].RegisterSpace = 0;
@@ -41,10 +41,18 @@ DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device *device) {
   descDescriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
   descDescriptorRange[2].OffsetInDescriptorsFromTableStart =
       D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+  // This cheeky SRV only serves DXR; the rest of the time it goes unused.
+  descDescriptorRange[3].BaseShaderRegister = 4;
+  descDescriptorRange[3].NumDescriptors = 1;
+  descDescriptorRange[3].RegisterSpace = 0;
+  descDescriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+  descDescriptorRange[3].OffsetInDescriptorsFromTableStart =
+      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
   D3D12_ROOT_PARAMETER descRootParameter = {};
   descRootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
   descRootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-  descRootParameter.DescriptorTable.NumDescriptorRanges = 3;
+  descRootParameter.DescriptorTable.NumDescriptorRanges =
+      descDescriptorRange.size();
   descRootParameter.DescriptorTable.pDescriptorRanges = &descDescriptorRange[0];
   D3D12_ROOT_SIGNATURE_DESC descSignature = {};
   descSignature.NumParameters = 1;
