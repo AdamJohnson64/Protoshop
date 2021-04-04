@@ -231,6 +231,7 @@ float3 HaltonSample(int x)
 // Bilinear interpolation implemented with far too much code.
 float4 SampleTextureBilinear(Texture2D tex, float2 uv)
 {
+	uv -= floor(uv); // Clamp to [0..1] for wrapping
     uint Width, Height, NumberOfLevels;
     tex.GetDimensions(0, Width, Height, NumberOfLevels);
     float fx = uv.x * Width;
@@ -252,6 +253,7 @@ float4 SampleTextureBilinear(Texture2D tex, float2 uv)
 // like absolute garbage. It's cheap though.
 float4 SampleTextureNearest(Texture2D tex, float2 uv)
 {
+	uv -= floor(uv); // Clamp to [0..1] for wrapping
     uint Width, Height, NumberOfLevels;
     tex.GetDimensions(0, Width, Height, NumberOfLevels);
     return tex.Load(uint3(uv.x * Width, uv.y * Height, 0));
