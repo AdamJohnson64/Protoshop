@@ -102,31 +102,40 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     CComPtr<ID3D12Resource> resource;
     D3D12_GPU_DESCRIPTOR_HANDLE gpu;
   };
+  // Helper function to generate a texture and inject the descriptor.
+  std::function<std::shared_ptr<TextureWithView>(IImage *)> addTexture =
+      [&](IImage *image) {
+        // Create the new texture entry and return the GPU VA.
+        std::shared_ptr<TextureWithView> newTexture(new TextureWithView());
+        newTexture->resource = D3D12_Create_Texture(device.get(), image);
+        // Inject a view of this texture into the descriptor heap.
+        int descriptorIndexToUse = descriptorOffsetLocals + countTexture;
+        device->m_pDevice->CreateShaderResourceView(
+            newTexture->resource,
+            &Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_Texture2D(
+                DXGI_FORMAT_B8G8R8A8_UNORM),
+            descriptorBase + descriptorElementSize * descriptorIndexToUse);
+        newTexture->gpu =
+            descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart() +
+            descriptorElementSize * descriptorIndexToUse;
+        ++countTexture;
+        return newTexture;
+      };
+  // Create a texture to use if all else fails.
+  std::shared_ptr<TextureWithView> defaultTexture =
+      addTexture(Image_Sample(256, 256).get());
+  // Create a texture from a texture image object.
   MutableMap<const TextureImage *, std::shared_ptr<TextureWithView>>
       factoryTexture;
   factoryTexture.fnGenerator = [&](const TextureImage *texture) {
     if (texture == nullptr) {
-      return std::shared_ptr<TextureWithView>(nullptr);
+      return defaultTexture;
     }
     std::shared_ptr<IImage> image = Load_TGA(texture->Filename.c_str());
     if (image == nullptr) {
-      return std::shared_ptr<TextureWithView>(nullptr);
+      return defaultTexture;
     }
-    // Create the new texture entry and return the GPU VA.
-    std::shared_ptr<TextureWithView> newTexture(new TextureWithView());
-    newTexture->resource = D3D12_Create_Texture(device.get(), image.get());
-    // Inject a view of this texture into the descriptor heap.
-    int descriptorIndexToUse = descriptorOffsetLocals + countTexture;
-    device->m_pDevice->CreateShaderResourceView(
-        newTexture->resource,
-        &Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_Texture2D(
-            DXGI_FORMAT_B8G8R8A8_UNORM),
-        descriptorBase + descriptorElementSize * descriptorIndexToUse);
-    newTexture->gpu =
-        descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart() +
-        descriptorElementSize * descriptorIndexToUse;
-    ++countTexture;
-    return newTexture;
+    return addTexture(image.get());
   };
   ////////////////////////////////////////////////////////////////////////////////
   // Material Mapper.
