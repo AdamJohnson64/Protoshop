@@ -2,8 +2,13 @@
 #include "Sample_DXR_RaySimple.inc"
 #include "Sample_DXR_Shaders.inc"
 
+struct Vertex {
+  float3 Normal;
+  float2 Texcoord;
+};
+
 Texture2D myTexture : register(t1);
-StructuredBuffer<float2> concatenatedUVs : register(t4);
+StructuredBuffer<Vertex> vertexAttributes : register(t4);
 
 [shader("closesthit")]
 void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
@@ -22,11 +27,13 @@ void MaterialCheckerboard(inout RayPayload rayPayload, in IntersectionAttributes
 [shader("closesthit")]
 void MaterialTextured(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
-  float2 uv0 = concatenatedUVs[InstanceID() + PrimitiveIndex() * 3 + 0];
-  float2 uv1 = concatenatedUVs[InstanceID() + PrimitiveIndex() * 3 + 1];
-  float2 uv2 = concatenatedUVs[InstanceID() + PrimitiveIndex() * 3 + 2];
+  Vertex v0 = vertexAttributes[InstanceID() + PrimitiveIndex() * 3 + 0];
+  Vertex v1 = vertexAttributes[InstanceID() + PrimitiveIndex() * 3 + 1];
+  Vertex v2 = vertexAttributes[InstanceID() + PrimitiveIndex() * 3 + 2];
   float barya = intersectionAttributes.Normal.x;
   float baryb = intersectionAttributes.Normal.y;
-  float2 uv = uv0 + (uv1 - uv0) * barya + (uv2 - uv0) * baryb;
-  rayPayload.Color = SampleTextureBilinear(myTexture, uv).rgb;
+  float3 normal = v0.Normal + (v1.Normal - v0.Normal) * barya + (v2.Normal - v0.Normal) * baryb;
+  float2 uv = v0.Texcoord + (v1.Texcoord - v0.Texcoord) * barya + (v2.Texcoord - v0.Texcoord) * baryb;
+  float illum = clamp(dot(normal, normalize(float3(1, 1, -1))), 0, 1);
+  rayPayload.Color = illum * SampleTextureBilinear(myTexture, uv).rgb;
 }

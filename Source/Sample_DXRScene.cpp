@@ -156,40 +156,41 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   };
   ////////////////////////////////////////////////////////////////////////////////
   // BLAS - Build the bottom level acceleration structures.
-  std::vector<Vector2> concatenatedUVs;
+  struct Vertex {
+    Vector3 Normal;
+    Vector2 Texcoord;
+  };
+  std::vector<Vertex> vertexAttributes;
   struct MeshWithAttributes {
     CComPtr<ID3D12Resource1> resourceBLAS;
-    uint32_t indexIntoConcatenatedUVs;
+    uint32_t indexIntoVertexAttributes;
   };
   MutableMap<const IMesh *, MeshWithAttributes> factoryBLAS;
   factoryBLAS.fnGenerator = [&](const IMesh *mesh) {
-    int sizeVertex = sizeof(float[3]) * mesh->getVertexCount();
-    std::unique_ptr<int8_t[]> dataVertex(new int8_t[sizeVertex]);
-    mesh->copyVertices(reinterpret_cast<Vector3 *>(dataVertex.get()),
-                       sizeof(Vector3));
-    int sizeIndices = sizeof(int32_t) * mesh->getIndexCount();
-    std::unique_ptr<int8_t[]> dataIndex(new int8_t[sizeIndices]);
-    mesh->copyIndices(reinterpret_cast<uint32_t *>(dataIndex.get()),
-                      sizeof(uint32_t));
-    int sizeTexcoord = sizeof(Vector2) * mesh->getVertexCount();
-    std::unique_ptr<int8_t> dataTexcoord(new int8_t[sizeTexcoord]);
+    std::unique_ptr<uint32_t[]> dataIndex(new uint32_t[mesh->getIndexCount()]);
+    mesh->copyIndices(dataIndex.get(), sizeof(uint32_t));
+    std::unique_ptr<Vector3[]> dataVertex(new Vector3[mesh->getVertexCount()]);
+    mesh->copyVertices(dataVertex.get(), sizeof(Vector3));
+    std::unique_ptr<Vector3[]> dataNormal(new Vector3[mesh->getVertexCount()]);
+    mesh->copyNormals(dataNormal.get(), sizeof(Vector3));
+    std::unique_ptr<Vector2[]> dataTexcoord(
+        new Vector2[mesh->getVertexCount()]);
     mesh->copyTexcoords(dataTexcoord.get(), sizeof(Vector2));
     MeshWithAttributes newMesh = {};
-    // Record the current index into the concatenated UVs.
-    newMesh.indexIntoConcatenatedUVs = concatenatedUVs.size();
+    // Record the current index into the concatenated attributes.
+    newMesh.indexIntoVertexAttributes = vertexAttributes.size();
     newMesh.resourceBLAS =
         DXRCreateBLAS(device.get(), dataVertex.get(), mesh->getVertexCount(),
                       DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
                       mesh->getIndexCount(), DXGI_FORMAT_R32_UINT);
     ////////////////////////////////////////////////////////////////////////////////
-    // Add these UVs to our concatenated buffer.
+    // Add all attributes to our concatenated buffer.
     int indexCount = mesh->getIndexCount();
-    const uint32_t *bufferIndex =
-        reinterpret_cast<const uint32_t *>(dataIndex.get());
-    const Vector2 *bufferTexcoord =
-        reinterpret_cast<const Vector2 *>(dataTexcoord.get());
     for (int i = 0; i < indexCount; ++i) {
-      concatenatedUVs.push_back(bufferTexcoord[bufferIndex[i]]);
+      Vertex v = {};
+      v.Normal = dataNormal[dataIndex[i]];
+      v.Texcoord = dataTexcoord[dataIndex[i]];
+      vertexAttributes.push_back(v);
     }
     return newMesh;
   };
@@ -206,17 +207,17 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
       instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
           *instance.TransformObjectToWorld, materialID, theMesh.resourceBLAS);
       // We're using InstanceID to look up into the concatenated attributes.
-      instanceDescs[i].InstanceID = theMesh.indexIntoConcatenatedUVs;
+      instanceDescs[i].InstanceID = theMesh.indexIntoVertexAttributes;
     }
     resourceTLAS =
         DXRCreateTLAS(device.get(), &instanceDescs[0], instanceDescs.size());
   }
   ////////////////////////////////////////////////////////////////////////////////
-  // Upload the concatenated UVs.
-  CComPtr<ID3D12Resource1> resourceConcatenatedUVs = D3D12_Create_Buffer(
+  // Upload the concatenated attributes.
+  CComPtr<ID3D12Resource1> resourceVertexAttributes = D3D12_Create_Buffer(
       device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-      D3D12_RESOURCE_STATE_COMMON, sizeof(Vector2) * concatenatedUVs.size(),
-      sizeof(Vector2) * concatenatedUVs.size(), &concatenatedUVs[0]);
+      D3D12_RESOURCE_STATE_COMMON, sizeof(Vertex) * vertexAttributes.size(),
+      sizeof(Vertex) * vertexAttributes.size(), &vertexAttributes[0]);
   ////////////////////////////////////////////////////////////////////////////////
   // Create the completed shader table
   resourceShaderTable = D3D12_Create_Buffer(
@@ -259,15 +260,15 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
       device->m_pDevice->CreateConstantBufferView(
           &Make_D3D12_CONSTANT_BUFFER_VIEW_DESC(resourceConstants, 256),
           descriptorBase + descriptorElementSize * 2);
-      // Create the SRV for the concatenated UVs.
-      D3D12_SHADER_RESOURCE_VIEW_DESC descSRVConcatenatedUVs = {};
-      descSRVConcatenatedUVs.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-      descSRVConcatenatedUVs.Shader4ComponentMapping =
+      // Create the SRV for the concatenated attributes.
+      D3D12_SHADER_RESOURCE_VIEW_DESC descSRVVertexAttributes = {};
+      descSRVVertexAttributes.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+      descSRVVertexAttributes.Shader4ComponentMapping =
           D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-      descSRVConcatenatedUVs.Buffer.NumElements = concatenatedUVs.size();
-      descSRVConcatenatedUVs.Buffer.StructureByteStride = sizeof(Vector2);
+      descSRVVertexAttributes.Buffer.NumElements = vertexAttributes.size();
+      descSRVVertexAttributes.Buffer.StructureByteStride = sizeof(Vertex);
       device->m_pDevice->CreateShaderResourceView(
-          resourceConcatenatedUVs.p, &descSRVConcatenatedUVs,
+          resourceVertexAttributes.p, &descSRVVertexAttributes,
           descriptorBase + descriptorElementSize * 3);
     }
     ////////////////////////////////////////////////////////////////////////////////
