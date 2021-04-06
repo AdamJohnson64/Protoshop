@@ -239,10 +239,10 @@ float4 SampleTextureBilinear(Texture2D tex, float2 uv)
     uint ux = fx;
     uint uy = fy;
     float4 pix[4] = {
-        tex.Load(uint3(ux + 0, uy + 0, 0)),
-        tex.Load(uint3(ux + 1, uy + 0, 0)),
-        tex.Load(uint3(ux + 0, uy + 1, 0)),
-        tex.Load(uint3(ux + 1, uy + 1, 0)),
+        tex.Load(uint3((ux + 0) % Width, (uy + 0) % Height, 0)),
+        tex.Load(uint3((ux + 1) % Width, (uy + 0) % Height, 0)),
+        tex.Load(uint3((ux + 0) % Width, (uy + 1) % Height, 0)),
+        tex.Load(uint3((ux + 1) % Width, (uy + 1) % Height, 0)),
     };
     float ix = fx - ux;
     float iy = fy - uy;
