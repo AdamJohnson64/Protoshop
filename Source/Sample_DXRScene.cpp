@@ -35,7 +35,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   CComPtr<ID3D12RootSignature> rootSignatureGLOBAL =
       DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(device->m_pDevice);
   CComPtr<ID3D12RootSignature> rootSignatureLOCAL =
-      DXR_Create_Signature_LOCAL_1SRV(device->m_pDevice);
+      DXR_Create_Signature_LOCAL_2SRV(device->m_pDevice);
   ////////////////////////////////////////////////////////////////////////////////
   // Map out parts of the descriptor table.
   D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =
@@ -56,9 +56,6 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     setup.BytecodeLength = sizeof(g_dxr_shader);
     setup.MaxPayloadSizeInBytes = sizeof(float[3]); // Size of RayPayload
     setup.MaxTraceRecursionDepth = 1;
-    setup.HitGroups.push_back({L"HitGroupCheckerboardMesh",
-                               D3D12_HIT_GROUP_TYPE_TRIANGLES, nullptr,
-                               L"MaterialCheckerboard", nullptr});
     setup.HitGroups.push_back({L"HitGroupTexturedMesh",
                                D3D12_HIT_GROUP_TYPE_TRIANGLES, nullptr,
                                L"MaterialTextured", nullptr});
@@ -70,7 +67,7 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   ////////////////////////////////////////////////////////////////////////////////
   // SHADER TABLE - Create a table of all shaders for the raytracer.
   std::vector<uint8_t> sbtData;
-  RaytracingSBTHelper sbtHelper(256, 1);
+  RaytracingSBTHelper sbtHelper(256, 2);
   sbtData.resize(sbtHelper.GetShaderTableSize());
   CComPtr<ID3D12Resource1> resourceShaderTable;
   CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
@@ -86,96 +83,108 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     memcpy(&sbtData[0] + sbtHelper.GetShaderIdentifierOffset(1),
            stateObjectProperties->GetShaderIdentifier(L"Miss"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    // Shader Index 2 - Hit Shader 1
-    memcpy(
-        &sbtData[0] + sbtHelper.GetShaderIdentifierOffset(2),
-        stateObjectProperties->GetShaderIdentifier(L"HitGroupCheckerboardMesh"),
-        D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
   }
+#pragma region - Texture Handling -
   ////////////////////////////////////////////////////////////////////////////////
-  // Texture Loader
-  // Given a TextureImage object we load the (assumed) TGA image into a new
-  // D3D12 resource and mark the index of the loaded texture in the descriptor
-  // heap.
-  int countTexture = 0;
-  struct TextureWithView {
-    CComPtr<ID3D12Resource> resource;
-    D3D12_GPU_DESCRIPTOR_HANDLE gpu;
+  // Texture Handling
+  int countTexturesSoFar = 0;
+  struct CreatedTexture {
+    CComPtr<ID3D12Resource> resourceTexture;
+    D3D12_GPU_DESCRIPTOR_HANDLE descriptorGPU;
   };
   // Helper function to generate a texture and inject the descriptor.
-  std::function<std::shared_ptr<TextureWithView>(IImage *)> addTexture =
-      [&](IImage *image) {
+  std::function<std::shared_ptr<CreatedTexture>(IImage *)>
+      createTextureFromImage = [&](IImage *image) {
         // Create the new texture entry and return the GPU VA.
-        std::shared_ptr<TextureWithView> newTexture(new TextureWithView());
-        newTexture->resource = D3D12_Create_Texture(device.get(), image);
+        std::shared_ptr<CreatedTexture> newTexture(new CreatedTexture());
+        newTexture->resourceTexture = D3D12_Create_Texture(device.get(), image);
         // Inject a view of this texture into the descriptor heap.
-        int descriptorIndexToUse = descriptorOffsetLocals + countTexture;
+        int descriptorIndexToUse = descriptorOffsetLocals + countTexturesSoFar;
         device->m_pDevice->CreateShaderResourceView(
-            newTexture->resource,
+            newTexture->resourceTexture,
             &Make_D3D12_SHADER_RESOURCE_VIEW_DESC_For_Texture2D(
                 DXGI_FORMAT_B8G8R8A8_UNORM),
             descriptorBase + descriptorElementSize * descriptorIndexToUse);
-        newTexture->gpu =
+        newTexture->descriptorGPU =
             descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart() +
             descriptorElementSize * descriptorIndexToUse;
-        ++countTexture;
+        ++countTexturesSoFar;
         return newTexture;
       };
   // Create a texture to use if all else fails.
-  std::shared_ptr<TextureWithView> defaultTexture =
-      addTexture(Image_Sample(256, 256).get());
+  std::shared_ptr<CreatedTexture> textureLightBlue =
+      createTextureFromImage(Image_SolidColor(8, 8, 0xFF8080FF).get());
   // Create a texture from a texture image object.
-  MutableMap<const TextureImage *, std::shared_ptr<TextureWithView>>
-      factoryTexture;
-  factoryTexture.fnGenerator = [&](const TextureImage *texture) {
-    if (texture == nullptr) {
-      return defaultTexture;
-    }
-    std::shared_ptr<IImage> image = Load_TGA(texture->Filename.c_str());
-    if (image == nullptr) {
-      return defaultTexture;
-    }
-    return addTexture(image.get());
-  };
+  std::function<std::shared_ptr<CreatedTexture>(const TextureImage *)>
+      createTextureFromFileRef = [&](const TextureImage *texture) {
+        if (texture == nullptr) {
+          return textureLightBlue;
+        }
+        std::shared_ptr<IImage> image = Load_TGA(texture->Filename.c_str());
+        if (image == nullptr) {
+          return textureLightBlue;
+        }
+        return createTextureFromImage(image.get());
+      };
+  // Cached version to reuse texture references.
+  std::map<const TextureImage *, std::shared_ptr<CreatedTexture>>
+      mapImageToCreatedTexture;
+  std::function<std::shared_ptr<CreatedTexture>(const TextureImage *)>
+      cacheTextureFromFileRef = [&](const TextureImage *texture) {
+        auto findIt = mapImageToCreatedTexture.find(texture);
+        if (findIt != mapImageToCreatedTexture.end()) {
+          return findIt->second;
+        }
+        return mapImageToCreatedTexture[texture] =
+                   createTextureFromFileRef(texture);
+      };
+#pragma endregion
+#pragma region - Material Handling -
   ////////////////////////////////////////////////////////////////////////////////
-  // Material Mapper.
-  // Given an IMaterial map to the index in the SBT which implements that
-  // material.
-  uint32_t countMaterial = 0;
-  MutableMap<IMaterial *, uint32_t> factoryMaterial;
-  factoryMaterial.fnGenerator = [&](IMaterial *material) mutable {
+  // Material Handling
+  uint32_t countMaterialsSoFar = 0;
+  MutableMap<IMaterial *, uint32_t> mapMaterialToHitGroupIndex;
+  mapMaterialToHitGroupIndex.fnGenerator = [&](IMaterial *material) {
     OBJMaterial *objMaterial = dynamic_cast<OBJMaterial *>(material);
     if (objMaterial == nullptr)
       return 0;
-    std::shared_ptr<TextureWithView> newTextureEntry =
-        factoryTexture(objMaterial->DiffuseMap.get());
-    if (newTextureEntry == nullptr)
-      return 0;
+    std::shared_ptr<CreatedTexture> newTextureEntry =
+        cacheTextureFromFileRef(objMaterial->DiffuseMap.get());
+    std::shared_ptr<CreatedTexture> newNormalMapEntry =
+        cacheTextureFromFileRef(objMaterial->NormalMap.get());
     // Set up the shader binding table entry for this material.
-    int shaderTableHitGroup = 1 + countMaterial;
-    int shaderTableIndex = 3 + countMaterial;
+    int shaderTableHitGroup = countMaterialsSoFar;
+    int shaderTableIndex = 2 + countMaterialsSoFar;
     memcpy(&sbtData[0] + sbtHelper.GetShaderIdentifierOffset(shaderTableIndex),
            stateObjectProperties->GetShaderIdentifier(L"HitGroupTexturedMesh"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     memcpy(&sbtData[0] +
                sbtHelper.GetShaderRootArgumentOffset(shaderTableIndex, 0),
-           &newTextureEntry->gpu, sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
-    ++countMaterial;
+           &newTextureEntry->descriptorGPU,
+           sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+    memcpy(&sbtData[0] +
+               sbtHelper.GetShaderRootArgumentOffset(shaderTableIndex, 1),
+           &newNormalMapEntry->descriptorGPU,
+           sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+    ++countMaterialsSoFar;
     return shaderTableHitGroup;
   };
+#pragma endregion
+#pragma region - Mesh Handling -
   ////////////////////////////////////////////////////////////////////////////////
   // BLAS - Build the bottom level acceleration structures.
-  struct Vertex {
+  struct VertexAttributes {
+    Vector3 Position;
     Vector3 Normal;
     Vector2 Texcoord;
   };
-  std::vector<Vertex> vertexAttributes;
-  struct MeshWithAttributes {
+  std::vector<VertexAttributes> vertexAttributes;
+  struct CreatedMesh {
     CComPtr<ID3D12Resource1> resourceBLAS;
     uint32_t indexIntoVertexAttributes;
   };
-  MutableMap<const IMesh *, MeshWithAttributes> factoryBLAS;
-  factoryBLAS.fnGenerator = [&](const IMesh *mesh) {
+  std::function<CreatedMesh(const IMesh *)> createMesh = [&](const IMesh
+                                                                 *mesh) {
     std::unique_ptr<uint32_t[]> dataIndex(new uint32_t[mesh->getIndexCount()]);
     mesh->copyIndices(dataIndex.get(), sizeof(uint32_t));
     std::unique_ptr<Vector3[]> dataVertex(new Vector3[mesh->getVertexCount()]);
@@ -185,24 +194,35 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     std::unique_ptr<Vector2[]> dataTexcoord(
         new Vector2[mesh->getVertexCount()]);
     mesh->copyTexcoords(dataTexcoord.get(), sizeof(Vector2));
-    MeshWithAttributes newMesh = {};
+    CreatedMesh newMesh = {};
     // Record the current index into the concatenated attributes.
     newMesh.indexIntoVertexAttributes = vertexAttributes.size();
     newMesh.resourceBLAS =
         DXRCreateBLAS(device.get(), dataVertex.get(), mesh->getVertexCount(),
                       DXGI_FORMAT_R32G32B32_FLOAT, dataIndex.get(),
                       mesh->getIndexCount(), DXGI_FORMAT_R32_UINT);
-    ////////////////////////////////////////////////////////////////////////////////
     // Add all attributes to our concatenated buffer.
     int indexCount = mesh->getIndexCount();
     for (int i = 0; i < indexCount; ++i) {
-      Vertex v = {};
+      VertexAttributes v = {};
+      v.Position = dataVertex[dataIndex[i]];
       v.Normal = dataNormal[dataIndex[i]];
       v.Texcoord = dataTexcoord[dataIndex[i]];
       vertexAttributes.push_back(v);
     }
     return newMesh;
   };
+  // Cached version.
+  std::map<const IMesh *, CreatedMesh> mapMeshToCreatedMesh;
+  std::function<CreatedMesh(const IMesh *)> cacheMesh = [&](const IMesh *mesh) {
+    auto findIt = mapMeshToCreatedMesh.find(mesh);
+    if (findIt != mapMeshToCreatedMesh.end()) {
+      return findIt->second;
+    }
+    return mapMeshToCreatedMesh[mesh] = createMesh(mesh);
+  };
+#pragma endregion
+#pragma region - Instance Handling -
   ////////////////////////////////////////////////////////////////////////////////
   // TLAS - Build the top level acceleration structure.
   CComPtr<ID3D12Resource1> resourceTLAS;
@@ -210,23 +230,27 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDescs;
     instanceDescs.resize(scene.size());
     for (int i = 0; i < scene.size(); ++i) {
-      const Instance &instance = scene[i];
-      uint32_t materialID = factoryMaterial(instance.Material.get());
-      const MeshWithAttributes &theMesh = factoryBLAS(instance.Mesh.get());
+      const Instance &thisInstance = scene[i];
+      const uint32_t indexOfHitGroup =
+          mapMaterialToHitGroupIndex(thisInstance.Material.get());
+      const CreatedMesh &createdMesh = cacheMesh(thisInstance.Mesh.get());
       instanceDescs[i] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-          *instance.TransformObjectToWorld, materialID, theMesh.resourceBLAS);
+          *thisInstance.TransformObjectToWorld, indexOfHitGroup,
+          createdMesh.resourceBLAS);
       // We're using InstanceID to look up into the concatenated attributes.
-      instanceDescs[i].InstanceID = theMesh.indexIntoVertexAttributes;
+      instanceDescs[i].InstanceID = createdMesh.indexIntoVertexAttributes;
     }
     resourceTLAS =
         DXRCreateTLAS(device.get(), &instanceDescs[0], instanceDescs.size());
   }
+#pragma endregion
   ////////////////////////////////////////////////////////////////////////////////
   // Upload the concatenated attributes.
   CComPtr<ID3D12Resource1> resourceVertexAttributes = D3D12_Create_Buffer(
       device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-      D3D12_RESOURCE_STATE_COMMON, sizeof(Vertex) * vertexAttributes.size(),
-      sizeof(Vertex) * vertexAttributes.size(), &vertexAttributes[0]);
+      D3D12_RESOURCE_STATE_COMMON,
+      sizeof(VertexAttributes) * vertexAttributes.size(),
+      sizeof(VertexAttributes) * vertexAttributes.size(), &vertexAttributes[0]);
   ////////////////////////////////////////////////////////////////////////////////
   // Create the completed shader table
   resourceShaderTable = D3D12_Create_Buffer(
@@ -241,8 +265,8 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
         sampleResources.BackBufferResource->GetDesc();
     ////////////////////////////////////////////////////////////////////////////////
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-    auto persistBLAS = factoryBLAS;
-    auto persistTexture = factoryTexture;
+    auto persistBLAS = mapMeshToCreatedMesh;
+    auto persistTexture = mapImageToCreatedTexture;
     ////////////////////////////////////////////////////////////////////////////////
     // Create a constant buffer view for top level data.
     CComPtr<ID3D12Resource> resourceConstants = D3D12_Create_Buffer(
@@ -275,7 +299,8 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
       descSRVVertexAttributes.Shader4ComponentMapping =
           D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
       descSRVVertexAttributes.Buffer.NumElements = vertexAttributes.size();
-      descSRVVertexAttributes.Buffer.StructureByteStride = sizeof(Vertex);
+      descSRVVertexAttributes.Buffer.StructureByteStride =
+          sizeof(VertexAttributes);
       device->m_pDevice->CreateShaderResourceView(
           resourceVertexAttributes.p, &descSRVVertexAttributes,
           descriptorBase + descriptorElementSize * 3);

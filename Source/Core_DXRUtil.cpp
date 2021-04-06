@@ -83,6 +83,37 @@ DXR_Create_Signature_LOCAL_1SRV(ID3D12Device *device) {
 }
 
 CComPtr<ID3D12RootSignature>
+DXR_Create_Signature_LOCAL_2SRV(ID3D12Device *device) {
+  std::array<D3D12_DESCRIPTOR_RANGE, 2> descDescriptorRange = {};
+  descDescriptorRange[0].BaseShaderRegister = 1;
+  descDescriptorRange[0].NumDescriptors = 1;
+  descDescriptorRange[0].RegisterSpace = 0;
+  descDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+  descDescriptorRange[0].OffsetInDescriptorsFromTableStart =
+      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+  descDescriptorRange[1].BaseShaderRegister = 2;
+  descDescriptorRange[1].NumDescriptors = 1;
+  descDescriptorRange[1].RegisterSpace = 0;
+  descDescriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+  descDescriptorRange[1].OffsetInDescriptorsFromTableStart =
+      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+  std::array<D3D12_ROOT_PARAMETER, 2> descRootParameter = {};
+  descRootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+  descRootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+  descRootParameter[0].DescriptorTable.NumDescriptorRanges = 1;
+  descRootParameter[0].DescriptorTable.pDescriptorRanges = &descDescriptorRange[0];
+  descRootParameter[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+  descRootParameter[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+  descRootParameter[1].DescriptorTable.NumDescriptorRanges = 1;
+  descRootParameter[1].DescriptorTable.pDescriptorRanges = &descDescriptorRange[1];
+  D3D12_ROOT_SIGNATURE_DESC descSignature = {};
+  descSignature.NumParameters = 2;
+  descSignature.pParameters = &descRootParameter[0];
+  descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+  return DXR_Create_Signature(device, descSignature);
+}
+
+CComPtr<ID3D12RootSignature>
 DXR_Create_Signature_LOCAL_4x32(ID3D12Device *device) {
   D3D12_ROOT_PARAMETER descRootParameter = {};
   descRootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;

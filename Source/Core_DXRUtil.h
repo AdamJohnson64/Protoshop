@@ -23,6 +23,10 @@ DXR_Create_Signature_LOCAL_4x32(ID3D12Device *device);
 CComPtr<ID3D12RootSignature>
 DXR_Create_Signature_LOCAL_1SRV(ID3D12Device *device);
 
+// Create a DXR LOCAL root signature that contains two texture reference.
+CComPtr<ID3D12RootSignature>
+DXR_Create_Signature_LOCAL_2SRV(ID3D12Device *device);
+
 D3D12_RAYTRACING_INSTANCE_DESC
 Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transform, int hitgroup,
                                     D3D12_GPU_VIRTUAL_ADDRESS blas);
