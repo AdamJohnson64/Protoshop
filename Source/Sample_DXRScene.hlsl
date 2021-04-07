@@ -30,8 +30,14 @@ float3x3 cotangent_frame( float3 N, float3 p, float2 uv ) {
   return float3x3( T * invmax, B * invmax, N );
 }
 
+[shader("miss")]
+void PrimaryMiss(inout RayPayload rayPayload)
+{
+    rayPayload.Color = float3(0, 0, 0);
+}
+
 [shader("closesthit")]
-void MaterialTextured(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+void PrimaryMaterialTextured(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
   // Locate and extract the vertex attributes for this triangle.
   // - Vertex attributes are uploaded into an SRV (t4).
@@ -70,9 +76,28 @@ void MaterialTextured(inout RayPayload rayPayload, in IntersectionAttributes int
   float invmax = rsqrt( max( dot(T,T), dot(B,B) ) );
   float3x3 matTangentFrame = float3x3( T * invmax, B * invmax, normal );
   float3 normalBump = normalize(mul(texelNormal * 2 - 1, matTangentFrame));
-
+  
+  // Fire a single shadow ray to demonstrate hit group offsets.
+  float3 lightOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+  float3 lightDirection = float3(-3, 1, 0.1) - lightOrigin;
+  RayDesc rayDescShadow = { lightOrigin + lightDirection * DEFAULT_TMIN, 0, lightDirection, 1 };
+  RayPayload shadowRayPayload;
+  shadowRayPayload.Color = float3(0, 0, 0);
+  TraceRay(raytracingAccelerationStructure, RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, 1, 0, 1, rayDescShadow, shadowRayPayload);
   // Calculate a simple dot product lighting.
-  float illum = clamp(dot(normalBump, normalize(float3(1, 1, -1))), 0, 1);
-  rayPayload.Color = illum * texelDiffuse;
-  //rayPayload.Color = (vectorNormal + 1) / 2;
+  float illum = clamp(dot(normalBump, normalize(lightDirection)), 0, 1);
+  // Emit the color with dot product ligiting and simple shadowing.
+  rayPayload.Color = texelDiffuse * illum * shadowRayPayload.Color;
+}
+
+[shader("miss")]
+void ShadowMiss(inout RayPayload rayPayload)
+{
+    rayPayload.Color = float3(1, 1, 1);
+}
+
+[shader("closesthit")]
+void ShadowMaterialTextured(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+{
+    rayPayload.Color = float3(0.25, 0.25, 0.25);
 }

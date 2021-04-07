@@ -55,10 +55,13 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     setup.pShaderBytecode = g_dxr_shader;
     setup.BytecodeLength = sizeof(g_dxr_shader);
     setup.MaxPayloadSizeInBytes = sizeof(float[3]); // Size of RayPayload
-    setup.MaxTraceRecursionDepth = 1;
-    setup.HitGroups.push_back({L"HitGroupTexturedMesh",
+    setup.MaxTraceRecursionDepth = 2;
+    setup.HitGroups.push_back({L"PrimaryTexturedMesh",
                                D3D12_HIT_GROUP_TYPE_TRIANGLES, nullptr,
-                               L"MaterialTextured", nullptr});
+                               L"PrimaryMaterialTextured", nullptr});
+    setup.HitGroups.push_back({L"ShadowTexturedMesh",
+                               D3D12_HIT_GROUP_TYPE_TRIANGLES, nullptr,
+                               L"ShadowMaterialTextured", nullptr});
     TRYD3D(device->m_pDevice->CreateStateObject(
         ConfigureRaytracerPipeline(setup), __uuidof(ID3D12StateObject),
         (void **)&pipelineStateObject));
@@ -79,9 +82,13 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
     memcpy(&sbtData[0] + sbtHelper.GetShaderIdentifierOffset(0),
            stateObjectProperties->GetShaderIdentifier(L"RayGenerationMVPClip"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    // Shader Index 1 - Miss Shader
+    // Shader Index 1 - Miss Shader (Primary Rays)
     memcpy(&sbtData[0] + sbtHelper.GetShaderIdentifierOffset(1),
-           stateObjectProperties->GetShaderIdentifier(L"Miss"),
+           stateObjectProperties->GetShaderIdentifier(L"PrimaryMiss"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    // Shader Index 2 - Miss Shader (Shadow Rays)
+    memcpy(&sbtData[0] + sbtHelper.GetShaderIdentifierOffset(2),
+           stateObjectProperties->GetShaderIdentifier(L"ShadowMiss"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
   }
 #pragma region - Texture Handling -
@@ -154,9 +161,9 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
         cacheTextureFromFileRef(objMaterial->NormalMap.get());
     // Set up the shader binding table entry for this material.
     int shaderTableHitGroup = countMaterialsSoFar;
-    int shaderTableIndex = 2 + countMaterialsSoFar;
+    int shaderTableIndex = 3 + countMaterialsSoFar;
     memcpy(&sbtData[0] + sbtHelper.GetShaderIdentifierOffset(shaderTableIndex),
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupTexturedMesh"),
+           stateObjectProperties->GetShaderIdentifier(L"PrimaryTexturedMesh"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     memcpy(&sbtData[0] +
                sbtHelper.GetShaderRootArgumentOffset(shaderTableIndex, 0),
@@ -166,7 +173,11 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
                sbtHelper.GetShaderRootArgumentOffset(shaderTableIndex, 1),
            &newNormalMapEntry->descriptorGPU,
            sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
-    ++countMaterialsSoFar;
+    memcpy(&sbtData[0] +
+               sbtHelper.GetShaderIdentifierOffset(shaderTableIndex + 1),
+           stateObjectProperties->GetShaderIdentifier(L"ShadowTexturedMesh"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    countMaterialsSoFar += 2;
     return shaderTableHitGroup;
   };
 #pragma endregion
@@ -326,10 +337,12 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
             desc.MissShaderTable.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
                 sbtHelper.GetShaderIdentifierOffset(1);
-            desc.MissShaderTable.SizeInBytes = sbtHelper.GetShaderEntrySize();
+            desc.MissShaderTable.SizeInBytes =
+                sbtHelper.GetShaderEntrySize() * 2;
+            desc.MissShaderTable.StrideInBytes = sbtHelper.GetShaderEntrySize();
             desc.HitGroupTable.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
-                sbtHelper.GetShaderIdentifierOffset(2);
+                sbtHelper.GetShaderIdentifierOffset(3);
             desc.HitGroupTable.SizeInBytes = sbtHelper.GetShaderEntrySize() * 2;
             desc.HitGroupTable.StrideInBytes = sbtHelper.GetShaderEntrySize();
             desc.Width = descTarget.Width;
