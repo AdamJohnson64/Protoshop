@@ -129,13 +129,20 @@
     <Text Include="LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Source\Sample_DXRAmbientOcclusion.hlsl" />
-    <FxCompile Include="Source\Sample_DXRMesh.hlsl" />
-    <FxCompile Include="Source\Sample_DXRBasic.hlsl" />
-    <FxCompile Include="Source\Sample_DXRPathTrace.hlsl" />
-    <FxCompile Include="Source\Sample_DXRScene.hlsl" />
-    <FxCompile Include="Source\Sample_DXRTexture.hlsl" />
-    <FxCompile Include="Source\Sample_DXRWhitted.hlsl" />
+    <FxCompile Include="Source\*.cs.hlsl">
+      <EntryPointName>main</EntryPointName>
+      <HeaderFileOutput>$(ProjectDir)\Source\generated.%(Filename).h</HeaderFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType>Compute</ShaderType>
+      <VariableName>g_cs_shader</VariableName>
+    </FxCompile>
+    <FxCompile Include="Source\*.dxr.hlsl">
+      <EntryPointName />
+      <HeaderFileOutput>$(ProjectDir)\Source\generated.%(Filename).h</HeaderFileOutput>
+      <ShaderModel>6.4</ShaderModel>
+      <ShaderType>Library</ShaderType>
+      <VariableName>g_dxr_shader</VariableName>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
@@ -176,17 +183,10 @@
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(ProjectDir)Submodules\freetype\include;$(ProjectDir)Submodules\openvr\headers</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>VULKAN_INSTALLED;FT2_BUILD_LIBRARY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
-    <FxCompile>
-      <EntryPointName />
-      <HeaderFileOutput>$(ProjectDir)\Source\generated.%(Filename).dxr.h</HeaderFileOutput>
-      <ShaderModel>6.4</ShaderModel>
-      <ShaderType>Library</ShaderType>
-      <VariableName>g_dxr_shader</VariableName>
-    </FxCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
