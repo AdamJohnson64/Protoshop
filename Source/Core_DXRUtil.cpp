@@ -20,34 +20,37 @@ DXR_Create_Signature(ID3D12Device *device,
   return pRootSignature;
 }
 
-CComPtr<ID3D12RootSignature>
-DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device *device) {
-  std::array<D3D12_DESCRIPTOR_RANGE, 4> descDescriptorRange;
-  descDescriptorRange[0].BaseShaderRegister = 0;
-  descDescriptorRange[0].NumDescriptors = 1;
-  descDescriptorRange[0].RegisterSpace = 0;
-  descDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-  descDescriptorRange[0].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  descDescriptorRange[1].BaseShaderRegister = 0;
-  descDescriptorRange[1].NumDescriptors = 1;
-  descDescriptorRange[1].RegisterSpace = 0;
-  descDescriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-  descDescriptorRange[1].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  descDescriptorRange[2].BaseShaderRegister = 0;
-  descDescriptorRange[2].NumDescriptors = 1;
-  descDescriptorRange[2].RegisterSpace = 0;
-  descDescriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-  descDescriptorRange[2].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  // This cheeky SRV only serves DXR; the rest of the time it goes unused.
-  descDescriptorRange[3].BaseShaderRegister = 4;
-  descDescriptorRange[3].NumDescriptors = 1;
-  descDescriptorRange[3].RegisterSpace = 0;
-  descDescriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-  descDescriptorRange[3].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+std::vector<D3D12_DESCRIPTOR_RANGE> DXR_Create_Signature_Ranges(
+    const std::vector<SignatureRegisterBinding> &signature) {
+  std::vector<D3D12_DESCRIPTOR_RANGE> descDescriptorRange;
+  for (const auto &entry : signature) {
+    D3D12_DESCRIPTOR_RANGE newRange = {};
+    newRange.BaseShaderRegister = entry.RegisterIndex;
+    newRange.NumDescriptors = 1;
+    newRange.RegisterSpace = 0;
+    switch (entry.ResourceType) {
+    case ShaderResourceView:
+      newRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+      break;
+    case UnorderedAccessView:
+      newRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+      break;
+    case ConstantBufferView:
+      newRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+      break;
+    }
+    newRange.OffsetInDescriptorsFromTableStart =
+        D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    descDescriptorRange.push_back(newRange);
+  }
+  return descDescriptorRange;
+}
+
+CComPtr<ID3D12RootSignature> DXR_Create_Simple_Signature_GLOBAL(
+    ID3D12Device *device,
+    const std::vector<SignatureRegisterBinding> &signature) {
+  std::vector<D3D12_DESCRIPTOR_RANGE> descDescriptorRange =
+      DXR_Create_Signature_Ranges(signature);
   D3D12_ROOT_PARAMETER descRootParameter = {};
   descRootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
   descRootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -61,56 +64,32 @@ DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device *device) {
   return DXR_Create_Signature(device, descSignature);
 }
 
-CComPtr<ID3D12RootSignature>
-DXR_Create_Signature_LOCAL_1SRV(ID3D12Device *device) {
-  D3D12_DESCRIPTOR_RANGE descDescriptorRange = {};
-  descDescriptorRange.BaseShaderRegister = 1;
-  descDescriptorRange.NumDescriptors = 1;
-  descDescriptorRange.RegisterSpace = 0;
-  descDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-  descDescriptorRange.OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  D3D12_ROOT_PARAMETER descRootParameter = {};
-  descRootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-  descRootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-  descRootParameter.DescriptorTable.NumDescriptorRanges = 1;
-  descRootParameter.DescriptorTable.pDescriptorRanges = &descDescriptorRange;
+CComPtr<ID3D12RootSignature> DXR_Create_Simple_Signature_LOCAL(
+    ID3D12Device *device,
+    const std::vector<SignatureRegisterBinding> &signature) {
+  std::vector<D3D12_DESCRIPTOR_RANGE> descDescriptorRange =
+      DXR_Create_Signature_Ranges(signature);
+  std::vector<D3D12_ROOT_PARAMETER> descRootParameter;
+  for (const auto &entry : descDescriptorRange) {
+    D3D12_ROOT_PARAMETER newParameter = {};
+    newParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    newParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    newParameter.DescriptorTable.NumDescriptorRanges = 1;
+    newParameter.DescriptorTable.pDescriptorRanges = &entry;
+    descRootParameter.push_back(newParameter);
+  }
   D3D12_ROOT_SIGNATURE_DESC descSignature = {};
-  descSignature.NumParameters = 1;
-  descSignature.pParameters = &descRootParameter;
+  descSignature.NumParameters = descRootParameter.size();
+  descSignature.pParameters = &descRootParameter[0];
   descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
   return DXR_Create_Signature(device, descSignature);
 }
 
 CComPtr<ID3D12RootSignature>
-DXR_Create_Signature_LOCAL_2SRV(ID3D12Device *device) {
-  std::array<D3D12_DESCRIPTOR_RANGE, 2> descDescriptorRange = {};
-  descDescriptorRange[0].BaseShaderRegister = 1;
-  descDescriptorRange[0].NumDescriptors = 1;
-  descDescriptorRange[0].RegisterSpace = 0;
-  descDescriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-  descDescriptorRange[0].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  descDescriptorRange[1].BaseShaderRegister = 2;
-  descDescriptorRange[1].NumDescriptors = 1;
-  descDescriptorRange[1].RegisterSpace = 0;
-  descDescriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-  descDescriptorRange[1].OffsetInDescriptorsFromTableStart =
-      D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-  std::array<D3D12_ROOT_PARAMETER, 2> descRootParameter = {};
-  descRootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-  descRootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-  descRootParameter[0].DescriptorTable.NumDescriptorRanges = 1;
-  descRootParameter[0].DescriptorTable.pDescriptorRanges = &descDescriptorRange[0];
-  descRootParameter[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-  descRootParameter[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-  descRootParameter[1].DescriptorTable.NumDescriptorRanges = 1;
-  descRootParameter[1].DescriptorTable.pDescriptorRanges = &descDescriptorRange[1];
-  D3D12_ROOT_SIGNATURE_DESC descSignature = {};
-  descSignature.NumParameters = 2;
-  descSignature.pParameters = &descRootParameter[0];
-  descSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-  return DXR_Create_Signature(device, descSignature);
+DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device *device) {
+  return DXR_Create_Simple_Signature_GLOBAL(device, {{0, UnorderedAccessView},
+                                                     {0, ShaderResourceView},
+                                                     {0, ConstantBufferView}});
 }
 
 CComPtr<ID3D12RootSignature>
@@ -223,8 +202,8 @@ CComPtr<ID3D12Resource1> DXRCreateBLAS(Direct3D12Device *device,
                                        DXGI_FORMAT vertexFormat,
                                        const void *indices, int indexCount,
                                        DXGI_FORMAT indexFormat) {
-  // The GPU is doing the actual acceleration structure building work so we need
-  // all the mesh data up on GPU first.
+  // The GPU is doing the actual acceleration structure building work so we
+  // need all the mesh data up on GPU first.
   CComPtr<ID3D12Resource1> ResourceVertices = D3D12_Create_Buffer(
       device, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
       DXGI_FORMAT_Size(vertexFormat) * vertexCount,
@@ -300,8 +279,8 @@ DXRCreateTLAS(Direct3D12Device *device,
   ////////////////////////////////////////////////////////////////////////////////
   CComPtr<ID3D12Resource1> ResourceTLAS;
   {
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS descRaytracingInputs =
-        {};
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
+    descRaytracingInputs = {};
     descRaytracingInputs.Type =
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
     descRaytracingInputs.NumDescs = instanceCount;
@@ -361,7 +340,7 @@ RaytracingSBTHelper::RaytracingSBTHelper(size_t countShaders,
   m_shaderEntrySize =
       AlignUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES +
                   sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) * countCBVSRVUAV,
-              D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+              D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
   m_shaderTableSize = m_shaderEntrySize * countShaders;
 }
 

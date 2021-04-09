@@ -26,7 +26,8 @@ CreateSample_DXRTexture(std::shared_ptr<Direct3D12Device> device) {
   CComPtr<ID3D12RootSignature> rootSignatureGLOBAL =
       DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(device->m_pDevice);
   CComPtr<ID3D12RootSignature> rootSignatureLOCAL =
-      DXR_Create_Signature_LOCAL_1SRV(device->m_pDevice);
+      DXR_Create_Simple_Signature_LOCAL(device->m_pDevice,
+                                        {{1, ShaderResourceView}});
   ////////////////////////////////////////////////////////////////////////////////
   // PIPELINE - Build the pipeline with all ray shaders.
   CComPtr<ID3D12StateObject> pipelineStateObject;

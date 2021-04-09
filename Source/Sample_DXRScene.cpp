@@ -33,9 +33,16 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   CComPtr<ID3D12DescriptorHeap> descriptorHeapCBVSRVUAV =
       D3D12_Create_DescriptorHeap_CBVSRVUAV(device->m_pDevice, 256);
   CComPtr<ID3D12RootSignature> rootSignatureGLOBAL =
-      DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(device->m_pDevice);
+      DXR_Create_Simple_Signature_GLOBAL(device->m_pDevice,
+                                         {{0, UnorderedAccessView},
+                                          {0, ShaderResourceView},
+                                          {0, ConstantBufferView},
+                                          // This holds the vertex attributes.
+                                          {4, ShaderResourceView}});
   CComPtr<ID3D12RootSignature> rootSignatureLOCAL =
-      DXR_Create_Signature_LOCAL_2SRV(device->m_pDevice);
+      DXR_Create_Simple_Signature_LOCAL(
+          device->m_pDevice,
+          {{1, ShaderResourceView}, {2, ShaderResourceView}});
   ////////////////////////////////////////////////////////////////////////////////
   // Map out parts of the descriptor table.
   D3D12_CPU_DESCRIPTOR_HANDLE descriptorBase =

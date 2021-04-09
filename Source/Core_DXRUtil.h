@@ -8,6 +8,33 @@
 
 class Direct3D12Device;
 
+enum SignatureEntry {
+  ShaderResourceView,
+  UnorderedAccessView,
+  ConstantBufferView
+};
+
+struct SignatureRegisterBinding {
+  int RegisterIndex;
+  SignatureEntry ResourceType;
+};
+
+// Create a GLOBAL root signature.
+// Since the global root signature will not change in-frame we bind all
+// resources in a single descriptor table at the root (one descriptor table).
+CComPtr<ID3D12RootSignature> DXR_Create_Simple_Signature_GLOBAL(
+    ID3D12Device *device,
+    const std::vector<SignatureRegisterBinding> &signature);
+
+// Create a LOCAL root signature.
+// It is assumed that each binding will have it's own root entry such that all
+// resources can be separately modified. Note: THIS IS NOT WHAT YOU MAY WANT. It
+// is also possible to bind descriptor ranges for (e.g.) logical groupings of
+// albedo, normal, specular maps. We don't support that here.
+CComPtr<ID3D12RootSignature> DXR_Create_Simple_Signature_LOCAL(
+    ID3D12Device *device,
+    const std::vector<SignatureRegisterBinding> &signature);
+
 // Create a DXR GLOBAL root signature that contains the required output UAV,
 // an SRV for the acceleration structure, and a CBV for global constants.
 // This will be attached via the compute root signature and descriptor heap.
@@ -18,14 +45,6 @@ DXR_Create_Signature_GLOBAL_1UAV1SRV1CBV(ID3D12Device *device);
 // material shader. This will be attached via the shader table.
 CComPtr<ID3D12RootSignature>
 DXR_Create_Signature_LOCAL_4x32(ID3D12Device *device);
-
-// Create a DXR LOCAL root signature that contains only a texture reference.
-CComPtr<ID3D12RootSignature>
-DXR_Create_Signature_LOCAL_1SRV(ID3D12Device *device);
-
-// Create a DXR LOCAL root signature that contains two texture reference.
-CComPtr<ID3D12RootSignature>
-DXR_Create_Signature_LOCAL_2SRV(ID3D12Device *device);
 
 D3D12_RAYTRACING_INSTANCE_DESC
 Make_D3D12_RAYTRACING_INSTANCE_DESC(const Matrix44 &transform, int hitgroup,
