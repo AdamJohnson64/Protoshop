@@ -24,17 +24,23 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
     setup.GlobalRootSignature = rootSignatureGLOBAL.p;
     setup.pShaderBytecode = g_dxr_shader;
     setup.BytecodeLength = sizeof(g_dxr_shader);
-    setup.MaxPayloadSizeInBytes = sizeof(float[3]) + sizeof(float) +
-                                  sizeof(int) +
-                                  sizeof(int); // Size of RayPayload
+    setup.MaxPayloadSizeInBytes = sizeof(float[3]);
     setup.MaxTraceRecursionDepth = 2;
-    setup.HitGroups.push_back({L"HitGroupAmbientOcclusionPlane",
+    setup.HitGroups.push_back({L"HitGroupPrimaryAmbientOcclusionPlane",
                                D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
-                               nullptr, L"MaterialAmbientOcclusion",
+                               nullptr, L"PrimaryMaterialAmbientOcclusion",
                                L"IntersectPlane"});
-    setup.HitGroups.push_back({L"HitGroupAmbientOcclusionSphere",
+    setup.HitGroups.push_back({L"HitGroupShadowAmbientOcclusionPlane",
                                D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
-                               nullptr, L"MaterialAmbientOcclusion",
+                               nullptr, L"ShadowMaterialAmbientOcclusion",
+                               L"IntersectPlane"});
+    setup.HitGroups.push_back({L"HitGroupPrimaryAmbientOcclusionSphere",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"PrimaryMaterialAmbientOcclusion",
+                               L"IntersectSphere"});
+    setup.HitGroups.push_back({L"HitGroupShadowAmbientOcclusionSphere",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"ShadowMaterialAmbientOcclusion",
                                L"IntersectSphere"});
     TRYD3D(device->m_pDevice->CreateStateObject(
         ConfigureRaytracerPipeline(setup), __uuidof(ID3D12StateObject),
@@ -46,52 +52,52 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
   //
   // Our shader entry is a shader function entrypoint only; no other
   // descriptors or data.
-  const uint32_t shaderEntrySize =
-      AlignUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES,
-              D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-  // Ray Generation shader comes first, aligned as necessary.
-  const uint32_t descriptorOffsetRayGenerationShader = 0;
-  // Miss shader comes next.
-  const uint32_t descriptorOffsetMissShader =
-      AlignUp(descriptorOffsetRayGenerationShader + shaderEntrySize,
-              D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-  // Then all the HitGroup shaders.
-  const uint32_t descriptorOffsetHitGroup =
-      AlignUp(descriptorOffsetMissShader + shaderEntrySize,
-              D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-  // The total size of the table we expect.
-  const uint32_t shaderTableSize =
-      descriptorOffsetHitGroup + shaderEntrySize * 2;
+  RaytracingSBTHelper sbtHelper(256, 0);
   // Now build this table.
   CComPtr<ID3D12Resource1> resourceShaderTable;
   {
     CComPtr<ID3D12StateObjectProperties> stateObjectProperties;
     TRYD3D(pipelineStateObject->QueryInterface<ID3D12StateObjectProperties>(
         &stateObjectProperties));
-    std::unique_ptr<uint8_t[]> shaderTableCPU(new uint8_t[shaderTableSize]);
-    memset(&shaderTableCPU[0], 0, shaderTableSize);
+    std::unique_ptr<uint8_t[]> shaderTableCPU(
+        new uint8_t[sbtHelper.GetShaderTableSize()]);
+    memset(&shaderTableCPU[0], 0, sbtHelper.GetShaderTableSize());
     // Shader Index 0 - Ray Generation Shader
-    memcpy(&shaderTableCPU[descriptorOffsetRayGenerationShader],
+    memcpy(&shaderTableCPU[sbtHelper.GetShaderIdentifierOffset(0)],
            stateObjectProperties->GetShaderIdentifier(L"RayGenerationMVPClip"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 1 - Miss Shader
-    memcpy(&shaderTableCPU[descriptorOffsetMissShader],
-           stateObjectProperties->GetShaderIdentifier(L"Miss"),
+    memcpy(&shaderTableCPU[sbtHelper.GetShaderIdentifierOffset(1)],
+           stateObjectProperties->GetShaderIdentifier(L"PrimaryMiss"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    // Shader Index 1 - Miss Shader
+    memcpy(&shaderTableCPU[sbtHelper.GetShaderIdentifierOffset(2)],
+           stateObjectProperties->GetShaderIdentifier(L"ShadowMiss"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     // Shader Index 2 - Hit Shader 1
-    memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 0],
+    memcpy(&shaderTableCPU[sbtHelper.GetShaderIdentifierOffset(3)],
            stateObjectProperties->GetShaderIdentifier(
-               L"HitGroupAmbientOcclusionPlane"),
+               L"HitGroupPrimaryAmbientOcclusionPlane"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    // Shader Index 3 - Hit Shader 2
-    memcpy(&shaderTableCPU[descriptorOffsetHitGroup + shaderEntrySize * 1],
+    // Shader Index 3 - Hit Shader 1
+    memcpy(&shaderTableCPU[sbtHelper.GetShaderIdentifierOffset(4)],
            stateObjectProperties->GetShaderIdentifier(
-               L"HitGroupAmbientOcclusionSphere"),
+               L"HitGroupShadowAmbientOcclusionPlane"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    // Shader Index 4 - Hit Shader 2
+    memcpy(&shaderTableCPU[sbtHelper.GetShaderIdentifierOffset(5)],
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupPrimaryAmbientOcclusionSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    // Shader Index 5 - Hit Shader 2
+    memcpy(&shaderTableCPU[sbtHelper.GetShaderIdentifierOffset(6)],
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupShadowAmbientOcclusionSphere"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     resourceShaderTable = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-        D3D12_RESOURCE_STATE_COMMON, shaderTableSize, shaderTableSize,
-        &shaderTableCPU[0]);
+        D3D12_RESOURCE_STATE_COMMON, sbtHelper.GetShaderTableSize(),
+        sbtHelper.GetShaderTableSize(), &shaderTableCPU[0]);
     resourceShaderTable->SetName(L"DXR Shader Table");
   }
   ////////////////////////////////////////////////////////////////////////////////
@@ -107,13 +113,13 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
         CreateMatrixScale(Vector3{10, 1, 10}), 0,
         resourceBLAS->GetGPUVirtualAddress());
     DxrInstance[1] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-        CreateMatrixTranslate(Vector3{-2, 1, 0}), 1,
+        CreateMatrixTranslate(Vector3{-2, 1, 0}), 2,
         resourceBLAS->GetGPUVirtualAddress());
     DxrInstance[2] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-        CreateMatrixTranslate(Vector3{0, 1, 0}), 1,
+        CreateMatrixTranslate(Vector3{0, 1, 0}), 2,
         resourceBLAS->GetGPUVirtualAddress());
     DxrInstance[3] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-        CreateMatrixTranslate(Vector3{2, 1, 0}), 1,
+        CreateMatrixTranslate(Vector3{2, 1, 0}), 2,
         resourceBLAS->GetGPUVirtualAddress());
     resourceInstance = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
@@ -198,17 +204,19 @@ CreateSample_DXRAmbientOcclusion(std::shared_ptr<Direct3D12Device> device) {
             D3D12_DISPATCH_RAYS_DESC desc = {};
             desc.RayGenerationShaderRecord.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
-                descriptorOffsetRayGenerationShader;
-            desc.RayGenerationShaderRecord.SizeInBytes = shaderEntrySize;
+                sbtHelper.GetShaderIdentifierOffset(0);
+            desc.RayGenerationShaderRecord.SizeInBytes =
+                sbtHelper.GetShaderEntrySize();
             desc.MissShaderTable.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
-                descriptorOffsetMissShader;
-            desc.MissShaderTable.SizeInBytes = shaderEntrySize;
+                sbtHelper.GetShaderIdentifierOffset(1);
+            desc.MissShaderTable.SizeInBytes = sbtHelper.GetShaderEntrySize();
+            desc.MissShaderTable.StrideInBytes = sbtHelper.GetShaderEntrySize();
             desc.HitGroupTable.StartAddress =
                 resourceShaderTable->GetGPUVirtualAddress() +
-                descriptorOffsetHitGroup;
-            desc.HitGroupTable.SizeInBytes = shaderEntrySize;
-            desc.HitGroupTable.StrideInBytes = shaderEntrySize;
+                sbtHelper.GetShaderIdentifierOffset(3);
+            desc.HitGroupTable.SizeInBytes = sbtHelper.GetShaderEntrySize();
+            desc.HitGroupTable.StrideInBytes = sbtHelper.GetShaderEntrySize();
             desc.Width = descTarget.Width;
             desc.Height = descTarget.Height;
             desc.Depth = 1;
