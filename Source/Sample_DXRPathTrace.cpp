@@ -41,19 +41,32 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     setup.LocalRootSignature = rootSignatureLOCAL.p;
     setup.pShaderBytecode = g_dxr_shader;
     setup.BytecodeLength = sizeof(g_dxr_shader);
-    setup.MaxPayloadSizeInBytes = sizeof(float[3]) + sizeof(float) +
-                                  sizeof(int) +
-                                  sizeof(int); // Size of RayPayload
+    setup.MaxPayloadSizeInBytes = sizeof(float[3]);
     setup.MaxTraceRecursionDepth = 2;
-    setup.HitGroups.push_back({L"HitGroupDiffusePlane",
+    setup.HitGroups.push_back({L"HitGroupPrimaryDiffusePlane",
                                D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
-                               nullptr, L"MaterialDiffuse", L"IntersectPlane"});
-    setup.HitGroups.push_back(
-        {L"HitGroupDiffuseSphere", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
-         nullptr, L"MaterialDiffuse", L"IntersectSphere"});
-    setup.HitGroups.push_back(
-        {L"HitGroupEmissiveSphere", D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
-         nullptr, L"MaterialEmissive", L"IntersectSphere"});
+                               nullptr, L"PrimaryMaterialDiffuse",
+                               L"IntersectPlane"});
+    setup.HitGroups.push_back({L"HitGroupShadowDiffusePlane",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"ShadowMaterialDiffuse",
+                               L"IntersectPlane"});
+    setup.HitGroups.push_back({L"HitGroupPrimaryDiffuseSphere",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"PrimaryMaterialDiffuse",
+                               L"IntersectSphere"});
+    setup.HitGroups.push_back({L"HitGroupShadowDiffuseSphere",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"ShadowMaterialDiffuse",
+                               L"IntersectSphere"});
+    setup.HitGroups.push_back({L"HitGroupPrimaryEmissiveSphere",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"PrimaryMaterialEmissive",
+                               L"IntersectSphere"});
+    setup.HitGroups.push_back({L"HitGroupShadowEmissiveSphere",
+                               D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE,
+                               nullptr, L"ShadowMaterialEmissive",
+                               L"IntersectSphere"});
     TRYD3D(device->m_pDevice->CreateStateObject(
         ConfigureRaytracerPipeline(setup), __uuidof(ID3D12StateObject),
         (void **)&pipelineStateObject));
@@ -64,7 +77,7 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
   //
   // Our shader entry is a shader function entrypoint + 4x32bit values in
   // the signature.
-  RaytracingSBTHelper sbtHelper(7, 1);
+  RaytracingSBTHelper sbtHelper(64, 2);
   CComPtr<ID3D12Resource1> ResourceShaderTable;
   {
     Vector4 albedoRed = {1, 0, 0, 0};
@@ -77,52 +90,99 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
     std::unique_ptr<uint8_t[]> sbtData(
         new uint8_t[sbtHelper.GetShaderTableSize()]);
     memset(sbtData.get(), 0, sbtHelper.GetShaderTableSize());
-    // Shader Index 0 - Ray Generation Shader
+
+    // Ray Generation and Miss Shaders
     memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(0),
            stateObjectProperties->GetShaderIdentifier(L"RayGenerationMVPClip"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    // Shader Index 1 - Miss Shader
     memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(1),
-           stateObjectProperties->GetShaderIdentifier(L"Miss"),
+           stateObjectProperties->GetShaderIdentifier(L"PrimaryMiss"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    // Shader Index 2 - Hit Shader 1
     memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(2),
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupDiffusePlane"),
+           stateObjectProperties->GetShaderIdentifier(L"ShadowMiss"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    *reinterpret_cast<Vector4 *>(sbtData.get() +
-                                 sbtHelper.GetShaderRootArgumentOffset(2, 0)) =
-        albedoWhite;
-    // Shader Index 3 - Hit Shader 2
+
+    // Shader pair.
     memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(3),
-           stateObjectProperties->GetShaderIdentifier(L"HitGroupDiffuseSphere"),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupPrimaryDiffusePlane"),
            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(sbtData.get() +
                                  sbtHelper.GetShaderRootArgumentOffset(3, 0)) =
         albedoWhite;
-    // Shader Index 4 - Hit Shader 3
-    memcpy(
-        sbtData.get() + sbtHelper.GetShaderIdentifierOffset(4),
-        stateObjectProperties->GetShaderIdentifier(L"HitGroupEmissiveSphere"),
-        D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(4),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupShadowDiffusePlane"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(sbtData.get() +
                                  sbtHelper.GetShaderRootArgumentOffset(4, 0)) =
-        albedoRed;
-    // Shader Index 5 - Hit Shader 4
-    memcpy(
-        sbtData.get() + sbtHelper.GetShaderIdentifierOffset(5),
-        stateObjectProperties->GetShaderIdentifier(L"HitGroupEmissiveSphere"),
-        D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+        albedoWhite;
+
+    // Shader pair.
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(5),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupPrimaryDiffuseSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(sbtData.get() +
                                  sbtHelper.GetShaderRootArgumentOffset(5, 0)) =
-        albedoGreen;
-    // Shader Index 6 - Hit Shader 5
-    memcpy(
-        sbtData.get() + sbtHelper.GetShaderIdentifierOffset(6),
-        stateObjectProperties->GetShaderIdentifier(L"HitGroupEmissiveSphere"),
-        D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+        albedoWhite;
+
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(6),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupShadowDiffuseSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     *reinterpret_cast<Vector4 *>(sbtData.get() +
                                  sbtHelper.GetShaderRootArgumentOffset(6, 0)) =
+        albedoWhite;
+
+    // Shader pair.
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(7),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupPrimaryEmissiveSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    *reinterpret_cast<Vector4 *>(sbtData.get() +
+                                 sbtHelper.GetShaderRootArgumentOffset(7, 0)) =
+        albedoRed;
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(8),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupShadowEmissiveSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    *reinterpret_cast<Vector4 *>(sbtData.get() +
+                                 sbtHelper.GetShaderRootArgumentOffset(8, 0)) =
+        albedoRed;
+
+    // Shader pair.
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(9),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupPrimaryEmissiveSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    *reinterpret_cast<Vector4 *>(sbtData.get() +
+                                 sbtHelper.GetShaderRootArgumentOffset(9, 0)) =
+        albedoGreen;
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(10),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupShadowEmissiveSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    *reinterpret_cast<Vector4 *>(sbtData.get() +
+                                 sbtHelper.GetShaderRootArgumentOffset(10, 0)) =
+        albedoGreen;
+
+    // Shader pair.
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(11),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupPrimaryEmissiveSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    *reinterpret_cast<Vector4 *>(sbtData.get() +
+                                 sbtHelper.GetShaderRootArgumentOffset(11, 0)) =
         albedoBlue;
+    memcpy(sbtData.get() + sbtHelper.GetShaderIdentifierOffset(12),
+           stateObjectProperties->GetShaderIdentifier(
+               L"HitGroupShadowEmissiveSphere"),
+           D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    *reinterpret_cast<Vector4 *>(sbtData.get() +
+                                 sbtHelper.GetShaderRootArgumentOffset(12, 0)) =
+        albedoBlue;
+
     ResourceShaderTable = D3D12_Create_Buffer(
         device.get(), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
         D3D12_RESOURCE_STATE_COMMON, sbtHelper.GetShaderTableSize(),
@@ -157,19 +217,19 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
       DxrInstance[0] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
           CreateMatrixScale(Vector3{10, 1, 10}), 0, resourceBLAS);
       DxrInstance[1] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
-          CreateMatrixTranslate(Vector3{0, 1, 0}), 1, resourceBLAS);
+          CreateMatrixTranslate(Vector3{0, 1, 0}), 2, resourceBLAS);
       DxrInstance[2] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
           CreateMatrixTranslate(Vector3{cosf(rotate + Pi<float> * 0 / 3) * 2, 1,
                                         sinf(rotate + Pi<float> * 0 / 3) * 2}),
-          2, resourceBLAS);
+          4, resourceBLAS);
       DxrInstance[3] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
           CreateMatrixTranslate(Vector3{cosf(rotate + Pi<float> * 2 / 3) * 2, 1,
                                         sinf(rotate + Pi<float> * 2 / 3) * 2}),
-          3, resourceBLAS);
+          6, resourceBLAS);
       DxrInstance[4] = Make_D3D12_RAYTRACING_INSTANCE_DESC(
           CreateMatrixTranslate(Vector3{cosf(rotate + Pi<float> * 4 / 3) * 2, 1,
                                         sinf(rotate + Pi<float> * 4 / 3) * 2}),
-          4, resourceBLAS);
+          8, resourceBLAS);
       resourceTLAS =
           DXRCreateTLAS(device.get(), &DxrInstance[0], DxrInstance.size());
       rotate += 0.01f;
@@ -227,10 +287,12 @@ CreateSample_DXRPathTrace(std::shared_ptr<Direct3D12Device> device) {
                 ResourceShaderTable->GetGPUVirtualAddress() +
                 sbtHelper.GetShaderIdentifierOffset(1);
             desc.MissShaderTable.SizeInBytes = sbtHelper.GetShaderEntrySize();
+            desc.MissShaderTable.StrideInBytes = sbtHelper.GetShaderEntrySize();
             desc.HitGroupTable.StartAddress =
                 ResourceShaderTable->GetGPUVirtualAddress() +
-                sbtHelper.GetShaderIdentifierOffset(2);
-            desc.HitGroupTable.SizeInBytes = sbtHelper.GetShaderEntrySize() * 3;
+                sbtHelper.GetShaderIdentifierOffset(3);
+            desc.HitGroupTable.SizeInBytes =
+                sbtHelper.GetShaderEntrySize() * 16;
             desc.HitGroupTable.StrideInBytes = sbtHelper.GetShaderEntrySize();
             desc.Width = descTarget.Width;
             desc.Height = descTarget.Height;

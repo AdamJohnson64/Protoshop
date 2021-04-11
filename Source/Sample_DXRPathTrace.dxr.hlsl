@@ -1,19 +1,18 @@
 #include "Sample_DXR_Common.inc"
 #include "Sample_DXR_Implicit.inc"
-#include "Sample_DXR_RayRecurse.inc"
+#include "Sample_DXR_RaySimple.inc"
 #include "Sample_DXR_Shaders.inc"
 
-[shader("closesthit")]
-void MaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+[shader("miss")]
+void PrimaryMiss(inout RayPayload rayPayload)
 {
-    if (rayPayload.RecursionLevel > 1)
-    {
-        rayPayload.Color = float3(0, 0, 0);
-        return;
-    }
+    rayPayload.Color = float3(0, 0, 0);
+}
+
+[shader("closesthit")]
+void PrimaryMaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+{
     uint2 LaunchIndex = DispatchRaysIndex().xy;
-    rayPayload.IntersectionT = RayTCurrent();
-    if (rayPayload.Flags != RAY_FLAG_NONE) return;
     float3 localX = float3(1, 0, 0);
     float3 localY = intersectionAttributes.Normal;
     float3 localZ = normalize(cross(localX, localY));
@@ -29,17 +28,32 @@ void MaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes inte
         RayDesc newRayDesc = { rayOrigin, DEFAULT_TMIN, hemisphereInTangentFrame, DEFAULT_TMAX };
         RayPayload recurseRayPayload;
         recurseRayPayload.Color = float3(0, 0, 0);
-        recurseRayPayload.IntersectionT = DEFAULT_TMAX;
-        recurseRayPayload.Flags = 1; // Do not spawn new rays.
-        recurseRayPayload.RecursionLevel = rayPayload.RecursionLevel + 1;
-        TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, newRayDesc, recurseRayPayload);
+        TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 1, 0, 1, newRayDesc, recurseRayPayload);
         accumulatedIrradiance += Albedo * recurseRayPayload.Color;
     }
     rayPayload.Color = accumulatedIrradiance / 32;
 }
 
 [shader("closesthit")]
-void MaterialEmissive(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+void PrimaryMaterialEmissive(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+{
+    rayPayload.Color = Albedo;
+}
+
+[shader("miss")]
+void ShadowMiss(inout RayPayload rayPayload)
+{
+    rayPayload.Color = float3(0, 0, 0);
+}
+
+[shader("closesthit")]
+void ShadowMaterialDiffuse(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
+{
+    rayPayload.Color = float3(0, 0, 0);
+}
+
+[shader("closesthit")]
+void ShadowMaterialEmissive(inout RayPayload rayPayload, in IntersectionAttributes intersectionAttributes)
 {
     rayPayload.Color = Albedo;
 }
