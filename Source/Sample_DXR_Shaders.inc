@@ -51,3 +51,27 @@ void Miss(inout RayPayload rayPayload)
 {
     rayPayload.Color = float3(0, 0, 0);
 }
+
+float3 AmbientOcclusion(float3 origin, float3 normal)
+{
+    float3 localX = float3(1, 0, 0);
+    float3 localY = normal;
+    float3 localZ = normalize(cross(localX, localY));
+    float3x3 tbn = float3x3(localX, localY, localZ);
+    localX = normalize(cross(localY, localZ));
+    float illuminated = 0;
+    int offset = (DispatchRaysIndex().x * DispatchRaysIndex().y * 16);
+    for (int i = 0; i < 8; ++i)
+    {
+        // This incredibly cheap sample jittering of i + x * y * 16 produces a high-frequency
+        // Moire interference pattern that looks like old-school dithering; nice.
+        float3 hemisphere = HaltonSample(i + offset).xzy;
+        float3 hemisphereInTangentFrame = mul(hemisphere, tbn);
+        RayDesc rayDesc = { origin + hemisphereInTangentFrame * 0.01, 0, hemisphereInTangentFrame, DEFAULT_TMAX };
+        RayPayload rayPayload;
+        rayPayload.Color = float3(0, 0, 0);
+        TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 1, 0, 1, rayDesc, rayPayload);
+        illuminated += rayPayload.Color.r;
+    }
+    return illuminated / 8;
+}
