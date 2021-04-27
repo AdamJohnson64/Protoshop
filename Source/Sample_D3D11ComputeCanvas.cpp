@@ -71,8 +71,8 @@ CreateSample_D3D11ComputeCanvas(std::shared_ptr<Direct3D11Device> device) {
                                                            &bufferConstants.p);
     device->GetID3D11DeviceContext()->CSSetShaderResources(0, 1,
                                                            &srvCanvasImage.p);
-    device->GetID3D11DeviceContext()->Dispatch(descBackbuffer.Width,
-                                               descBackbuffer.Height, 1);
+    device->GetID3D11DeviceContext()->Dispatch(descBackbuffer.Width / 16,
+                                               descBackbuffer.Height / 16, 1);
     device->GetID3D11DeviceContext()->ClearState();
     device->GetID3D11DeviceContext()->Flush();
   };

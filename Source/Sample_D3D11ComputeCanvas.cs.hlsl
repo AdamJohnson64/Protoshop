@@ -28,13 +28,13 @@ float4 Sample(float2 pixel)
     }
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(16, 16, 1)]
 void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
     ////////////////////////////////////////////////////////////////////////////////
     // No Supersampling.
-    renderTarget[dispatchThreadId.xy] = Sample((float2)dispatchThreadId);
-    return;
+    //renderTarget[dispatchThreadId.xy] = Sample((float2)dispatchThreadId);
+    //return;
     
     ////////////////////////////////////////////////////////////////////////////////
     // 8x8 (64 TAP) Supersampling.

@@ -90,7 +90,7 @@ float3 CalculateNormal(float3 position)
     return normalize(float3(deltax, deltay, deltaz));
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(16, 16, 1)]
 void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
     const float EPSILON = 0.001;
@@ -167,8 +167,8 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
     device->GetID3D11DeviceContext()->CSSetShader(shaderCompute, nullptr, 0);
     device->GetID3D11DeviceContext()->CSSetConstantBuffers(0, 1,
                                                            &bufferConstants.p);
-    device->GetID3D11DeviceContext()->Dispatch(descBackbuffer.Width,
-                                               descBackbuffer.Height, 1);
+    device->GetID3D11DeviceContext()->Dispatch(descBackbuffer.Width / 16,
+                                               descBackbuffer.Height / 16, 1);
     device->GetID3D11DeviceContext()->ClearState();
     device->GetID3D11DeviceContext()->Flush();
   };
