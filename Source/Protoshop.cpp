@@ -23,6 +23,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     //CreateNewOpenVRSession(deviceD3D11, CreateSample_D3D11Scene(deviceD3D11, Scene_Sponza()));
     std::shared_ptr<Object> D3D11Basic = CreateNewWindow(deviceD3D11, CreateSample_D3D11Basic(deviceD3D11));
     std::shared_ptr<Object> D3D11ComputeCanvas = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeCanvas(deviceD3D11));
+    std::shared_ptr<Object> D3D11ComputeVector = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeVector(deviceD3D11));
     std::shared_ptr<Object> D3D11DrawingContext = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContext(deviceD3D11));
     std::shared_ptr<Object> D3D11DXGICapture = CreateNewWindow(deviceD3D11, CreateSample_D3D11DXGICapture(deviceD3D11));
     std::shared_ptr<Object> D3D11Font = CreateNewWindow(deviceD3D11, CreateSample_D3D11Font(deviceD3D11));
