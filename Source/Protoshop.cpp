@@ -25,6 +25,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<Object> D3D11ComputeCanvas = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeCanvas(deviceD3D11));
     std::shared_ptr<Object> D3D11ComputeVector = CreateNewWindow(deviceD3D11, CreateSample_D3D11ComputeVector(deviceD3D11));
     std::shared_ptr<Object> D3D11DrawingContext = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContext(deviceD3D11));
+    std::shared_ptr<Object> D3D11DrawingContextCompute = CreateNewWindow(deviceD3D11, CreateSample_D3D11DrawingContextCompute(deviceD3D11));
     std::shared_ptr<Object> D3D11DXGICapture = CreateNewWindow(deviceD3D11, CreateSample_D3D11DXGICapture(deviceD3D11));
     std::shared_ptr<Object> D3D11Font = CreateNewWindow(deviceD3D11, CreateSample_D3D11Font(deviceD3D11));
     std::shared_ptr<Object> D3D11FreeType = CreateNewWindow(deviceD3D11, CreateSample_Image_FreeTypeAtlas());
@@ -62,7 +63,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     std::shared_ptr<OpenGLDevice> deviceGL = CreateOpenGLDevice();
     std::shared_ptr<Object> GLBasic = CreateNewWindow(deviceGL, CreateSample_OpenGLBasic(deviceGL));
 #if VULKAN_INSTALLED
-    ////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////
     // Vulkan Samples
     std::shared_ptr<VKDevice> deviceVK = CreateVKDevice();
     std::shared_ptr<Object> VKBasic = CreateNewWindow(deviceVK, deviceD3D12, CreateSample_VKBasic());

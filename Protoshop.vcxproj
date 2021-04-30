@@ -67,6 +67,7 @@
     <ClCompile Include="Source\Protoshop.cpp" />
     <ClCompile Include="Source\Sample_D3D11Basic.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeCanvas.cpp" />
+    <ClCompile Include="Source\Sample_D3D11DrawingContextCompute.cpp" />
     <ClCompile Include="Source\Sample_D3D11ComputeVector.cpp" />
     <ClCompile Include="Source\Sample_D3D11DrawingContext.cpp" />
     <ClCompile Include="Source\Sample_D3D11DXGICapture.cpp" />
@@ -150,6 +151,7 @@
     <None Include=".gitignore" />
     <None Include="README.md" />
     <None Include="Source\Sample_D3D11ComputeVector.inc" />
+    <None Include="Source\Sample_D3D11DrawingContextCompute.inc" />
     <None Include="Source\Sample_D3D11_Common.inc" />
     <None Include="Source\Sample_DXR_Implicit.inc" />
     <None Include="Source\Sample_DXR_RaySimple.inc" />
