@@ -3,6 +3,9 @@
 RWTexture2D<float4> renderTarget;
 ByteAddressBuffer shape : register(t0);
 
+groupshared uint clippedObjectCount;
+groupshared uint clippedObjects[4096];
+
 bool InsideLine(float2 samplepoint, float2 p1, float2 p2,
                 float line_half_width) {
   float2 direction = normalize(p2 - p1);
@@ -21,31 +24,30 @@ bool InsideLine(float2 samplepoint, float2 p1, float2 p2,
 }
 
 float2 LoadFloat2(ByteAddressBuffer buffer, int offset) {
-    float2 data;
-    data.x = asfloat(shape.Load(offset));
-    data.y = asfloat(shape.Load(offset + 4));
-    return data;
+  float2 data;
+  data.x = asfloat(shape.Load(offset));
+  data.y = asfloat(shape.Load(offset + 4));
+  return data;
 }
 
 float4 Sample(float2 samplePoint) {
   // First 4 bytes; uint count of shapes.
   uint shapeCount = asuint(shape.Load(0));
   // Iterate over all shapes and intersect.
-  for (uint shapeIndex = 0; shapeIndex < shapeCount; ++shapeIndex) {
-    uint shapeOffset = asuint(shape.Load(4 + 4 * shapeIndex));
+  for (uint clippedObjectIndex = 0; clippedObjectIndex < clippedObjectCount;
+       ++clippedObjectIndex) {
+    uint shapeOffset = clippedObjects[clippedObjectIndex];
     uint shapeType = asuint(shape.Load(shapeOffset + 0));
     if (shapeType == SHAPE_FILLED_CIRCLE) {
-      float2 position = LoadFloat2(shape, shapeOffset + 4);
+      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
       float radius = asfloat(shape.Load(shapeOffset + 12));
-      position -= samplePoint;
       if (abs(sqrt(dot(position, position))) < radius)
         return float4(0, 0, 0, 1);
     }
     if (shapeType == SHAPE_STROKED_CIRCLE) {
-      float2 position = LoadFloat2(shape, shapeOffset + 4);
+      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
       float radius = asfloat(shape.Load(shapeOffset + 12));
       float line_half_width = asfloat(shape.Load(shapeOffset + 16));
-      position -= samplePoint;
       if (abs(sqrt(dot(position, position)) - radius) < line_half_width)
         return float4(0, 0, 0, 1);
     }
@@ -66,17 +68,66 @@ struct CSInput {
   uint groupIndex : SV_GroupIndex;
 };
 
-[numthreads(THREADCOUNT_X, THREADCOUNT_Y, 1)] void main(CSInput csin) {
+[numthreads(THREADCOUNT_SQUARE, THREADCOUNT_SQUARE, 1)] void
+main(CSInput csin) {
   ////////////////////////////////////////////////////////////////////////////////
-  // Now render the actual pixels.
-  //renderTarget[csin.dispatchThreadId.xy] =
-  //    Sample((float2)csin.dispatchThreadId);
-  //return;
-
+  // Initialize groupshared storage for the first thread only.
+  if (csin.groupIndex == 0) {
+    clippedObjectCount = 0;
+  }
+  // Wait for all threads to reach here and init to synchronize.
+  AllMemoryBarrierWithGroupSync();
   ////////////////////////////////////////////////////////////////////////////////
-  // 4x4 (16 TAP) Supersampling.
-  const int superCountX = 4;
-  const int superCountY = 4;
+  // Coarse rasterize all objects to get a rough clip list.
+  uint shapeCount = asuint(shape.Load(0));
+  // Define the number of edges to clip in one thread group.
+  uint objectsPerThreadGroup = THREADCOUNT_SQUARE * THREADCOUNT_SQUARE;
+  uint objectsPerThread = shapeCount / objectsPerThreadGroup;
+  // If there's a remainder then add it into the earlier threads.
+  if (csin.groupIndex < shapeCount % objectsPerThreadGroup) {
+    ++objectsPerThread;
+  }
+  // Iterate over all shapes and intersect.
+  for (uint objectInThread = 0; objectInThread < objectsPerThread;
+       ++objectInThread) {
+    uint shapeIndex = objectsPerThreadGroup * objectInThread + csin.groupIndex;
+    uint shapeOffset = asuint(shape.Load(4 + 4 * shapeIndex));
+    uint shapeType = asuint(shape.Load(shapeOffset + 0));
+    float2 samplePoint =
+        csin.groupId * THREADCOUNT_SQUARE + THREADCOUNT_SQUARE / 2;
+    if (shapeType == SHAPE_FILLED_CIRCLE) {
+      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
+      float radius = asfloat(shape.Load(shapeOffset + 12)) +
+                     THREADCOUNT_SQUARE * 8 / 10; // 0.8 ~= sqrt(2) / 2
+      if (!(abs(sqrt(dot(position, position))) < radius))
+        continue;
+    }
+    if (shapeType == SHAPE_STROKED_CIRCLE) {
+      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
+      float radius = asfloat(shape.Load(shapeOffset + 12));
+      float line_half_width = asfloat(shape.Load(shapeOffset + 16)) +
+                              THREADCOUNT_SQUARE * 8 / 10; // 0.8 ~= sqrt(2) / 2
+      if (!(abs(sqrt(dot(position, position)) - radius) < line_half_width))
+        continue;
+    }
+    if (shapeType == SHAPE_STROKED_LINE) {
+      float2 p1 = LoadFloat2(shape, shapeOffset + 4);
+      float2 p2 = LoadFloat2(shape, shapeOffset + 12);
+      float line_half_width = asfloat(shape.Load(shapeOffset + 20)) +
+                              THREADCOUNT_SQUARE * 8 / 10; // 0.8 ~= sqrt(2) / 2
+      if (!InsideLine(samplePoint, p1, p2, line_half_width))
+        continue;
+    }
+    uint recordIndex;
+    InterlockedAdd(clippedObjectCount, 1, recordIndex);
+    clippedObjects[recordIndex] = shapeOffset;
+  }
+  // Wait for all threads to reach here and init to synchronize.
+  AllMemoryBarrierWithGroupSync();
+  ////////////////////////////////////////////////////////////////////////////////
+  // 8x8 (64 TAP) Supersampling.
+  const int superCountX = 8;
+  const int superCountY = 8;
   const float superSpacingX = 1.0 / superCountX;
   const float superSpacingY = 1.0 / superCountY;
   const float superOffsetX = superSpacingX / 2;

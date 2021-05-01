@@ -51,40 +51,53 @@ CreateSample_D3D11DrawingContextCompute(
     std::vector<uint8_t> dataShapeDefinition;
     {
       // Define a collection of functions to serialize the various shapes.
-      std::function<void(const Vector2&, float)> fillCircle = [&](const Vector2& center, float radius) {
-        dataShapeOffset.push_back(dataShapeDefinition.size());
-        Append(dataShapeDefinition, static_cast<uint32_t>(SHAPE_FILLED_CIRCLE));
-        Append(dataShapeDefinition, center);
-        Append(dataShapeDefinition, radius);
-      };
-      std::function<void(const Vector2&, float, float)> strokeCircle = [&](const Vector2& center, float radius, float line_half_width) {
-        dataShapeOffset.push_back(dataShapeDefinition.size());
-        Append(dataShapeDefinition, static_cast<uint32_t>(SHAPE_STROKED_CIRCLE));
-        Append(dataShapeDefinition, center);
-        Append(dataShapeDefinition, radius);
-        Append(dataShapeDefinition, line_half_width);
-      };
-      std::function<void(const Vector2&, const Vector2&, float)> strokeLine = [&](const Vector2& p1, const Vector2& p2, float line_half_width) {
-        dataShapeOffset.push_back(dataShapeDefinition.size());
-        Append(dataShapeDefinition, static_cast<uint32_t>(SHAPE_STROKED_LINE));
-        Append(dataShapeDefinition, p1);
-        Append(dataShapeDefinition, p2);
-        Append(dataShapeDefinition, line_half_width);
-      };
+      std::function<void(const Vector2 &, float)> fillCircle =
+          [&](const Vector2 &center, float radius) {
+            dataShapeOffset.push_back(dataShapeDefinition.size());
+            Append(dataShapeDefinition,
+                   static_cast<uint32_t>(SHAPE_FILLED_CIRCLE));
+            Append(dataShapeDefinition, center);
+            Append(dataShapeDefinition, radius);
+          };
+      std::function<void(const Vector2 &, float, float)> strokeCircle =
+          [&](const Vector2 &center, float radius, float line_half_width) {
+            dataShapeOffset.push_back(dataShapeDefinition.size());
+            Append(dataShapeDefinition,
+                   static_cast<uint32_t>(SHAPE_STROKED_CIRCLE));
+            Append(dataShapeDefinition, center);
+            Append(dataShapeDefinition, radius);
+            Append(dataShapeDefinition, line_half_width);
+          };
+      std::function<void(const Vector2 &, const Vector2 &, float)> strokeLine =
+          [&](const Vector2 &p1, const Vector2 &p2, float line_half_width) {
+            dataShapeOffset.push_back(dataShapeDefinition.size());
+            Append(dataShapeDefinition,
+                   static_cast<uint32_t>(SHAPE_STROKED_LINE));
+            Append(dataShapeDefinition, p1);
+            Append(dataShapeDefinition, p2);
+            Append(dataShapeDefinition, line_half_width);
+          };
       // Use these functions to draw something interesting.
       static uint32_t animate = 0;
-      strokeLine({64, 64}, {512, 512}, 32);
-      Vector2 position = { 512.0f + sinf(animate * 0.01f) * 256.0f, 512.0f - cosf(animate * 0.01f) * 256.0f };
+      strokeLine(
+          {64.0f,
+           descBackbuffer.Height / 2.0f + cosf(animate * 0.01f) * 256.0f},
+          {descBackbuffer.Width - 64.0f,
+           descBackbuffer.Height / 2.0f + sinf(animate * 0.01f) * 256.0f},
+          32);
+      Vector2 position = {
+          descBackbuffer.Width / 2.0f + sinf(animate * 0.01f) * 256.0f,
+          descBackbuffer.Height / 2.0f - cosf(animate * 0.01f) * 256.0f};
       fillCircle(position, 32);
-      for (int i = 0; i <= 16; ++i)
-      {
+      for (int i = 0; i < 15; ++i) {
         strokeCircle(position, 64 + 32 * i, (16 - i) * 0.1f);
       }
       animate = (animate + 1) % 500;
     }
     uint32_t dataOffsetHeader = 0;
     uint32_t dataOffsetTable = dataOffsetHeader + sizeof(uint32_t);
-    uint32_t dataOffsetShape = dataOffsetTable + sizeof(uint32_t) * dataShapeOffset.size();
+    uint32_t dataOffsetShape =
+        dataOffsetTable + sizeof(uint32_t) * dataShapeOffset.size();
     uint32_t dataSize = dataOffsetShape + dataShapeDefinition.size();
     ////////////////////////////////////////////////////////////////////////////////
     // Create a shape in a SRV buffer.
@@ -99,7 +112,8 @@ CreateSample_D3D11DrawingContextCompute(
       }
       // Append all of the shape definitions.
       // The offsets above will point to these records.
-      data.insert(data.end(), dataShapeDefinition.begin(), dataShapeDefinition.end());
+      data.insert(data.end(), dataShapeDefinition.begin(),
+                  dataShapeDefinition.end());
       assert(data.size() == dataSize);
       // Now create the SRV resource for the shader.
       D3D11_BUFFER_DESC desc = {};
@@ -132,8 +146,8 @@ CreateSample_D3D11DrawingContextCompute(
     device->GetID3D11DeviceContext()->CSSetShaderResources(0, 1,
                                                            &bufferShapeView.p);
     device->GetID3D11DeviceContext()->Dispatch(
-        descBackbuffer.Width / THREADCOUNT_X,
-        descBackbuffer.Height / THREADCOUNT_Y, 1);
+        descBackbuffer.Width / THREADCOUNT_SQUARE,
+        descBackbuffer.Height / THREADCOUNT_SQUARE, 1);
     device->GetID3D11DeviceContext()->ClearState();
     device->GetID3D11DeviceContext()->Flush();
   };
