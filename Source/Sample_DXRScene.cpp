@@ -143,6 +143,10 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   // Cached version to reuse texture references.
   std::map<const TextureImage *, std::shared_ptr<CreatedTexture>>
       mapImageToCreatedTexture;
+  ////////////////////////////////////////////////////////////////////////////////
+  // HACK! Add the light blue normal map into the cache here to prevent it unloading.
+  mapImageToCreatedTexture[nullptr] = textureLightBlue;
+  ////////////////////////////////////////////////////////////////////////////////
   std::function<std::shared_ptr<CreatedTexture>(const TextureImage *)>
       cacheTextureFromFileRef = [&](const TextureImage *texture) {
         auto findIt = mapImageToCreatedTexture.find(texture);
@@ -159,13 +163,21 @@ CreateSample_DXRScene(std::shared_ptr<Direct3D12Device> device,
   uint32_t countMaterialsSoFar = 0;
   MutableMap<IMaterial *, uint32_t> mapMaterialToHitGroupIndex;
   mapMaterialToHitGroupIndex.fnGenerator = [&](IMaterial *material) {
-    OBJMaterial *objMaterial = dynamic_cast<OBJMaterial *>(material);
-    if (objMaterial == nullptr)
-      return 0;
-    std::shared_ptr<CreatedTexture> newTextureEntry =
-        cacheTextureFromFileRef(objMaterial->DiffuseMap.get());
-    std::shared_ptr<CreatedTexture> newNormalMapEntry =
-        cacheTextureFromFileRef(objMaterial->NormalMap.get());
+    std::shared_ptr<CreatedTexture> newTextureEntry;
+    std::shared_ptr<CreatedTexture> newNormalMapEntry;
+    {
+      OBJMaterial *objMaterial = dynamic_cast<OBJMaterial *>(material);
+      if (objMaterial != nullptr) {
+        newTextureEntry =
+            cacheTextureFromFileRef(objMaterial->DiffuseMap.get());
+        newNormalMapEntry =
+            cacheTextureFromFileRef(objMaterial->NormalMap.get());
+      } else {
+        // Unknown material; just use the normal map default texture (cached above).
+        newTextureEntry = textureLightBlue;
+        newNormalMapEntry = textureLightBlue;
+      }
+    }
     // Set up the shader binding table entry for this material.
     int shaderTableHitGroup = countMaterialsSoFar;
     int shaderTableIndex = 3 + countMaterialsSoFar;
