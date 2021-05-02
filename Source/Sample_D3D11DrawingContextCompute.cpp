@@ -51,35 +51,45 @@ CreateSample_D3D11DrawingContextCompute(
     std::vector<uint8_t> dataShapeDefinition;
     {
       // Define a collection of functions to serialize the various shapes.
-      std::function<void(const Vector2 &, float)> fillCircle =
-          [&](const Vector2 &center, float radius) {
+      std::function<void(const Vector4 &, const Vector2 &, float)> fillCircle =
+          [&](const Vector4 &color, const Vector2 &center, float radius) {
             dataShapeOffset.push_back(dataShapeDefinition.size());
             Append(dataShapeDefinition,
                    static_cast<uint32_t>(SHAPE_FILLED_CIRCLE));
+            Append(dataShapeDefinition, color);
             Append(dataShapeDefinition, center);
             Append(dataShapeDefinition, radius);
           };
-      std::function<void(const Vector2 &, float, float)> strokeCircle =
-          [&](const Vector2 &center, float radius, float line_half_width) {
+      std::function<void(const Vector4 &, const Vector2 &, float, float)>
+          strokeCircle = [&](const Vector4 &color, const Vector2 &center,
+                             float radius, float line_half_width) {
             dataShapeOffset.push_back(dataShapeDefinition.size());
             Append(dataShapeDefinition,
                    static_cast<uint32_t>(SHAPE_STROKED_CIRCLE));
+            Append(dataShapeDefinition, color);
             Append(dataShapeDefinition, center);
             Append(dataShapeDefinition, radius);
             Append(dataShapeDefinition, line_half_width);
           };
-      std::function<void(const Vector2 &, const Vector2 &, float)> strokeLine =
-          [&](const Vector2 &p1, const Vector2 &p2, float line_half_width) {
+      std::function<void(const Vector4 &, const Vector2 &, const Vector2 &,
+                         float)>
+          strokeLine = [&](const Vector4 &color, const Vector2 &p1,
+                           const Vector2 &p2, float line_half_width) {
             dataShapeOffset.push_back(dataShapeDefinition.size());
             Append(dataShapeDefinition,
                    static_cast<uint32_t>(SHAPE_STROKED_LINE));
+            Append(dataShapeDefinition, color);
             Append(dataShapeDefinition, p1);
             Append(dataShapeDefinition, p2);
             Append(dataShapeDefinition, line_half_width);
           };
       // Use these functions to draw something interesting.
+      static Vector4 color_black = {0, 0, 0, 1};
+      static Vector4 color_blue = {0, 0, 1, 1};
+      static Vector4 color_red = {1, 0, 0, 1};
       static uint32_t animate = 0;
       strokeLine(
+        color_red,
           {64.0f,
            descBackbuffer.Height / 2.0f + cosf(animate * 0.01f) * 256.0f},
           {descBackbuffer.Width - 64.0f,
@@ -88,9 +98,9 @@ CreateSample_D3D11DrawingContextCompute(
       Vector2 position = {
           descBackbuffer.Width / 2.0f + sinf(animate * 0.01f) * 256.0f,
           descBackbuffer.Height / 2.0f - cosf(animate * 0.01f) * 256.0f};
-      fillCircle(position, 32);
+      fillCircle(color_blue, position, 32);
       for (int i = 0; i < 15; ++i) {
-        strokeCircle(position, 64 + 32 * i, (16 - i) * 0.1f);
+        strokeCircle(color_black, position, 64 + 32 * i, (16 - i) * 0.1f);
       }
       animate = (animate + 1) % 500;
     }

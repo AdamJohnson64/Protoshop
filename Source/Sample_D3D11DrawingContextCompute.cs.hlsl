@@ -6,19 +6,31 @@ ByteAddressBuffer shape : register(t0);
 groupshared uint clippedObjectCount;
 groupshared uint clippedObjects[4096];
 
-bool InsideLine(float2 samplepoint, float2 p1, float2 p2,
-                float line_half_width) {
+bool InsideFilledCircle(float2 samplePoint, float2 center, float radius) {
+  float2 localposition = center - samplePoint;
+  return sqrt(dot(localposition, localposition)) < radius;
+}
+
+bool InsideStrokedCircle(float2 samplePoint, float2 center, float radius,
+                         float strokeHalfWidth) {
+  float2 localposition = center - samplePoint;
+  return abs(sqrt(dot(localposition, localposition)) - radius) <
+         strokeHalfWidth;
+}
+
+bool InsideStrokedLine(float2 samplePoint, float2 p1, float2 p2,
+                       float strokeHalfWidth) {
   float2 direction = normalize(p2 - p1);
   float2 perpendicular = {-direction.y, direction.x};
   // Check if we're outide the width of the line.
-  if (abs(dot(samplepoint, perpendicular) - dot(p1, perpendicular)) >
-      line_half_width)
+  if (abs(dot(samplePoint, perpendicular) - dot(p1, perpendicular)) >
+      strokeHalfWidth)
     return false;
   // Check if the sample point is before p1 (beginning of line).
-  if (dot(samplepoint, -direction) - dot(p1, -direction) > line_half_width)
+  if (dot(samplePoint, -direction) - dot(p1, -direction) > strokeHalfWidth)
     return false;
   // Check if the sample point is after p2 (end of line).
-  if (dot(samplepoint, direction) - dot(p2, direction) > line_half_width)
+  if (dot(samplePoint, direction) - dot(p2, direction) > strokeHalfWidth)
     return false;
   return true;
 }
@@ -30,6 +42,15 @@ float2 LoadFloat2(ByteAddressBuffer buffer, int offset) {
   return data;
 }
 
+float4 LoadFloat4(ByteAddressBuffer buffer, int offset) {
+  float4 data;
+  data.x = asfloat(shape.Load(offset));
+  data.y = asfloat(shape.Load(offset + 4));
+  data.z = asfloat(shape.Load(offset + 8));
+  data.w = asfloat(shape.Load(offset + 12));
+  return data;
+}
+
 float4 Sample(float2 samplePoint) {
   // First 4 bytes; uint count of shapes.
   uint shapeCount = asuint(shape.Load(0));
@@ -38,25 +59,26 @@ float4 Sample(float2 samplePoint) {
        ++clippedObjectIndex) {
     uint shapeOffset = clippedObjects[clippedObjectIndex];
     uint shapeType = asuint(shape.Load(shapeOffset + 0));
+    float4 color = LoadFloat4(shape, shapeOffset + 4);
     if (shapeType == SHAPE_FILLED_CIRCLE) {
-      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
-      float radius = asfloat(shape.Load(shapeOffset + 12));
-      if (abs(sqrt(dot(position, position))) < radius)
-        return float4(0, 0, 0, 1);
+      float2 center = LoadFloat2(shape, shapeOffset + 20);
+      float radius = asfloat(shape.Load(shapeOffset + 28));
+      if (InsideFilledCircle(samplePoint, center, radius))
+        return color;
     }
     if (shapeType == SHAPE_STROKED_CIRCLE) {
-      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
-      float radius = asfloat(shape.Load(shapeOffset + 12));
-      float line_half_width = asfloat(shape.Load(shapeOffset + 16));
-      if (abs(sqrt(dot(position, position)) - radius) < line_half_width)
-        return float4(0, 0, 0, 1);
+      float2 center = LoadFloat2(shape, shapeOffset + 20);
+      float radius = asfloat(shape.Load(shapeOffset + 28));
+      float strokeHalfWidth = asfloat(shape.Load(shapeOffset + 32));
+      if (InsideStrokedCircle(samplePoint, center, radius, strokeHalfWidth))
+        return color;
     }
     if (shapeType == SHAPE_STROKED_LINE) {
-      float2 p1 = LoadFloat2(shape, shapeOffset + 4);
-      float2 p2 = LoadFloat2(shape, shapeOffset + 12);
-      float line_half_width = asfloat(shape.Load(shapeOffset + 20));
-      if (InsideLine(samplePoint, p1, p2, line_half_width))
-        return float4(0, 0, 0, 1);
+      float2 p1 = LoadFloat2(shape, shapeOffset + 20);
+      float2 p2 = LoadFloat2(shape, shapeOffset + 28);
+      float strokeHalfWidth = asfloat(shape.Load(shapeOffset + 36));
+      if (InsideStrokedLine(samplePoint, p1, p2, strokeHalfWidth))
+        return color;
     }
   }
   return float4(1, 1, 1, 1);
@@ -96,26 +118,26 @@ main(CSInput csin) {
     float2 samplePoint =
         csin.groupId * THREADCOUNT_SQUARE + THREADCOUNT_SQUARE / 2;
     if (shapeType == SHAPE_FILLED_CIRCLE) {
-      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
-      float radius = asfloat(shape.Load(shapeOffset + 12)) +
+      float2 center = LoadFloat2(shape, shapeOffset + 20);
+      float radius = asfloat(shape.Load(shapeOffset + 28)) +
                      THREADCOUNT_SQUARE * 8 / 10; // 0.8 ~= sqrt(2) / 2
-      if (!(abs(sqrt(dot(position, position))) < radius))
+      if (!InsideFilledCircle(samplePoint, center, radius))
         continue;
     }
     if (shapeType == SHAPE_STROKED_CIRCLE) {
-      float2 position = LoadFloat2(shape, shapeOffset + 4) - samplePoint;
-      float radius = asfloat(shape.Load(shapeOffset + 12));
-      float line_half_width = asfloat(shape.Load(shapeOffset + 16)) +
+      float2 center = LoadFloat2(shape, shapeOffset + 20);
+      float radius = asfloat(shape.Load(shapeOffset + 28));
+      float strokeHalfWidth = asfloat(shape.Load(shapeOffset + 32)) +
                               THREADCOUNT_SQUARE * 8 / 10; // 0.8 ~= sqrt(2) / 2
-      if (!(abs(sqrt(dot(position, position)) - radius) < line_half_width))
+      if (!InsideStrokedCircle(samplePoint, center, radius, strokeHalfWidth))
         continue;
     }
     if (shapeType == SHAPE_STROKED_LINE) {
-      float2 p1 = LoadFloat2(shape, shapeOffset + 4);
-      float2 p2 = LoadFloat2(shape, shapeOffset + 12);
-      float line_half_width = asfloat(shape.Load(shapeOffset + 20)) +
+      float2 p1 = LoadFloat2(shape, shapeOffset + 20);
+      float2 p2 = LoadFloat2(shape, shapeOffset + 28);
+      float strokeHalfWidth = asfloat(shape.Load(shapeOffset + 36)) +
                               THREADCOUNT_SQUARE * 8 / 10; // 0.8 ~= sqrt(2) / 2
-      if (!InsideLine(samplePoint, p1, p2, line_half_width))
+      if (!InsideStrokedLine(samplePoint, p1, p2, strokeHalfWidth))
         continue;
     }
     uint recordIndex;
