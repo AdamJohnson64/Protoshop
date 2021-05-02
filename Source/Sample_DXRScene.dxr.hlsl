@@ -78,14 +78,15 @@ void PrimaryMaterialTextured(inout RayPayload rayPayload, in IntersectionAttribu
 
   // Calculate the normal mapped normal.
   float3 vectorNormal = normalize(mul(texelNormal * 2 - 1, matTangentFrame));
-  
+
 // Flip this over to use a basic shadow rendering.
 #if 1
-  // Reconstuct an orthonormal frame from a constant axis.
-  float3 orthoB = normalize(cross(float3(1, 0, 0), vectorNormal));
-  float3 orthoT = normalize(cross(orthoB, vectorNormal));
-  float3x3 matTangentOrtho = float3x3(orthoT, orthoB, vectorNormal);
-
+  // Use the slow version for fewer samples.
+  // This converges more uniformly.
+  float3x3 matTangentOrtho = TangentBasisFromViewAxis(vectorNormal);
+  // Use the fast version for large numbers of samples.
+  // This will exhibit "Hairy Ball" effects with any sample bias.
+  //float3x3 matTangentOrtho = TangentBasisFromViewDirection(vectorNormal);
   // Use this orthonormal frame to transform hemisphere samples.
   float3 rayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent() + interpNormal * 0.0001;
   float3 irradiance = float3(0, 0, 0);

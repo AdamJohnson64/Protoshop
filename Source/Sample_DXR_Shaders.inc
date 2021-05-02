@@ -75,3 +75,45 @@ float3 AmbientOcclusion(float3 origin, float3 normal)
     }
     return illuminated / 8;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Tangent Spaces
+////////////////////////////////////////////////////////////////////////////////
+// Here's the rub with tangent spaces.
+// In general there is no good choice of a tangent space that won't exhibit some
+// form of discontinuity at some point in space. We'll observe this as a whorl.
+// This discontinuity will cause the vector field to spin around a point but the
+// basis is still technically orthonormal. For larger numbers of samples The
+// directionality will eventually "wash out". For small numbers of samples we
+// will observe any bias in the sampling direction as that same directionality.
+
+// Technically speaking this means that ANY choice of orthonormal tangent space
+// will *eventually* work. We'll provide alternatives that work reasonably for
+// small numbers of samples.
+
+// FAST: Orient along the view direction (world ray direction).
+// For small numbers of samples this will produce a discontinuity at V==N.
+// This will appear as an annoying whorl in the middle of the screen.
+float3x3 TangentBasisFromViewDirection(float3 vectorNormal)
+{
+  float3 orthoN = vectorNormal;
+  float3 orthoT = normalize(cross(orthoN, WorldRayDirection()));
+  float3 orthoB = normalize(cross(orthoN, orthoT));
+  return float3x3(orthoT, orthoB, orthoN);
+}
+
+// SLOW: Orient along some arbitrary axis in the space of the eye.
+// For small numbers of samples this will be consistent across the frame.
+// Strange things will occur under animation but it should converge cleanly.
+float3x3 TangentBasisFromViewAxis(float3 vectorNormal)
+{
+  float4 eyeFarMidH = mul(TransformClipToWorld, float4(0, 0, 1, 1));
+  float3 eyeFarMid = eyeFarMidH.xyz / eyeFarMidH.w;
+  float4 eyeFarOtherH = mul(TransformClipToWorld, float4(1, 1, 1, 1));
+  float3 eyeFarOther = eyeFarOtherH.xyz / eyeFarOtherH.w;
+  float3 eyeAxis = normalize(eyeFarOther - eyeFarMid);
+  float3 orthoN = vectorNormal;
+  float3 orthoT = normalize(cross(orthoN, eyeAxis));
+  float3 orthoB = normalize(cross(orthoN, orthoT));
+  return float3x3(orthoT, orthoB, orthoN);
+}
