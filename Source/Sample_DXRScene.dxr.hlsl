@@ -97,7 +97,14 @@ void PrimaryMaterialTextured(inout RayPayload rayPayload, in IntersectionAttribu
       // Moire interference pattern that looks like old-school dithering; nice.
       float3 hemisphere = HaltonSample(i + sampleOffset);
       float3 hemisphereInTangentFrame = mul(hemisphere, matTangentOrtho);
-      RayDesc rayDesc = { rayOrigin + hemisphereInTangentFrame * 0.01, 0, hemisphereInTangentFrame, DEFAULT_TMAX };
+      // A note on this 0.05 eta offset here.
+      // We're calculating the normal from the normal map which deviates from the geometric normal.
+      // Since we're using geometry to perform lighting this will mean that our AO probe
+      // rays may self intersect their neighborhood and reveal the geometry (and look nasty).
+      // The larger this eta the more we displace the hemisphere from the surface.
+      // This will smooth the lighting but will increase the risk of light leaks.
+      // Tune with care.
+      RayDesc rayDesc = { rayOrigin + hemisphereInTangentFrame * 0.05, 0, hemisphereInTangentFrame, DEFAULT_TMAX };
       RayPayload rayPayload;
       rayPayload.Color = float3(0, 0, 0);
       TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 1, 0, 1, rayDesc, rayPayload);
