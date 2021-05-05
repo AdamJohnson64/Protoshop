@@ -14,8 +14,7 @@ class IncludeFromSourceDirectory : public ID3DInclude {
 public:
   HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName,
                LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override {
-    if (IncludeType == D3D_INCLUDE_LOCAL &&
-        !strcmp(pFileName, "Sample_D3D11_Common.inc")) {
+    if (IncludeType == D3D_INCLUDE_LOCAL) {
       auto findCached = filenameToString.find(pFileName);
       if (findCached == filenameToString.end()) {
         // The default working directory in VS2019 is still the directory

@@ -1,3 +1,4 @@
+#include "Sample_HLSL_Common.inc"
 #include "Sample_DXR_Common.inc"
 #include "Sample_DXR_RaySimple.inc"
 #include "Sample_DXR_Shaders.inc"
@@ -11,24 +12,6 @@ struct Vertex {
 Texture2D textureDiffuse : register(t1);
 Texture2D textureNormal : register(t2);
 StructuredBuffer<Vertex> vertexAttributes : register(t4);
-
-// This is the same cotangent reconstruction described at:
-// http://www.thetenthplanet.de/archives/1180
-float3x3 cotangent_frame( float3 N, float3 p, float2 uv ) {
-  // get edge vectors of the pixel triangle
-  float3 dp1 = ddx( p );
-  float3 dp2 = ddy( p );
-  float2 duv1 = ddx( uv );
-  float2 duv2 = ddy( uv );
-  // solve the linear system
-  float3 dp2perp = cross( dp2, N );
-  float3 dp1perp = cross( N, dp1 );
-  float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
-  float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
-  // construct a scale-invariant frame
-  float invmax = rsqrt( max( dot(T,T), dot(B,B) ) );
-  return float3x3( T * invmax, B * invmax, N );
-}
 
 [shader("miss")]
 void PrimaryMiss(inout RayPayload rayPayload)
@@ -68,13 +51,7 @@ void PrimaryMaterialTextured(inout RayPayload rayPayload, in IntersectionAttribu
   // Note: In the pixel shader version of this we ddx/ddy to produce a reference plane.
   // When we're raytracing it's nonsense to use ddx/ddy so we'll use the triangle directly.
   // solve the linear system
-  float3 dp2perp = cross( dp2, interpNormal );
-  float3 dp1perp = cross( interpNormal, dp1 );
-  float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
-  float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
-  // construct a scale-invariant frame
-  float invmax = rsqrt( max( dot(T,T), dot(B,B) ) );
-  float3x3 matTangentFrame = float3x3( T * invmax, B * invmax, interpNormal );
+  float3x3 matTangentFrame = cotangent_frame(interpNormal, dp1, dp2, duv1, duv2);
 
   // Calculate the normal mapped normal.
   float3 vectorNormal = normalize(mul(texelNormal * 2 - 1, matTangentFrame));
