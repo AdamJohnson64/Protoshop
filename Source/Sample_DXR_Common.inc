@@ -47,6 +47,9 @@ RaytracingAccelerationStructure raytracingAccelerationStructure : register(t0);
 cbuffer Constants : register(b0)
 {
     float4x4 TransformClipToWorld;
+	// HACK: These elements are only here for the AO sample.
+	float4 AO_AccumulatorRescale;
+	uint AO_SampleSequenceOffset;
 };
 
 // Just to show how materials might be set up we'll patch 4 32-bit embedded

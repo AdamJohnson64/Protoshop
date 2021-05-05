@@ -24,8 +24,7 @@
 // the "rays" that the rasterizers would generate +/- some amount of float
 // precision loss.
 
-[shader("raygeneration")]
-void RayGenerationMVPClip()
+float4 _RayGenerationMVPClipBase()
 {
     const float NormalizedX = -1 + 2 * (float)DispatchRaysIndex().x / (float)DispatchRaysDimensions().x;
     const float NormalizedY = 1 - 2 * (float)DispatchRaysIndex().y / (float)DispatchRaysDimensions().y;
@@ -40,7 +39,19 @@ void RayGenerationMVPClip()
     rayDesc.TMax = DEFAULT_TMAX;
     RayPayload rayPayload = InitializeRayPayload();
     TraceRay(raytracingAccelerationStructure, RAY_FLAG_NONE, 0xFF, 0, 0, 0, rayDesc, rayPayload);
-    renderTargetOutput[DispatchRaysIndex().xy] = float4(rayPayload.Color, 1);
+    return float4(rayPayload.Color, 1);
+}
+
+[shader("raygeneration")]
+void RayGenerationMVPClip()
+{
+    renderTargetOutput[DispatchRaysIndex().xy] = _RayGenerationMVPClipBase();
+}
+
+[shader("raygeneration")]
+void RayGenerationMVPClip_ACCUMULATE()
+{
+    renderTargetOutput[DispatchRaysIndex().xy] += _RayGenerationMVPClipBase();
 }
 
 // The general miss shader. All rays which hit nothing will return

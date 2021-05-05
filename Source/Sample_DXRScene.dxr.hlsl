@@ -90,12 +90,12 @@ void PrimaryMaterialTextured(inout RayPayload rayPayload, in IntersectionAttribu
   // Use this orthonormal frame to transform hemisphere samples.
   float3 rayOrigin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent() + interpNormal * 0.0001;
   float3 irradiance = float3(0, 0, 0);
-  int sampleOffset = (DispatchRaysIndex().x * DispatchRaysIndex().y * 16);
   for (int i = 0; i < 8; ++i)
   {
       // This incredibly cheap sample jittering of i + x * y * 16 produces a high-frequency
       // Moire interference pattern that looks like old-school dithering; nice.
-      float3 hemisphere = HaltonSample(i + sampleOffset);
+      uint sampleOffset = (DispatchRaysIndex().x * DispatchRaysIndex().y * 173 + i + AO_SampleSequenceOffset) % 7919;
+      float3 hemisphere = HaltonSample(sampleOffset);
       float3 hemisphereInTangentFrame = mul(hemisphere, matTangentOrtho);
       // A note on this 0.05 eta offset here.
       // We're calculating the normal from the normal map which deviates from the geometric normal.
