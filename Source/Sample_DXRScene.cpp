@@ -179,6 +179,8 @@ void mainCS(uint3 dispatchThreadId : SV_DispatchThreadID)
   // Create a texture to use if all else fails.
   std::shared_ptr<CreatedTexture> textureLightBlue =
       createTextureFromImage(Image_SolidColor(8, 8, 0xFF8080FF).get());
+  std::shared_ptr<CreatedTexture> textureWhite =
+      createTextureFromImage(Image_SolidColor(8, 8, 0xFFFFFFFF).get());
   // Create a texture from a texture image object.
   std::function<std::shared_ptr<CreatedTexture>(const TextureImage *)>
       createTextureFromFileRef = [&](const TextureImage *texture) {
@@ -194,9 +196,6 @@ void mainCS(uint3 dispatchThreadId : SV_DispatchThreadID)
   // Cached version to reuse texture references.
   std::map<const TextureImage *, std::shared_ptr<CreatedTexture>>
       mapImageToCreatedTexture;
-  ////////////////////////////////////////////////////////////////////////////////
-  // HACK! Add the light blue normal map into the cache here to prevent it unloading.
-  mapImageToCreatedTexture[nullptr] = textureLightBlue;
   ////////////////////////////////////////////////////////////////////////////////
   std::function<std::shared_ptr<CreatedTexture>(const TextureImage *)>
       cacheTextureFromFileRef = [&](const TextureImage *texture) {
@@ -225,7 +224,7 @@ void mainCS(uint3 dispatchThreadId : SV_DispatchThreadID)
             cacheTextureFromFileRef(objMaterial->NormalMap.get());
       } else {
         // Unknown material; just use the normal map default texture (cached above).
-        newTextureEntry = textureLightBlue;
+        newTextureEntry = textureWhite;
         newNormalMapEntry = textureLightBlue;
       }
     }
@@ -372,6 +371,8 @@ void mainCS(uint3 dispatchThreadId : SV_DispatchThreadID)
     // WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
     auto persistBLAS = mapMeshToCreatedMesh;
     auto persistTexture = mapImageToCreatedTexture;
+    auto persistTextureLightBlue = textureLightBlue;
+    auto persistTextureWhite = textureWhite;
     ////////////////////////////////////////////////////////////////////////////////
     // If our view transform has changed then discard the accumulation buffer.
     bool clearAccumulationBuffer = false;
