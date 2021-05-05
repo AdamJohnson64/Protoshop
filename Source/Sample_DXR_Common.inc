@@ -261,3 +261,18 @@ float4 SampleTextureNearest(Texture2D tex, float2 uv)
     tex.GetDimensions(0, Width, Height, NumberOfLevels);
     return tex.Load(uint3(uv.x * Width, uv.y * Height, 0));
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// TESTING FUNCTIONALITY
+////////////////////////////////////////////////////////////////////////////////
+
+// Create a really cheesy sky based on ray direction.
+// Plug this into your primary and/or shadow miss to introduce an area sunlight.
+float3 DXR_Fake_Sky()
+{
+    float sky = 1 - pow(1 - saturate(dot(WorldRayDirection(), float3(0,1,0))), 4);
+    float sun = pow(saturate(dot(WorldRayDirection(), normalize(float3(0.1,1,0.1)))), 1000);
+    float3 color = lerp(float3(0.75, 0.75, 0.75), float3(0.75, 0.75, 1), sky);
+    color += float3(1000, 800, 800) * sun;
+    return color;
+}
