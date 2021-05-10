@@ -25,6 +25,8 @@ CreateSample_D3D11RayMarch(std::shared_ptr<Direct3D11Device> device) {
   CComPtr<ID3D11ComputeShader> shaderCompute;
   {
     CComPtr<ID3DBlob> blobCS = CompileShader("cs_5_0", "main", R"SHADER(
+#include "Sample_HLSL_Common.inc"
+
 cbuffer Constants
 {
     float4x4 TransformClipToWorld;
@@ -33,18 +35,6 @@ cbuffer Constants
 };
 
 RWTexture2D<float4> renderTarget;
-
-float lambert(float3 normal)
-{
-    const float3 light = normalize(float3(1, 1, -1));
-    return max(0, dot(normal, light));
-}
-
-float phong(float3 reflect, float power)
-{
-    const float3 light = normalize(float3(1, 1, -1));
-    return pow(max(0, dot(light, reflect)), power);
-}
 
 float SignedDistanceFunctionBlob(float3 position)
 {

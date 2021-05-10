@@ -1,4 +1,3 @@
-#include "Sample_HLSL_Common.inc"
 #include "Sample_DXR_Common.inc"
 #include "Sample_DXR_RaySimple.inc"
 #include "Sample_DXR_Shaders.inc"
@@ -41,7 +40,6 @@ void PrimaryMaterialTextured(inout RayPayload rayPayload, in IntersectionAttribu
   float2 duv1 = v1.Texcoord - v0.Texcoord;
   float2 duv2 = v2.Texcoord - v0.Texcoord;
   // Perform the interpolation of all components.
-  float3 interpPosition = v0.Position + dp1 * barya + dp2 * baryb;
   float3 interpNormal = normalize(v0.Normal + dn1 * barya + dn2 * baryb);
   float2 interpUV = v0.Texcoord + duv1 * barya + duv2 * baryb;
   // Look up all textures using the computed texture coordinate.
