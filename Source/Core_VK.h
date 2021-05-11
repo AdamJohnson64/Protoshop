@@ -1,7 +1,5 @@
 #pragma once
 
-#if VULKAN_INSTALLED
-
 #define VK_USE_PLATFORM_WIN32_KHR
 
 #include <functional>
@@ -40,5 +38,3 @@ void VK_Run_Synchronously(VKDevice *device,
                           std::function<void(VkCommandBuffer)> fn);
 
 std::shared_ptr<VKDevice> CreateVKDevice();
-
-#endif // VULKAN_INSTALLED

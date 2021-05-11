@@ -62,12 +62,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     // OpenGL Samples
     std::shared_ptr<OpenGLDevice> deviceGL = CreateOpenGLDevice();
     std::shared_ptr<Object> GLBasic = CreateNewWindow(deviceGL, CreateSample_OpenGLBasic(deviceGL));
-#if VULKAN_INSTALLED
     //////////////////////////////////////////////////////////////////////////////////////
     // Vulkan Samples
     std::shared_ptr<VKDevice> deviceVK = CreateVKDevice();
     std::shared_ptr<Object> VKBasic = CreateNewWindow(deviceVK, deviceD3D12, CreateSample_VKBasic());
-#endif // VULKAN_INSTALLED
     // clang-format on
     {
       MSG Msg = {};

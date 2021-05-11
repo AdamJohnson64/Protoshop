@@ -1,8 +1,4 @@
-#if VULKAN_INSTALLED
-
 #include "Core_VK.h"
-
-#pragma comment(lib, "vulkan-1.lib")
 
 template <class _Container, class _Pr>
 typename _Container::const_iterator find_iterator(const _Container &_Array,
@@ -197,5 +193,3 @@ void VK_Run_Synchronously(VKDevice *device,
 std::shared_ptr<VKDevice> CreateVKDevice() {
   return std::shared_ptr<VKDevice>(new VKDevice());
 }
-
-#endif // VULKAN_INSTALLED

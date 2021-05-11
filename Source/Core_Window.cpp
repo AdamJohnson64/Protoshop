@@ -470,7 +470,6 @@ std::shared_ptr<Object> CreateNewWindow(std::shared_ptr<OpenGLDevice> deviceOGL,
   return std::shared_ptr<Object>(window);
 }
 
-#if VULKAN_INSTALLED
 std::shared_ptr<Object>
 CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
                 std::shared_ptr<Direct3D12Device> deviceD3D12,
@@ -634,4 +633,3 @@ CreateNewWindow(std::shared_ptr<VKDevice> deviceVK,
   };
   return std::shared_ptr<Object>(window);
 }
-#endif

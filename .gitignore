@@ -2,6 +2,7 @@
 !/.clang-format
 !/.gitignore
 !/.gitmodules
+!/CMakeLists.txt
 !/LICENSE.txt
 !/README.md
 !/*.props

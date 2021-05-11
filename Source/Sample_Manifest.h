@@ -108,6 +108,4 @@ std::unique_ptr<IImage> CreateSample_Image_FreeTypeAtlas();
 std::function<void()>
 CreateSample_OpenGLBasic(std::shared_ptr<OpenGLDevice> device);
 
-#if VULKAN_INSTALLED
 std::function<void(VKDevice *, vk::Image)> CreateSample_VKBasic();
-#endif // VULKAN_INSTALLED

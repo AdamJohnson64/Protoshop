@@ -1,5 +1,3 @@
-#if VULKAN_INSTALLED
-
 #include "Core_D3D.h"
 #include "Core_D3D12.h"
 #include "Core_D3D12Util.h"
@@ -46,5 +44,3 @@ std::function<void(VKDevice *, vk::Image)> CreateSample_VKBasic() {
     });
   };
 }
-
-#endif // VULKAN_INSTALLED
